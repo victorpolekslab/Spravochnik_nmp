@@ -1,0 +1,12 @@
+# build outputs
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/keystore.properties
+*.jks
+*.keystore
+web/node_modules/
+web/dist/
+web/*.tmp.db
+__pycache__/

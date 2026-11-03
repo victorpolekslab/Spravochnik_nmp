@@ -1,0 +1,7 @@
+{
+  "name": "spravochnik-nmp-web",
+  "private": true,
+  "description": "Web (PWA) build of the paramedic reference",
+  "scripts": { "build": "python3 build.py" },
+  "dependencies": { "fflate": "0.8.2", "sql.js": "1.12.0" }
+}

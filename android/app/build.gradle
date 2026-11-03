@@ -1,0 +1,43 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'ru.klinrek.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'ru.klinrek.feldsher'
+        minSdk 26
+        targetSdk 34
+        versionCode 5
+        versionName "1.4 (КР от 03.11.2026)"
+    }
+
+    signingConfigs {
+        release {
+            // keystore.properties (not in git): storeFile, storePassword, keyAlias, keyPassword
+            def kp = rootProject.file('keystore.properties')
+            if (kp.exists()) {
+                def p = new Properties(); kp.withInputStream { p.load(it) }
+                storeFile file(p['storeFile']); storePassword p['storePassword']
+                keyAlias p['keyAlias']; keyPassword p['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig rootProject.file('keystore.properties').exists() ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
