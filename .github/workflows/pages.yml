@@ -2,7 +2,7 @@ name: Публикация веб-версии
 
 on:
   push:
-    branches: [main]
+    branches: [main, apk]
   workflow_dispatch:
 
 permissions:
@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -30,6 +32,13 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           python3 build.py
+      - name: Android-приложение (ветка apk)
+        run: |
+          if git fetch --depth=1 origin apk; then
+            mkdir -p web/dist/download
+            git show FETCH_HEAD:SpravochnikNMP.apk > web/dist/download/SpravochnikNMP.apk
+            git show FETCH_HEAD:android.json > web/dist/android.json
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

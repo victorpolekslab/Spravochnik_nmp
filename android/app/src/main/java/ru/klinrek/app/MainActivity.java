@@ -134,9 +134,49 @@ public class MainActivity extends Activity {
                 }
                 return false;
             }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (!updateChecked) { updateChecked = true; checkUpdate(); }
+            }
         });
         setContentView(web);
         web.loadUrl("file:///android_asset/www/index.html");
+    }
+
+    // ------------------------------------------------------------ update check
+    static final String UPDATE_URL = "https://victorpolekslab.github.io/Spravochnik_nmp/android.json";
+    private boolean updateChecked = false;
+
+    /** Asks the site for the latest APK version; if it is newer, the page shows an "update available" banner. */
+    @SuppressWarnings("deprecation")
+    private void checkUpdate() {
+        new Thread(() -> {
+            try {
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(UPDATE_URL).openConnection();
+                c.setConnectTimeout(8000);
+                c.setReadTimeout(8000);
+                c.setUseCaches(false);
+                if (c.getResponseCode() != 200) return;
+                java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                try (InputStream in = c.getInputStream()) {
+                    byte[] buf = new byte[8192]; int n;
+                    while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                } finally {
+                    c.disconnect();
+                }
+                String body = out.toString("UTF-8");
+                org.json.JSONObject o = new org.json.JSONObject(body);
+                long latest = o.optLong("versionCode", 0);
+                long current = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+                if (latest > current) {
+                    final String js = "window.onUpdate&&onUpdate(" + o.toString() + ")";
+                    runOnUiThread(() -> { if (web != null) web.evaluateJavascript(js, null); });
+                }
+            } catch (Exception ignored) {
+                // offline or site unavailable: try again next launch
+            }
+        }).start();
     }
 
     @Override

@@ -636,13 +636,29 @@ function updateCalc() {
   });
 }
 
+// ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
+const APP_VERSION = '1.5';
+const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
+window.onUpdate = info => {
+  if (!info || !info.url || $('.updbar')) return;
+  const t = document.createElement('div');
+  t.className = 'updbar';
+  t.innerHTML = `<div class="tx"><b>Доступна версия ${esc(info.versionName || '')}</b>${info.notes ? `<small>${esc(info.notes)}</small>` : ''}</div>
+    <a class="go" href="${esc(info.url)}">Скачать</a><button class="x" aria-label="Позже">×</button>`;
+  t.querySelector('.x').onclick = () => t.remove();
+  t.querySelector('.go').addEventListener('click', () => setTimeout(() => t.remove(), 500));
+  document.body.appendChild(t);
+};
+
 // ---------------------------------------------------------------- about
 function about() {
   setTitle('О справочнике', false);
   const names = crNames();
   const bundled = Object.values(crData()).filter(x => x.off);
   view.innerHTML = `<div class="about">
-    <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия 1.4 · клинические рекомендации от 03.11.2026</p></div>
+    <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION} · клинические рекомендации от 03.11.2026</p></div>
+    <div class="card"><b>Поделиться с коллегами</b><p>iPhone и любой браузер: <a href="${SITE}">${SITE.replace('https://', '')}</a> — открыть в Safari → «Поделиться» → «На экран Домой».</p>
+      <p>Android: <a href="${SITE}download/SpravochnikNMP.apk">скачать приложение (APK)</a>. Новые версии приложение предлагает само.</p></div>
     <div class="card"><b>Что это</b><p>Справочник фельдшера неотложной медицинской помощи по действующим клиническим рекомендациям Минздрава России. Во вкладках «Неотложно» — помощь до приезда СМП: без кислородотерапии, тромболизиса, наркотических анальгетиков и инфузомата. <span class="onebadge" style="margin:0">ОДИН ИЗ</span> — взаимозаменяемые препараты, выбирается один.</p>
       <p><span class="src kr">КР</span> — доза или положение из текста рекомендации (сверено автоматически); <span class="src ins">инстр.</span> — доза из инструкции к препарату, в КР её нет.</p></div>
     <div class="card"><b>МКБ-10 и рекомендации</b><p>Классификатор МКБ-10 (НСИ Минздрава, версия 2.27) и перечень всех действующих рекомендаций (${Object.keys(names).length}). Полные тексты ${bundled.length} рекомендаций встроены в приложение; остальные можно загрузить на телефон из карточки рекомендации (нужен интернет), дальше они открываются без сети. Загружено: ${dlSet().size}.</p></div>
