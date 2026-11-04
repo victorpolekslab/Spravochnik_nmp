@@ -277,6 +277,19 @@
       });
       // check for updates whenever the app is brought back to the screen
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => { }); });
+      // "Проверить обновления" button (same interface as the Android app)
+      window.App = {
+        checkUpdate() {
+          if (reg.waiting && navigator.serviceWorker.controller) { offer(reg.waiting); window.onUpdateShown && onUpdateShown(); return; }
+          let found = false;
+          const f = () => { found = true; };
+          reg.addEventListener('updatefound', f, { once: true });
+          reg.update().then(() => setTimeout(() => {
+            if (found || reg.installing || reg.waiting) window.onUpdateShown && onUpdateShown();
+            else window.onUpdateNone && onUpdateNone();
+          }, 300)).catch(() => window.onUpdateFail && onUpdateFail());
+        }
+      };
     }).catch(e => console.warn('SW', e));
     let reloading = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloading && window.__swUpdating) { reloading = true; location.reload(); } });

@@ -638,9 +638,14 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
+const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
+window.onUpdateNone = () => updRes('У вас последняя версия');
+window.onUpdateFail = () => updRes('Нет связи с сайтом — попробуйте позже');
+window.onUpdateShown = () => updRes('Есть новая версия — см. внизу экрана');
 window.onUpdate = info => {
+  updRes('Есть новая версия — см. внизу экрана');
   if (!info || !info.url || $('.updbar')) return;
   const t = document.createElement('div');
   t.className = 'updbar';
@@ -657,7 +662,8 @@ function about() {
   const names = crNames();
   const bundled = Object.values(crData()).filter(x => x.off);
   view.innerHTML = `<div class="about">
-    <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION} · клинические рекомендации от 03.11.2026</p></div>
+    <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION} · клинические рекомендации от 03.11.2026</p>
+      ${window.App ? '<button class="lnkbtn" id="updChk">Проверить обновления</button><span class="updres" id="updRes"></span>' : ''}</div>
     <div class="card"><b>Поделиться с коллегами</b><p>iPhone и любой браузер: <a href="${SITE}">${SITE.replace('https://', '')}</a> — открыть в Safari → «Поделиться» → «На экран Домой».</p>
       <p>Android: <a href="${SITE}download/SpravochnikNMP.apk">скачать приложение (APK)</a>. Новые версии приложение предлагает само.</p></div>
     <div class="card"><b>Что это</b><p>Справочник фельдшера неотложной медицинской помощи по действующим клиническим рекомендациям Минздрава России. Во вкладках «Неотложно» — помощь до приезда СМП: без кислородотерапии, тромболизиса, наркотических анальгетиков и инфузомата. <span class="onebadge" style="margin:0">ОДИН ИЗ</span> — взаимозаменяемые препараты, выбирается один.</p>
@@ -666,6 +672,8 @@ function about() {
     <div class="card"><b>Важно</b><p>Справочник не заменяет инструкцию к препарату и решение врача. В КР «Бронхиальная астма» (359_3) для преднизолона у взрослых указано «20–30 мг/кг/сут» — это опечатка в единицах, в схеме приведено 20–30 мг/сут.</p></div>
     <div class="card"><b>Встроенные рекомендации</b>${bundled.sort((x, y) => x.name.localeCompare(y.name)).map(x => `<p><a href="#doc/${x.id}">КР${esc(x.id)}</a> — ${esc(x.name)}</p>`).join('')}</div>
   </div>`;
+  const b = $('#updChk');
+  if (b) b.onclick = () => { $('#updRes').textContent = 'Проверяю…'; try { window.App.checkUpdate(); } catch (e) { onUpdateFail(); } };
 }
 // ---------------------------------------------------------------- Document viewer
 let docState = null;

@@ -120,6 +120,7 @@ public class MainActivity extends Activity {
         s.setBuiltInZoomControls(false);
         web.setBackgroundColor(Color.TRANSPARENT);
         web.addJavascriptInterface(api, "Native");
+        web.addJavascriptInterface(new AppBridge(), "App");
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
@@ -137,7 +138,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (!updateChecked) { updateChecked = true; checkUpdate(); }
+                if (!updateChecked) { updateChecked = true; checkUpdate(false); }
             }
         });
         setContentView(web);
@@ -147,17 +148,33 @@ public class MainActivity extends Activity {
     // ------------------------------------------------------------ update check
     static final String UPDATE_URL = "https://victorpolekslab.github.io/Spravochnik_nmp/android.json";
     private boolean updateChecked = false;
+    private long lastCheck = 0;
 
-    /** Asks the site for the latest APK version; if it is newer, the page shows an "update available" banner. */
+    /** Exposed to the page as window.App (the web version provides the same object). */
+    public class AppBridge {
+        @android.webkit.JavascriptInterface
+        public void checkUpdate() { MainActivity.this.checkUpdate(true); }
+    }
+
+    private void js(String script) {
+        runOnUiThread(() -> { if (web != null) web.evaluateJavascript(script, null); });
+    }
+
+    /** Asks the site for the latest APK version; if it is newer, the page shows an "update available" banner.
+     *  manual = from the "Проверить обновления" button: also report "up to date" / "no connection". */
     @SuppressWarnings("deprecation")
-    private void checkUpdate() {
+    private void checkUpdate(boolean manual) {
+        lastCheck = System.currentTimeMillis();
         new Thread(() -> {
             try {
-                java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(UPDATE_URL).openConnection();
-                c.setConnectTimeout(8000);
-                c.setReadTimeout(8000);
+                // the query string bypasses the CDN cache, so a fresh release is seen at once
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection)
+                        new java.net.URL(UPDATE_URL + "?t=" + System.currentTimeMillis()).openConnection();
+                c.setConnectTimeout(10000);
+                c.setReadTimeout(10000);
                 c.setUseCaches(false);
-                if (c.getResponseCode() != 200) return;
+                c.setRequestProperty("Cache-Control", "no-cache");
+                if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
                 java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
                 try (InputStream in = c.getInputStream()) {
                     byte[] buf = new byte[8192]; int n;
@@ -165,18 +182,22 @@ public class MainActivity extends Activity {
                 } finally {
                     c.disconnect();
                 }
-                String body = out.toString("UTF-8");
-                org.json.JSONObject o = new org.json.JSONObject(body);
+                org.json.JSONObject o = new org.json.JSONObject(out.toString("UTF-8"));
                 long latest = o.optLong("versionCode", 0);
                 long current = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
-                if (latest > current) {
-                    final String js = "window.onUpdate&&onUpdate(" + o.toString() + ")";
-                    runOnUiThread(() -> { if (web != null) web.evaluateJavascript(js, null); });
-                }
-            } catch (Exception ignored) {
-                // offline or site unavailable: try again next launch
+                if (latest > current) js("window.onUpdate&&onUpdate(" + o + ")");
+                else if (manual) js("window.onUpdateNone&&onUpdateNone()");
+            } catch (Exception e) {
+                if (manual) js("window.onUpdateFail&&onUpdateFail()");
             }
         }).start();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // the app often stays in memory for days: check again when it comes back, at most every 30 minutes
+        if (web != null && updateChecked && System.currentTimeMillis() - lastCheck > 30 * 60 * 1000) checkUpdate(false);
     }
 
     @Override
