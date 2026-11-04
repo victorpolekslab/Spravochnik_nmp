@@ -91,6 +91,7 @@ function route() {
     case 'd': setTab('rec'); disease(parts[1], parts[2]); break;
     case 'mkb': setTab('home'); parts[1] ? mkbNode(+parts[1]) : mkbRoot(params.get('q')); break;
     case 'calc': setTab('home'); calcPage(parts[1]); break;
+    case 'route': setTab('home'); routeWizard(); break;
     case 'cr': setTab(''); crPage(parts[1]); break;
     case 'about': setTab(''); about(); break;
     case 'doc': doc(parts[1], parts[2], params.get('h') || ''); return;
@@ -108,12 +109,12 @@ const TOPICS = [
   { k: 'inf', t: 'Инфекционные болезни', ids: ['pnevm', 'orvi', 'sinus', 'angina'], c: 'green', i: 'inf' },
   { k: 'preg', t: 'Беременные', ids: ['agb', 'preg_back', 'preg_orvi', 'preg_pnevm', 'preg_uti'], c: 'pink', i: 'agb' },
   { k: 'uro', t: 'Урология', ids: ['uti', 'colic'], c: 'teal', i: 'uro' },
-  { k: 'endo', t: 'Эндокринология', ids: ['sd'], c: 'amber', i: 'sd' },
-  { k: 'route', t: 'Маршрутизация', ids: ['r_tmn', 'r_onmk', 'r_cardio', 'r_obst', 'r_kids'], c: 'slate', i: 'route' }
+  { k: 'endo', t: 'Эндокринология', ids: ['sd'], c: 'amber', i: 'sd' }
 ];
+const ROUTE_TABLES = ['r_tmn', 'r_onmk', 'r_cardio', 'r_obst', 'r_kids'];
 const TICON = { route: 'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11zM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', uro: 'M9 3c-3 0-5 3-5 7s2 7 5 7c1.5 0 2-1 2-2.5V12c0-1-.5-1.5-1.5-1.5M15 3c3 0 5 3 5 7s-2 7-5 7c-1.5 0-2-1-2-2.5V12c0-1 .5-1.5 1.5-1.5M11 17v4M13 17v4', inf: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1' };
 const plural = (n, f) => n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? f[0] : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? f[1] : f[2]);
-const ORDER = TOPICS.flatMap(x => x.ids);
+const ORDER = TOPICS.flatMap(x => x.ids).concat(ROUTE_TABLES);
 const DIS = (window.FELD || []).slice().sort((a, b) => (ORDER.indexOf(a.id) + 1 || 99) - (ORDER.indexOf(b.id) + 1 || 99));
 const byId = {}; DIS.forEach(d => byId[d.id] = d);
 const SCHEME_BY_CR = {}; DIS.forEach(d => d.crs.forEach(c => (SCHEME_BY_CR[c] = SCHEME_BY_CR[c] || []).push(d.id)));
@@ -162,6 +163,10 @@ const TOOLS = [
 function home() {
   setTitle('Справочник фельдшера НМП', true);
   view.innerHTML = `
+    <a class="mkbcard routecard" href="#route">
+      <div class="mk-h"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><path d="M12 7v6M9 10h6"/></svg>
+        <div><div class="tt">Дежурные стационары</div><div class="ts">куда везти: повод, район или адрес, день дежурства</div></div><span class="chev">›</span></div>
+    </a>
     <a class="mkbcard" href="#mkb">
       <div class="mk-h"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h6M9 8h3"/></svg>
         <div><div class="tt">Классификатор МКБ-10</div><div class="ts">рубрики, поиск по коду и нозологии, клинические рекомендации по коду</div></div></div>
@@ -229,7 +234,6 @@ function topicPage(k) {
   const tp = TOPICS.find(x => x.k === k);
   if (!tp) return go('#rec');
   setTitle(tp.t, false);
-  if (k === 'route' && window.ROUTE) return routeWizard(tp);
   view.innerHTML = `<div class="topic t-${tp.c} solo">${tp.ids.map(i => byId[i]).filter(Boolean).map(d =>
     `<a class="trow" href="#d/${d.id}"><span class="ti"><svg viewBox="0 0 24 24"><path d="${ICON[d.id] || ICON.bol}"/></svg></span>
       <span class="nm"><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></span><span class="chev">›</span></a>`).join('')}</div>`;
@@ -242,28 +246,72 @@ function dutyNow() {
   return { d: (n.getDay() + 6) % 7, date: n };
 }
 const RW = { st: null };
+const RW_AO = { len: 'Ленинский АО', cen: 'Центральный АО', kal: 'Калининский АО', vos: 'Восточный АО' };
+let ADDR_IX = null;
+function addrIndex() {
+  if (!ADDR_IX) ADDR_IX = (window.TMN_ADDR || []).map(([n, spec]) => {
+    const parts = spec.includes(':') ? spec.split('|').map(x => { const [o, hs] = x.split(':'); return [o, hs.split(',')]; }) : null;
+    return { n, w: rwNorm(n).split(' '), one: parts ? null : spec, parts };
+  });
+  return ADDR_IX;
+}
+const hnum = h => parseInt(h, 10) || 0;
+function addrHouse(st, h) {
+  if (st.one) return { t: st.one };
+  const H = h.toUpperCase().replace(/КОРПУС|КОРП\.?/g, 'К').replace(/СТРОЕНИЕ|СТР\.?/g, 'С').replace(/\s+/g, '');
+  for (const [o, hs] of st.parts) if (hs.includes(H)) return { t: o };
+  const n = hnum(H); if (!n) return null;
+  const same = new Set(); st.parts.forEach(([o, hs]) => hs.forEach(x => { if (hnum(x) === n) same.add(o); }));
+  if (same.size === 1) return { t: [...same][0] };
+  let best = null;
+  st.parts.forEach(([o, hs]) => hs.forEach(x => { const m = hnum(x); if (m && m % 2 === n % 2) { const dd = Math.abs(m - n); if (!best || dd < best.d) best = { d: dd, t: o, h: x }; } }));
+  return best && best.d <= 20 ? { t: best.t, near: best.h } : null;
+}
+function addrSearch(q) {
+  const m = q.trim().match(/^(.*?)[,\s]+(?:д\.?|дом)?\s*(\d+\s*[а-яёa-z]?(?:\s*(?:\/|к|корп\.?|корпус|с|стр\.?)\s*\d+[а-яёa-z]?)?)$/i);
+  const house = m ? m[2] : '';
+  const words = rwNorm(m ? m[1] : q).split(' ').filter(w => w && !['ул', 'улица', 'пр', 'проезд', 'пер', 'переулок', 'д', 'дом', 'г', 'тюмень'].includes(w));
+  if (!words.length) return [];
+  const hits = addrIndex().filter(s => words.every(w => s.w.some(x => x.startsWith(w))))
+    .sort((a, b) => (b.w.some(x => x === words[0]) - a.w.some(x => x === words[0])) || a.n.length - b.n.length).slice(0, 8);
+  return hits.map(s => {
+    if (house) {
+      const r = addrHouse(s, house);
+      if (r) return { s, h: house, t: r.t, sub: r.near ? `по соседнему дому № ${r.near} — проверьте` : '' };
+      return { s, h: house, t: '', sub: 'дом на границе округов не найден — выберите район вручную' };
+    }
+    if (s.one) return { s, h: '', t: s.one, sub: '' };
+    return { s, h: '', t: '', sub: 'улица в нескольких округах (' + s.parts.map(p => RW_AO[p[0]]).join(', ') + ') — введите номер дома' };
+  });
+}
 const rwNorm = t => String(t).toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]+/g, ' ').trim();
-function routeWizard(tp) {
+function routeWizard() {
   const R = window.ROUTE;
+  setTitle('Дежурные стационары', false);
   if (!RW.st) { const sv = LS.get('route', {}); RW.st = { age: sv.age || 'ad', p: '', t: sv.t || '', x: {}, d: null, open: '' }; }
   const s = RW.st, now = dutyNow(), d = s.d == null ? now.d : s.d;
   const dd = dt => String(dt.getDate()).padStart(2, '0') + '.' + String(dt.getMonth() + 1).padStart(2, '0');
   const nx = new Date(now.date); nx.setDate(nx.getDate() + 1);
   const label = (list, k) => { for (const g of list) for (const o of g[1]) if (o[0] === k) return o[1]; return ''; };
-  const plist = s.age === 'ad' ? R.P_AD : (s.age === 'ch' ? [...R.P_CH, R.P_GIRL] : R.P_CH);
+  const kid = s.age !== 'ad';
+  const plist = !kid ? R.P_AD : (s.age === 'ch' || s.age === 'kid' ? [...R.P_CH, R.P_GIRL] : R.P_CH);
   if (s.p && !label(plist, s.p)) s.p = '';
   const chip = (k, v, on, t, sub) => `<a class="rwc${on ? ' on' : ''}" data-k="${k}" data-v="${esc(v)}">${esc(t)}${sub ? `<small>${esc(sub)}</small>` : ''}</a>`;
   const q = (n, h, body, done) => `<div class="rwq${done ? ' done' : ''}"><div class="rwh"><span class="rwn">${n}</span>${h}</div>${body}</div>`;
   const summ = (k, t) => `<a class="rwsum" data-k="open" data-v="${k}"><b>${esc(t)}</b><span>изменить</span></a>`;
   let h = '';
-  h += q(1, 'Возраст', `<div class="rwcs">${R.AGES.map(o => chip('age', o[0], s.age === o[0], o[1])).join('')}</div>`, true);
+  h += q(1, 'Пациент', `<div class="rwab">${chip('age', 'ad', !kid, 'Взрослые')}${chip('age', 'kid', kid, 'Дети')}</div>
+    ${kid ? `<div class="rwsub"><div class="rwsubh">Возраст ребёнка</div><div class="rwcs rwkid">${R.AGES.slice(1).reverse().map(o => chip('age', o[0], s.age === o[0], o[1])).join('')}</div></div>` : ''}`, true);
   const ddBox = (k, groups, kw, ph) => `<div class="rwdd${s.open === k ? ' open' : ''}" data-dd="${k}"><div class="rwddf"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
       <input class="rwddq" type="search" placeholder="${esc(ph)}" autocomplete="off" spellcheck="false"><span class="rwddar">▾</span></div>
       <div class="rwlist">${groups.map(g => `<div class="rwgrp"><div class="rwg">${esc(g[0])}</div>${g[1].map(o =>
         `<a class="rwli${s[k] === o[0] ? ' on' : ''}" data-k="${k}" data-v="${o[0]}" data-s="${esc(rwNorm([o[1], o[2] || '', g[0], kw[o[0]] || ''].join(' ')))}">${esc(o[1])}${o[2] ? `<small>${esc(o[2])}</small>` : ''}</a>`).join('')}</div>`).join('')}
         <div class="rwnone" hidden>Ничего не найдено — попробуйте другое слово</div></div></div>`;
   h += q(2, 'Повод', s.p && s.open !== 'p' ? summ('p', label(plist, s.p)) : ddBox('p', plist, R.KW, 'Поиск: инфаркт, инсульт, роды…'), !!s.p);
-  h += q(3, 'Район вызова', s.t && s.open !== 't' ? summ('t', label(R.TER, s.t)) : ddBox('t', R.TER, R.KW_T, 'Поиск: Калининский, Ишим, тракт…'), !!s.t);
+  h += q(3, 'Район вызова', s.t && s.open !== 't' ? summ('t', label(R.TER, s.t) + (s.addr && RW_AO[s.t] ? ' · ' + s.addr : '')) :
+    `<div class="rwaddr"><div class="rwddf"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></svg>
+      <input id="rwAddr" type="search" placeholder="Адрес в Тюмени: улица и дом" autocomplete="off" spellcheck="false"></div><div class="rwasug"></div></div>
+     <div class="rwor">или район / муниципальный округ</div>` + ddBox('t', R.TER, R.KW_T, 'Поиск: Калининский, Ишим, тракт…'), !!s.t);
   let res = null;
   if (s.p && s.t) {
     res = R.find({ age: s.age, p: s.p, t: s.t, x: s.x, d });
@@ -280,24 +328,43 @@ function routeWizard(tp) {
       ${(res.note || []).length ? `<ul class="rwnote">${res.note.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
       ${res.phone ? `<div class="rwph">${esc(res.phone)}</div>` : ''}
       ${res.src ? `<div class="csrc">Основание: ${esc(res.src)}</div>` : ''}</div>`;
-  } else if (!res) h += `<div class="rwempty">Выберите повод и район — здесь появится стационар.</div>`;
-  h += `<div class="sec-h">Таблицы приказов</div><div class="topic t-${tp.c}">${tp.ids.map(i => byId[i]).filter(Boolean).map(x =>
+  } else if (res && res.needAge) h += `<div class="rwempty">Укажите возраст ребёнка — от него зависит стационар.</div>`;
+  else if (!res) h += `<div class="rwempty">Выберите повод и район — здесь появится стационар.</div>`;
+  h += `<div class="sec-h">Таблицы приказов</div><div class="topic t-slate">${ROUTE_TABLES.map(i => byId[i]).filter(Boolean).map(x =>
     `<a class="trow" href="#d/${x.id}"><span class="nm"><b>${esc(x.title)}</b><small>${esc(x.sub)}</small></span><span class="chev">›</span></a>`).join('')}</div>
-    <p class="disc">Маршруты — по приказам ДЗ Тюменской области, загруженным в справочник. При расхождении с распоряжением старшего врача или диспетчера — действует распоряжение.</p>`;
+    <p class="disc">Маршруты — по приказам ДЗ Тюменской области, загруженным в справочник. Округ по адресу — по границам и адресам OpenStreetMap (© участники OpenStreetMap), возможны неточности на границах округов. При расхождении с распоряжением старшего врача или диспетчера — действует распоряжение.</p>`;
   view.innerHTML = `<div class="rw">${h}</div>`;
   view.querySelectorAll('.rw [data-k]').forEach(el => el.onclick = () => {
     const k = el.dataset.k, v = el.dataset.v;
     if (k === 'open') s.open = v;
     else if (k === 'age') { s.age = v; }
     else if (k === 'p') { s.p = v; s.open = ''; s.x = {}; }
-    else if (k === 't') { s.t = v; s.open = ''; s.x = {}; }
+    else if (k === 't') { s.t = v; s.open = ''; s.x = {}; s.addr = ''; }
     else if (k === 'd') s.d = +v === now.d ? null : +v;
     else if (k === 'xdel') delete s.x[v];
     else if (k.startsWith('x:')) { const kk = k.slice(2); s.x[kk] = v; s.xl = s.xl || {}; s.xl[kk] = { q: el.closest('.rwq').querySelector('.rwh').textContent.replace(/^\?/, ''), a: el.textContent }; }
     LS.set('route', { age: s.age, t: s.t });
-    const y = window.scrollY; routeWizard(tp); window.scrollTo(0, y);
+    const y = window.scrollY; routeWizard(); window.scrollTo(0, y);
     if (k === 'p' || k === 't' || k.startsWith('x:')) { const r = $('.rwres') || $('.rwq:not(.done)'); if (r) r.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
   });
+  const ai = $('#rwAddr');
+  if (ai) {
+    const box = $('.rwasug');
+    const show = () => {
+      const v = ai.value.trim();
+      if (v.length < 2) { box.innerHTML = ''; return; }
+      const L = addrSearch(v);
+      box.innerHTML = L.length ? L.map((x, i) => `<a class="rwas${x.t ? '' : ' no'}" data-i="${i}"><b>${esc(x.s.n)}${x.h ? ', ' + esc(x.h) : ''}</b>${x.t ? `<span class="rwao">${RW_AO[x.t]}</span>` : ''}${x.sub ? `<small>${esc(x.sub)}</small>` : ''}</a>`).join('')
+        : '<div class="rwnone">Улица не найдена — выберите район вручную</div>';
+      box.querySelectorAll('.rwas').forEach(el => el.onclick = () => {
+        const x = L[+el.dataset.i]; if (!x.t) { if (!x.h) { ai.value = x.s.n + ' '; ai.focus(); show(); } return; }
+        s.t = x.t; s.addr = x.s.n + (x.h ? ', ' + x.h : ''); s.open = ''; s.x = {};
+        LS.set('route', { age: s.age, t: s.t }); routeWizard();
+        const r = $('.rwres') || $('.rwq:not(.done)'); if (r) r.scrollIntoView({ block: 'nearest' });
+      });
+    };
+    ai.addEventListener('input', debounce(show, 120));
+  }
   view.querySelectorAll('.rwdd').forEach(ddEl => {
     const pq = ddEl.querySelector('.rwddq'), none = ddEl.querySelector('.rwnone');
     const filt = () => {
@@ -820,7 +887,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '2.7';
+const APP_VERSION = '2.8';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');

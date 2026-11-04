@@ -648,3 +648,24 @@ details.susp .sfoot { margin-top: 6px; color: var(--muted); font-size: 12px; }
 .rwli:active, .rwli.on { background: var(--accent-soft); }
 .rwnone { padding: 14px 12px; color: var(--muted); font-size: 14px; }
 .rwli[hidden], .rwgrp[hidden], .rwnone[hidden] { display: none; }
+
+.rwab { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rwab .rwc { text-align: center; padding: 12px 8px; font-size: 16px; font-weight: 600; }
+.rwsub { margin-top: 10px; }
+.rwsubh { font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+.mkbcard.routecard { border-radius: 16px; background: var(--surface); color: var(--fg); border: 1.5px solid color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.routecard svg { stroke: var(--accent); }
+.routecard .ts { color: var(--muted); opacity: 1; }
+.routecard .chev { margin-left: auto; padding-left: 8px; color: var(--muted); font-size: 22px; }
+.rwcs.rwkid { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 6px; }
+.rwkid .rwc { text-align: center; padding: 8px 4px; font-size: 13.5px; }
+
+.rwaddr .rwddf { background: var(--surface); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.rwaddr .rwddf svg { stroke: var(--accent); }
+.rwasug { margin-top: 4px; }
+.rwas { display: block; padding: 9px 12px; border: 1px solid var(--line); border-radius: 10px; margin-top: 6px; color: var(--fg); text-decoration: none; cursor: pointer; background: var(--surface2); }
+.rwas b { font-weight: 600; font-size: 15px; }
+.rwas .rwao { float: right; margin-left: 8px; font-size: 13px; font-weight: 700; color: var(--green); }
+.rwas small { display: block; clear: both; font-size: 12px; color: var(--muted); margin-top: 2px; }
+.rwas.no { opacity: .85; }
+.rwor { font-size: 12.5px; color: var(--muted); margin: 12px 0 6px; text-align: center; }

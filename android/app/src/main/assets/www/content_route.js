@@ -284,6 +284,7 @@ window.ROUTE = (function () {
     const tract = () => ask("tract", "Тюменский МО: какой тракт?", TRACTS);
     // ---------------- дети
     if (kid) {
+      if (age === "kid" && ["k_ori", "k_endo", "k_card"].includes(p) && tmn(t)) return { needAge: true };
       if (p === "tick") return { res: [tmn(t) ? r("oikb") : NOD], src: S116 };
       if (p === "k_birth") return { res: [tmn(t) ? r("pce") : NOD], src: S111 };
       if (inT(t, "tob")) return { res: [r("ob3", "все профили")], src: S116 };
