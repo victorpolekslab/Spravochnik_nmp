@@ -590,4 +590,8 @@ details.susp .sfoot { margin-top: 6px; color: var(--muted); font-size: 12px; }
 .ttab td, .ttab th { overflow-wrap: anywhere; hyphens: auto; }
 .ttab thead th { font-size: 11px; }
 .ttab thead th.tt1 { color: var(--green); } .ttab thead th.tt2 { color: #C77700; } .ttab thead th.tt3 { color: var(--red); }
-.ttab tr:last-child th, .ttab tr:last-child td { border-bottom: 0; font-weight: 600; }
+.ttab tr:last-child th, .ttab tr:last-child td { border-bottom: 0; }
+.ttab.toned tr:last-child th, .ttab.toned tr:last-child td { font-weight: 600; }
+.ttab.c2 table { table-layout: auto; }
+.ttab.c2 tbody th { width: auto; color: var(--fg); font-weight: 500; }
+.ttab.c2 td { white-space: nowrap; }
