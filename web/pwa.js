@@ -135,12 +135,13 @@
           if (!r.length) break;
           path.push(r[0]); anc.push(r[0].code); p = r[0].parent;
         }
-        const sql = 'WITH RECURSIVE sub(id) AS (SELECT ? UNION ALL SELECT m.id FROM mkb m JOIN sub ON m.parent=sub.id) ' +
-          'SELECT cr.id, cr.code, cr.version, cr.name, cr.age, cr.pub, EXISTS(SELECT 1 FROM sec WHERE sec.cr=cr.id) AS off, ' +
+        // guidelines are shown at the code they list and below it; a 3-character category (J45) also shows its subcodes' guidelines
+        const own = [n.code, ...anc];
+        const cat = /^[A-Z]\d\d$/.test(n.code || '') ? 1 : 0;
+        const sql = 'SELECT cr.id, cr.code, cr.version, cr.name, cr.age, cr.pub, EXISTS(SELECT 1 FROM sec WHERE sec.cr=cr.id) AS off, ' +
           'group_concat(DISTINCT cm.code) AS via FROM cr_mkb cm JOIN cr ON cr.id=cm.cr ' +
-          "WHERE cm.code IN (SELECT code FROM mkb WHERE id IN sub) OR cm.code IN (''" + anc.map(() => ',?').join('') + ') ' +
-          'GROUP BY cr.id ORDER BY cr.name';
-        return J({ node: n, path: path.reverse(), children: JSON.parse(Native.mkbChildren(id)), cr: rows(sql, [id, ...anc]) });
+          'WHERE cm.code IN (' + own.map(() => '?').join(',') + ') OR (? = 1 AND cm.code LIKE ?) GROUP BY cr.id ORDER BY cr.name';
+        return J({ node: n, path: path.reverse(), children: JSON.parse(Native.mkbChildren(id)), cr: rows(sql, [...own, cat, (n.code || '') + '.%']) });
       } catch (e) { return err(e); }
     },
     mkbSearch(q) {

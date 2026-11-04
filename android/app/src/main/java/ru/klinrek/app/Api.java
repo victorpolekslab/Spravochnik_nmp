@@ -236,19 +236,23 @@ public class Api {
             for (int i = path.length() - 1; i >= 0; i--) rev.put(path.get(i));
             o.put("path", rev);
             o.put("children", new JSONArray(mkbChildren(id)));
-            // guidelines: codes of this subtree + codes of ancestors (rubric-level codes cover sub-codes)
-            StringBuilder anc = new StringBuilder("''");
+            // guidelines are shown at the code they list and below it (ancestor codes);
+            // a 3-character category (J45) also shows guidelines listed for its subcodes (J45.0 ...)
+            String code = n.optString("code", "");
             List<String> args = new ArrayList<>();
-            args.add(String.valueOf(id));
+            StringBuilder own = new StringBuilder("?");
+            args.add(code);
             for (String a : ancestorCodes) {
-                anc.append(",?");
+                own.append(",?");
                 args.add(a);
             }
-            String sql = "WITH RECURSIVE sub(id) AS (SELECT ? UNION ALL SELECT m.id FROM mkb m JOIN sub ON m.parent=sub.id) "
-                    + "SELECT cr.id, cr.code, cr.version, cr.name, cr.age, cr.pub, "
+            boolean cat = code.matches("[A-Z]\\d\\d");
+            args.add(cat ? "1" : "0");
+            args.add(code + ".%");
+            String sql = "SELECT cr.id, cr.code, cr.version, cr.name, cr.age, cr.pub, "
                     + "EXISTS(SELECT 1 FROM sec WHERE sec.cr=cr.id) AS off, "
                     + "group_concat(DISTINCT cm.code) AS via FROM cr_mkb cm JOIN cr ON cr.id=cm.cr "
-                    + "WHERE cm.code IN (SELECT code FROM mkb WHERE id IN sub) OR cm.code IN (" + anc + ") "
+                    + "WHERE cm.code IN (" + own + ") OR (? = '1' AND cm.code LIKE ?) "
                     + "GROUP BY cr.id ORDER BY cr.name";
             o.put("cr", rows(db.rawQuery(sql, args.toArray(new String[0]))));
             return o.toString();

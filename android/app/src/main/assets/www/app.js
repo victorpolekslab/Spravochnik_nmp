@@ -286,9 +286,10 @@ function mkbNode(id) {
     ${n.orig ? `<div class="sub">Исправлена опечатка источника. В справочнике НСИ: «${esc(n.orig)}»</div>` : ''}</div>`;
   const schemes = [...new Set((r.cr || []).flatMap(x => SCHEME_BY_CR[x.id] || []))];
   if (schemes.length) h += `<div class="sec-h">Схемы для фельдшера</div><ul class="list">${schemes.map(s => `<li><a href="#d/${s}"><span class="ti sm"><svg viewBox="0 0 24 24"><path d="${ICON[s] || ICON.bol}"/></svg></span><span class="nm"><b>${esc(byId[s].title)}</b></span><span class="chev">›</span></a></li>`).join('')}</ul>`;
-  h += r.cr && r.cr.length ? `<div class="sec-h">Клинические рекомендации: ${r.cr.length}</div><ul class="list">` + r.cr.map(x => crItem(x, 'коды: ' + x.via)).join('') + '</ul>'
-    : '<div class="sec-h">Клинические рекомендации</div><div class="empty">Действующих рекомендаций с этим кодом нет</div>';
-  if (r.children && r.children.length) h += `<div class="sec-h">Входящие коды: ${r.children.length}</div><ul class="list">` + r.children.map(x => mkbItem(x)).join('') + '</ul>';
+  const kids = r.children && r.children.length ? `<div class="sec-h">Входящие коды: ${r.children.length}</div><ul class="list">` + r.children.map(x => mkbItem(x)).join('') + '</ul>' : '';
+  if (r.cr && r.cr.length) h += `<div class="sec-h">Клинические рекомендации: ${r.cr.length}</div><ul class="list">` + r.cr.map(x => crItem(x, 'коды: ' + x.via)).join('') + '</ul>' + kids;
+  else if (kids) h += '<p class="mkbhint">Рекомендации привязаны к конкретным кодам. Число «КР» справа — сколько рекомендаций внутри рубрики.</p>' + kids;
+  else h += '<div class="sec-h">Клинические рекомендации</div><div class="empty">Действующих рекомендаций с этим кодом нет</div>';
   view.innerHTML = h;
 }
 
@@ -637,7 +638,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '1.5';
+const APP_VERSION = '1.6';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 window.onUpdate = info => {
   if (!info || !info.url || $('.updbar')) return;
