@@ -154,7 +154,8 @@ const TOOLS = [
   { h: '#calc/bmi', t: 'Индекс массы тела', s: 'ИМТ, степень ожирения', i: 'M6 20h12M8 20V9h8v11M12 9V5M9 5h6' },
   { h: '#calc/gcs', t: 'Шкала комы Глазго', s: 'уровень сознания E·V·M', i: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z' },
   { h: '#calc/shock', t: 'Индекс Альговера', s: 'шоковый индекс, кровопотеря', i: 'M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11zM9 14h6' },
-  { h: '#calc/vas', t: 'Шкала боли (ВАШ)', s: '0–10, интенсивность боли', i: 'M4 12h16M4 12l3-3M4 12l3 3M20 12l-3-3M20 12l-3 3' }
+  { h: '#calc/vas', t: 'Шкала боли (ВАШ)', s: '0–10, интенсивность боли', i: 'M4 12h16M4 12l3-3M4 12l3 3M20 12l-3-3M20 12l-3 3' },
+  { h: '#calc/skin', t: 'Кожные элементы', s: 'определитель морфологии сыпи', i: 'M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4.5-4.5M8 9h.01M12 8.5h.01M10.5 12.5h.01' }
 ];
 function home() {
   setTitle('Справочник фельдшера НМП', true);
@@ -342,7 +343,7 @@ window.onDl = (id, ok, msg) => {
 
 // ---------------------------------------------------------------- calculators
 function calcPage(k) {
-  ({ bmi: calcBmi, gcs: calcGcs, shock: calcShock, vas: calcVas }[k] || home)();
+  ({ bmi: calcBmi, gcs: calcGcs, shock: calcShock, vas: calcVas, skin: calcSkin }[k] || home)();
 }
 function numField(id, label, unit, val, ph) {
   return `<label class="nf"><span>${esc(label)}</span><input id="${id}" type="number" inputmode="decimal" value="${esc(val == null ? '' : val)}" placeholder="${esc(ph || '')}"><em>${esc(unit)}</em></label>`;
@@ -351,6 +352,43 @@ const num = id => { const v = parseFloat(String(($('#' + id) || {}).value || '')
 const f1 = v => String(Math.round(v * 10) / 10).replace('.', ',');
 const f2 = v => String(Math.round(v * 100) / 100).replace('.', ',');
 function srcLine(list) { return `<div class="csrc">Источник: ${list.map(c => `<a href="#cr/${c}" class="src kr">КР${c}</a>`).join(' ')}</div>`; }
+
+// ---------------------------------------------------------------- skin elements (data: content_skin.js)
+function calcSkin() {
+  setTitle('Кожные элементы', false);
+  const T = window.SKIN || {};
+  const qs = new URLSearchParams((location.hash.split('?')[1]) || '');
+  const path = (qs.get('p') || 'start').split(',').filter(k => T[k]);
+  if (!path.length || path[0] !== 'start') path.unshift('start');
+  const id = path[path.length - 1], n = T[id];
+  const to = next => '#calc/skin?p=' + [...path, next].join(',');
+  // answers so far
+  const trail = path.slice(0, -1).map((k, i) => {
+    const o = (T[k].opts || []).find(x => x.go === path[i + 1]);
+    return o ? `<a class="sktr" href="#calc/skin?p=${path.slice(0, i + 1).join(',')}">${esc(o.t)}</a>` : '';
+  }).join('<span class="skar">›</span>');
+  let h = trail ? `<div class="sktrail">${trail}</div>` : '';
+  if (n.q) {
+    h += `<div class="calc-card skq"><div class="skstep">Шаг ${path.length}</div><h2>${esc(n.q)}</h2>${n.hint ? `<div class="skhint">${esc(n.hint)}</div>` : ''}
+      <div class="skopts">${n.opts.map(o => `<a class="skopt${o.red ? ' red' : ''}" href="${to(o.go)}"><b>${esc(o.t)}</b>${o.sub ? `<small>${esc(o.sub)}</small>` : ''}<span class="chev">›</span></a>`).join('')}</div></div>`;
+  } else {
+    const kr = c => ` <a href="#cr/${c}" class="src kr">КР${c}</a>`;
+    h += `<div class="calc-card skres${n.urgent ? ' urgent' : ''}">
+      ${n.kind ? `<div class="skkind">${esc(n.kind)}</div>` : ''}<h2>${esc(n.r)}</h2><p class="skdef">${esc(n.def)}</p>
+      ${n.urgentIfFever ? '<div class="skalarm">Есть лихорадка или ребёнок/взрослый выглядит тяжело — вызов СМП немедленно (менингококковая инфекция).</div>' : ''}
+      ${n.act ? `<h3>Что делать</h3><ol class="skact">${n.act.map(x => `<li>${esc(x)}</li>`).join('')}</ol>` : ''}
+      ${n.think ? `<h3>О чём подумать</h3><ul class="skthink">${n.think.map(x => `<li>${esc(x.t)}${x.kr ? kr(x.kr) : ''}</li>`).join('')}</ul>` : ''}
+      ${n.links ? `<div class="sklinks">${n.links.map(l => `<a href="${l.h}">${esc(l.t)} ›</a>`).join('')}</div>` : ''}
+      ${n.kr ? `<div class="csrc">Источник:${n.kr.map(kr).join('')}</div>` : ''}
+    </div>`;
+    if (n.el) h += `<div class="calc-card skchart"><h3>Запись в карту</h3><p>Сыпь: <b>${esc(n.el)}</b>; локализация — …; размер — … мм; цвет — …; границы чёткие / нечёткие;
+      единичные / множественные, склонность к слиянию / группировке; зуд, боль — …; когда появилась и как распространялась — …</p></div>`;
+    h += `<div class="skbtns"><a class="bigbtn" href="#calc/skin">Определить другой элемент</a></div>`;
+  }
+  h += `<div class="disc">Определитель подсказывает морфологию элемента и направление поиска, диагноз не ставит. Морфология — общепринятая (пропедевтика дерматовенерологии); подсказки о болезнях — по клиническим рекомендациям, где они есть.</div>`;
+  view.innerHTML = h;
+  window.scrollTo(0, 0);
+}
 
 function calcBmi() {
   setTitle('Индекс массы тела', false);
@@ -691,7 +729,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.1';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');

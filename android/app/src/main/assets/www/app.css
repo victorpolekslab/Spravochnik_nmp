@@ -553,3 +553,30 @@ details.susp .sb { color: var(--muted); font-size: 12.5px; }
 details.susp .sp { margin-top: 3px; line-height: 1.4; }
 details.susp .sfoot { margin-top: 6px; color: var(--muted); font-size: 12px; }
 .kgwarn { margin: -4px 12px 10px; padding: 8px 12px; border-radius: 10px; background: var(--red-bg, rgba(192,57,43,.12)); color: var(--fg); font-size: 13.5px; line-height: 1.35; }
+
+.tools .tool:last-child:nth-child(odd) { grid-column: span 2; }
+.sktrail { margin: 10px 12px 0; font-size: 12.5px; line-height: 1.7; color: var(--muted); }
+.sktrail .sktr { color: var(--accent); text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 2px 8px; display: inline-block; }
+.sktrail .skar { margin: 0 4px; }
+.skq h2, .skres h2 { margin: 2px 0 8px; font-size: 19px; line-height: 1.25; }
+.skstep, .skkind { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; }
+.skhint { color: var(--muted); font-size: 13.5px; margin-bottom: 10px; line-height: 1.4; }
+.skopts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.skopt { position: relative; display: block; padding: 12px 34px 12px 14px; border-radius: 12px; background: var(--surface2); color: var(--fg); text-decoration: none; border: 1px solid var(--line); }
+.skopt b { display: block; font-size: 15.5px; font-weight: 600; }
+.skopt small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+.skopt .chev { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 20px; }
+.skopt.red { background: var(--red-bg); border-color: transparent; }
+.skopt.red b { color: var(--red); }
+.skopt:active { transform: scale(.99); }
+.skres.urgent { background: var(--red-bg); border-color: transparent; }
+.skres.urgent h2 { color: var(--red); }
+.skres h3, .skchart h3 { margin: 14px 0 6px; font-size: 14px; color: var(--accent); }
+.skdef { margin: 0; line-height: 1.45; }
+.skalarm { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: var(--red-bg); color: var(--red); font-weight: 600; font-size: 13.5px; }
+.skact, .skthink { margin: 0; padding-left: 20px; line-height: 1.45; }
+.skact li, .skthink li { margin: 4px 0; }
+.sklinks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.sklinks a { padding: 6px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); text-decoration: none; font-weight: 600; font-size: 14px; }
+.skchart p { margin: 0; line-height: 1.5; font-size: 14px; }
+.skbtns { margin: 12px; }
