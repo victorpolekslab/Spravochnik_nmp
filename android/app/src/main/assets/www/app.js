@@ -229,9 +229,92 @@ function topicPage(k) {
   const tp = TOPICS.find(x => x.k === k);
   if (!tp) return go('#rec');
   setTitle(tp.t, false);
+  if (k === 'route' && window.ROUTE) return routeWizard(tp);
   view.innerHTML = `<div class="topic t-${tp.c} solo">${tp.ids.map(i => byId[i]).filter(Boolean).map(d =>
     `<a class="trow" href="#d/${d.id}"><span class="ti"><svg viewBox="0 0 24 24"><path d="${ICON[d.id] || ICON.bol}"/></svg></span>
       <span class="nm"><b>${esc(d.title)}</b><small>${esc(d.sub)}</small></span><span class="chev">›</span></a>`).join('')}</div>`;
+}
+
+// ---------------------------------------------------------------- маршрутизация: мастер (данные и правила — content_route.js)
+const RW_DAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+function dutyNow() {
+  const n = new Date(); if (n.getHours() < 8) n.setDate(n.getDate() - 1);
+  return { d: (n.getDay() + 6) % 7, date: n };
+}
+const RW = { st: null };
+const rwNorm = t => String(t).toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]+/g, ' ').trim();
+function routeWizard(tp) {
+  const R = window.ROUTE;
+  if (!RW.st) { const sv = LS.get('route', {}); RW.st = { age: sv.age || 'ad', p: '', t: sv.t || '', x: {}, d: null, open: '' }; }
+  const s = RW.st, now = dutyNow(), d = s.d == null ? now.d : s.d;
+  const dd = dt => String(dt.getDate()).padStart(2, '0') + '.' + String(dt.getMonth() + 1).padStart(2, '0');
+  const nx = new Date(now.date); nx.setDate(nx.getDate() + 1);
+  const label = (list, k) => { for (const g of list) for (const o of g[1]) if (o[0] === k) return o[1]; return ''; };
+  const plist = s.age === 'ad' ? R.P_AD : (s.age === 'ch' ? [...R.P_CH, R.P_GIRL] : R.P_CH);
+  if (s.p && !label(plist, s.p)) s.p = '';
+  const chip = (k, v, on, t, sub) => `<a class="rwc${on ? ' on' : ''}" data-k="${k}" data-v="${esc(v)}">${esc(t)}${sub ? `<small>${esc(sub)}</small>` : ''}</a>`;
+  const q = (n, h, body, done) => `<div class="rwq${done ? ' done' : ''}"><div class="rwh"><span class="rwn">${n}</span>${h}</div>${body}</div>`;
+  const summ = (k, t) => `<a class="rwsum" data-k="open" data-v="${k}"><b>${esc(t)}</b><span>изменить</span></a>`;
+  let h = '';
+  h += q(1, 'Возраст', `<div class="rwcs">${R.AGES.map(o => chip('age', o[0], s.age === o[0], o[1])).join('')}</div>`, true);
+  const ddBox = (k, groups, kw, ph) => `<div class="rwdd${s.open === k ? ' open' : ''}" data-dd="${k}"><div class="rwddf"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
+      <input class="rwddq" type="search" placeholder="${esc(ph)}" autocomplete="off" spellcheck="false"><span class="rwddar">▾</span></div>
+      <div class="rwlist">${groups.map(g => `<div class="rwgrp"><div class="rwg">${esc(g[0])}</div>${g[1].map(o =>
+        `<a class="rwli${s[k] === o[0] ? ' on' : ''}" data-k="${k}" data-v="${o[0]}" data-s="${esc(rwNorm([o[1], o[2] || '', g[0], kw[o[0]] || ''].join(' ')))}">${esc(o[1])}${o[2] ? `<small>${esc(o[2])}</small>` : ''}</a>`).join('')}</div>`).join('')}
+        <div class="rwnone" hidden>Ничего не найдено — попробуйте другое слово</div></div></div>`;
+  h += q(2, 'Повод', s.p && s.open !== 'p' ? summ('p', label(plist, s.p)) : ddBox('p', plist, R.KW, 'Поиск: инфаркт, инсульт, роды…'), !!s.p);
+  h += q(3, 'Район вызова', s.t && s.open !== 't' ? summ('t', label(R.TER, s.t)) : ddBox('t', R.TER, R.KW_T, 'Поиск: Калининский, Ишим, тракт…'), !!s.t);
+  let res = null;
+  if (s.p && s.t) {
+    res = R.find({ age: s.age, p: s.p, t: s.t, x: s.x, d });
+    Object.keys(s.x).forEach(k => { const l = (s.xl || {})[k]; if (l) h += q('✓', esc(l.q), `<a class="rwsum" data-k="xdel" data-v="${k}"><b>${esc(l.a)}</b><span>изменить</span></a>`, true); });
+    if (res.ask) h += q('?', esc(res.ask.q), `<div class="rwcs">${res.ask.opts.map(o => chip('x:' + res.ask.k, o[0], s.x[res.ask.k] === o[0], o[1])).join('')}</div>`);
+  }
+  const cap = d === now.d ? `Дежурные сутки: ${RW_DAYS[d]} ${dd(now.date)} 08:00 — ${RW_DAYS[(d + 1) % 7]} ${dd(nx)} 08:00`
+    : `Выбран другой день: ${RW_DAYS[d]} 08:00 — ${RW_DAYS[(d + 1) % 7]} 08:00`;
+  h += q(4, 'День', `<div class="rwdays">${RW_DAYS.map((x, i) => `<a class="rwc${i === d ? ' on' : ''}" data-k="d" data-v="${i}">${x}${i === now.d ? '<small>сейчас</small>' : ''}</a>`).join('')}</div>
+    <div class="rwcap">${cap}${res && res.res && !res.ask && !res.day ? ' · <i>на этот повод день не влияет</i>' : ''}</div>`, true);
+  if (res && res.res && !res.ask) {
+    h += `<div class="rwres">${res.res.map(x => { const H = R.H[x.h] || ['?', '']; return `<div class="rwto"><div class="rwk">Везти</div><div class="rwnm">${esc(H[0])}</div>${H[1] ? `<div class="rwad">${esc(H[1])}</div>` : ''}${x.why ? `<div class="rwwhy">${esc(x.why)}</div>` : ''}</div>`; }).join('')}
+      ${(res.warn || []).map(w => `<div class="rwwarn">${esc(w)}</div>`).join('')}
+      ${(res.note || []).length ? `<ul class="rwnote">${res.note.map(n => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+      ${res.phone ? `<div class="rwph">${esc(res.phone)}</div>` : ''}
+      ${res.src ? `<div class="csrc">Основание: ${esc(res.src)}</div>` : ''}</div>`;
+  } else if (!res) h += `<div class="rwempty">Выберите повод и район — здесь появится стационар.</div>`;
+  h += `<div class="sec-h">Таблицы приказов</div><div class="topic t-${tp.c}">${tp.ids.map(i => byId[i]).filter(Boolean).map(x =>
+    `<a class="trow" href="#d/${x.id}"><span class="nm"><b>${esc(x.title)}</b><small>${esc(x.sub)}</small></span><span class="chev">›</span></a>`).join('')}</div>
+    <p class="disc">Маршруты — по приказам ДЗ Тюменской области, загруженным в справочник. При расхождении с распоряжением старшего врача или диспетчера — действует распоряжение.</p>`;
+  view.innerHTML = `<div class="rw">${h}</div>`;
+  view.querySelectorAll('.rw [data-k]').forEach(el => el.onclick = () => {
+    const k = el.dataset.k, v = el.dataset.v;
+    if (k === 'open') s.open = v;
+    else if (k === 'age') { s.age = v; }
+    else if (k === 'p') { s.p = v; s.open = ''; s.x = {}; }
+    else if (k === 't') { s.t = v; s.open = ''; s.x = {}; }
+    else if (k === 'd') s.d = +v === now.d ? null : +v;
+    else if (k === 'xdel') delete s.x[v];
+    else if (k.startsWith('x:')) { const kk = k.slice(2); s.x[kk] = v; s.xl = s.xl || {}; s.xl[kk] = { q: el.closest('.rwq').querySelector('.rwh').textContent.replace(/^\?/, ''), a: el.textContent }; }
+    LS.set('route', { age: s.age, t: s.t });
+    const y = window.scrollY; routeWizard(tp); window.scrollTo(0, y);
+    if (k === 'p' || k === 't' || k.startsWith('x:')) { const r = $('.rwres') || $('.rwq:not(.done)'); if (r) r.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
+  });
+  view.querySelectorAll('.rwdd').forEach(ddEl => {
+    const pq = ddEl.querySelector('.rwddq'), none = ddEl.querySelector('.rwnone');
+    const filt = () => {
+      const ws = rwNorm(pq.value).split(' ').filter(Boolean);
+      let any = false;
+      ddEl.querySelectorAll('.rwgrp').forEach(g => {
+        let n = 0;
+        g.querySelectorAll('.rwli').forEach(li => { const hay = ' ' + li.dataset.s; const ok = ws.every(w => hay.includes(' ' + w)); li.hidden = !ok; if (ok) n++; });
+        g.hidden = !n; if (n) any = true;
+      });
+      none.hidden = any;
+    };
+    pq.addEventListener('focus', () => ddEl.classList.add('open'));
+    pq.addEventListener('input', () => { ddEl.classList.add('open'); filt(); });
+    ddEl.querySelector('.rwddar').onclick = () => ddEl.classList.toggle('open');
+    if (s.open === ddEl.dataset.dd) { s.open = ''; setTimeout(() => pq.focus(), 50); }
+  });
 }
 
 // ---------------------------------------------------------------- MKB-10
@@ -737,7 +820,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '2.5';
+const APP_VERSION = '2.6';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
