@@ -472,7 +472,7 @@ function disease(id, kind) {
     <div class="seg n${d.sections.length}">${d.sections.map((x, j) => `<a class="${j === i ? 'on' : ''} k-${x.kind}" href="#d/${id}/${j}" data-k="${j}">${esc(label(x))}</a>`).join('')}</div>`;
   if (label(sec) !== sec.title) h += `<div class="sectitle">${esc(sec.title)}</div>`;
   if (sec.kind === 'kids' || JSON.stringify(sec.blocks).includes('"kg":')) {
-    h += `<div class="kgbar"><label for="kg">${sec.kind === 'kids' ? 'Масса ребёнка' : 'Масса пациента'}</label><input id="kg" type="number" inputmode="decimal" min="1" max="150" step="0.5" value="${esc(kgW)}" placeholder="—"><span>кг</span></div>`;
+    h += `<div class="kgbar"><label for="kg">${sec.kind === 'kids' ? 'Масса ребёнка' : 'Масса пациента'}</label><input id="kg" type="number" inputmode="decimal" min="1" max="150" step="0.5" value="${esc(kgW)}" placeholder="—"><span>кг</span></div><div class="kgwarn" id="kgwarn" hidden></div>`;
   }
   h += '<div class="blocks">' + sec.blocks.map(block).join('') + '</div>';
   const names = crNames();
@@ -511,7 +511,7 @@ function suspBox(k) {
     <div class="sfoot">${srcBadge('инстр.')} ${ready ? 'Сверьте концентрацию на флаконе — от неё зависит объём.' : 'Объём воды и срок хранения — по инструкции конкретного препарата; сверьте концентрацию на флаконе.'}</div></details>`;
 }
 function drugRow(x, opt) {
-  return `<div class="drug${opt ? ' opt' : ''}"${x.kg ? ` data-kg='${esc(JSON.stringify(x.kg))}'` : ''}${x.susp ? ` data-susp="${esc(x.susp)}"` : ''}>
+  return `<div class="drug${opt ? ' opt' : ''}"${x.kg ? ` data-kg='${esc(JSON.stringify(x.kg))}'` : ''}${x.susp ? ` data-susp="${esc(x.susp)}"` : ''}${x.adult ? ` data-adult='${esc(JSON.stringify(x.adult))}'` : ''}>
     <div class="dn">${esc(x.n)}</div>
     <div class="dd">${esc(x.d)}</div>
     ${x.note ? `<div class="dnote">${esc(x.note)}</div>` : ''}
@@ -625,24 +625,44 @@ function fmtN(v, unit) {
 function rng(a, b, unit) { return a === b ? fmtN(a, unit) : `${fmtN(a, unit)}–${fmtN(b, unit)}`; }
 function updateCalc() {
   const w = parseFloat(String(kgW).replace(',', '.'));
+  const kids = /ребёнка/.test((document.querySelector('.kgbar label') || {}).textContent || '');
+  const warn = $('#kgwarn');
+  if (warn) {
+    let t = '';
+    if (w >= 200 || w <= 0) t = 'Проверьте массу тела.';
+    else if (kids && w > 100) t = 'Проверьте массу: для ребёнка это необычно много. При массе ≥ 40 кг дозы — как для взрослых.';
+    else if (kids && w >= 40) t = 'Масса ≥ 40 кг: антибиотики и жаропонижающие — в дозах для взрослых (КР313_3), расчёт на кг не применяется.';
+    warn.textContent = t; warn.hidden = !t;
+  }
   document.querySelectorAll('.drug[data-kg]').forEach(el => {
     const c = JSON.parse(el.dataset.kg), out = el.querySelector('.calc');
     if (!out) return;
     if (!(w > 0 && w < 200)) { out.innerHTML = '<span class="cmuted">Введите массу тела вверху — посчитаю дозу</span>'; return; }
+    const ad = el.dataset.adult ? JSON.parse(el.dataset.adult) : null;
+    if (ad && w >= ad.from) {
+      out.innerHTML = `<span class="cw">${fmtN(w, 'мг')} кг:</span> масса ≥ ${ad.from} кг — <b>${esc(ad.lbl || 'доза для взрослых')}: ${esc(ad.d)}</b> ${srcBadge(ad.src)}`
+        + (ad.lbl ? '' : '<br><span class="cap">Пересчёт на кг и детские суспензии не применяются.</span>');
+      return;
+    }
     const u = c.unit || 'мг';
-    let lo = c.lo * w, hi = c.hi * w, capped = false;
+    let lo = c.lo * w, hi = c.hi * w, capped = false, adultCap = false;
+    // a child's dose never exceeds the adult one
+    const capAdult = (v, m) => { if (m && v > m) { adultCap = true; return m; } return v; };
     let txt = '';
     if (c.per === 'сут') {
       if (c.max && hi > c.max) { hi = c.max; capped = true; } if (c.max && lo > c.max) lo = c.max;
+      if (ad) { hi = capAdult(hi, ad.day); lo = Math.min(lo, hi); }
       txt = `<b>${rng(lo, hi, u)} ${u}/сут</b>`;
       if (c.div && c.div > 1) txt += ` → по <b>${rng(lo / c.div, hi / c.div, u)} ${u}</b> × ${c.div} р/сут`;
     } else {
       if (c.max && hi > c.max) { hi = c.max; capped = true; } if (c.max && lo > c.max) lo = c.max;
+      if (ad) { hi = capAdult(hi, ad.dose); lo = Math.min(lo, hi); }
       txt = `<b>${rng(lo, hi, u)} ${u}</b> на приём`;
-      if (c.maxDay) txt += `; не более <b>${fmtN(c.maxDay * w, u)} ${u}/сут</b>`;
+      if (c.maxDay) txt += `; не более <b>${fmtN(ad && ad.day ? capAdult(c.maxDay * w, ad.day) : c.maxDay * w, u)} ${u}/сут</b>`;
     }
     if (c.conc && c.per !== 'сут') txt += ` = <b>${rng(lo / c.conc, hi / c.conc, 'мл')} мл</b> <span class="cap">(${String(c.conc).replace('.', ',')} ${esc(c.concUnit || '')})</span>`;
     if (capped) txt += ` <span class="cap">(ограничено максимумом${c.maxNote ? ', ' + esc(c.maxNote) : ''})</span>`;
+    if (adultCap) txt += ` <span class="cap">(не больше дозы для взрослых)</span>`;
     // pediatric forms: millilitres of suspension per dose / dispersible tablets
     const forms = suspForms(el.dataset.susp);
     if (forms && u === 'мг') {
@@ -664,7 +684,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.9';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');

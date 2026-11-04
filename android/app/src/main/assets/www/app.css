@@ -552,3 +552,4 @@ details.susp .sf { margin: 6px 0 0; padding: 8px 10px; background: var(--surface
 details.susp .sb { color: var(--muted); font-size: 12.5px; }
 details.susp .sp { margin-top: 3px; line-height: 1.4; }
 details.susp .sfoot { margin-top: 6px; color: var(--muted); font-size: 12px; }
+.kgwarn { margin: -4px 12px 10px; padding: 8px 12px; border-radius: 10px; background: var(--red-bg, rgba(192,57,43,.12)); color: var(--fg); font-size: 13.5px; line-height: 1.35; }
