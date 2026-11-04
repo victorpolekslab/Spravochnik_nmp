@@ -501,12 +501,22 @@ function drugItem(x) {
   }
   return drugRow(x);
 }
+const suspForms = k => (k && typeof SUSP !== 'undefined' && SUSP[k]) || null;
+function suspBox(k) {
+  const f = suspForms(k);
+  if (!f) return '';
+  const ready = f.every(x => x.ready);
+  return `<details class="susp"><summary>${ready ? 'Готовая суспензия: сколько мл' : 'Суспензия: как приготовить и сколько мл'}</summary>
+    ${f.map(x => `<div class="sf"><b>${esc(x.lbl)}</b> <span class="sb">${esc(x.brand || '')}</span><div class="sp">${esc(x.prep)}</div></div>`).join('')}
+    <div class="sfoot">${srcBadge('инстр.')} ${ready ? 'Сверьте концентрацию на флаконе — от неё зависит объём.' : 'Объём воды и срок хранения — по инструкции конкретного препарата; сверьте концентрацию на флаконе.'}</div></details>`;
+}
 function drugRow(x, opt) {
-  return `<div class="drug${opt ? ' opt' : ''}"${x.kg ? ` data-kg='${esc(JSON.stringify(x.kg))}'` : ''}>
+  return `<div class="drug${opt ? ' opt' : ''}"${x.kg ? ` data-kg='${esc(JSON.stringify(x.kg))}'` : ''}${x.susp ? ` data-susp="${esc(x.susp)}"` : ''}>
     <div class="dn">${esc(x.n)}</div>
     <div class="dd">${esc(x.d)}</div>
     ${x.note ? `<div class="dnote">${esc(x.note)}</div>` : ''}
     ${x.kg ? '<div class="calc"></div>' : ''}
+    ${suspBox(x.susp)}
     <div class="dsrc">${srcBadge(x.src)}</div></div>`;
 }
 function block(b) {
@@ -633,12 +643,28 @@ function updateCalc() {
     }
     if (c.conc && c.per !== 'сут') txt += ` = <b>${rng(lo / c.conc, hi / c.conc, 'мл')} мл</b> <span class="cap">(${String(c.conc).replace('.', ',')} ${esc(c.concUnit || '')})</span>`;
     if (capped) txt += ` <span class="cap">(ограничено максимумом${c.maxNote ? ', ' + esc(c.maxNote) : ''})</span>`;
+    // pediatric forms: millilitres of suspension per dose / dispersible tablets
+    const forms = suspForms(el.dataset.susp);
+    if (forms && u === 'мг') {
+      txt += forms.map(f => {
+        const div = c.per === 'сут' ? (f.div || c.div || 1) : 1;
+        const a1 = c.per === 'сут' ? lo / div : lo, b1 = c.per === 'сут' ? hi / div : hi;
+        const times = c.per === 'сут' && div > 1 ? ` × ${div} р/сут` : '';
+        if (f.tab) {
+          let x1 = Math.ceil(a1 / f.tab) * f.tab, x2 = Math.floor(b1 / f.tab) * f.tab;
+          if (x1 > x2) x1 = x2 = Math.max(f.tab, Math.round((a1 + b1) / 2 / f.tab) * f.tab);
+          return `<div class="sml">${esc(f.brand)}: ≈ <b>${rng(x1, x2, 'мг')} мг</b>${times} <span class="cap">(таблетки 125/250/500 мг)</span></div>`;
+        }
+        const k = f.mg / f.ml;
+        return `<div class="sml">${esc(f.lbl.replace(/ \(.*\)$/, ''))}: ${c.per === 'сут' ? 'по ' : ''}<b>${rng(a1 / k, b1 / k, 'мл')} мл</b>${times}</div>`;
+      }).join('');
+    }
     out.innerHTML = `<span class="cw">${fmtN(w, 'мг')} кг:</span> ${txt}`;
   });
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');

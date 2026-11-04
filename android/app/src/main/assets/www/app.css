@@ -542,3 +542,13 @@ body.nohead::before { content: ''; position: fixed; top: 0; left: 0; right: 0; h
 .updbar .x { flex: none; width: 32px; height: 32px; border: 0; background: none; font-size: 22px; color: var(--muted); }
 .mkbhint { margin: 14px 16px 4px; color: var(--muted); font-size: 13px; line-height: 1.4; }
 .updres { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+.calc .sml { margin-top: 3px; padding-left: 10px; border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+details.susp { margin-top: 6px; font-size: 13.5px; }
+details.susp summary { cursor: pointer; color: var(--accent); font-weight: 600; list-style: none; padding: 4px 0; }
+details.susp summary::-webkit-details-marker { display: none; }
+details.susp summary::before { content: '▸ '; }
+details.susp[open] summary::before { content: '▾ '; }
+details.susp .sf { margin: 6px 0 0; padding: 8px 10px; background: var(--surface2); border-radius: 8px; }
+details.susp .sb { color: var(--muted); font-size: 12.5px; }
+details.susp .sp { margin-top: 3px; line-height: 1.4; }
+details.susp .sfoot { margin-top: 6px; color: var(--muted); font-size: 12px; }
