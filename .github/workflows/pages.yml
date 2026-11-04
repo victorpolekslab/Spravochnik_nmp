@@ -1,0 +1,58 @@
+name: Публикация веб-версии
+
+on:
+  push:
+    branches: [main, apk]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Сборка
+        working-directory: web
+        run: |
+          npm install --no-audit --no-fund
+          python3 build.py
+      - name: Android-приложение (ветка apk)
+        run: |
+          if git fetch --depth=1 origin apk; then
+            mkdir -p web/dist/download
+            git show FETCH_HEAD:SpravochnikNMP.apk > web/dist/download/SpravochnikNMP.apk
+            git show FETCH_HEAD:android.json > web/dist/android.json
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

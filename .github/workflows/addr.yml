@@ -1,0 +1,19 @@
+name: Адреса Тюмени (OSM)
+on:
+  push:
+    branches: [addr]
+permissions:
+  contents: write
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+jobs:
+  fetch:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 fetch.py
+      - run: |
+          mkdir out && mv tmn_addr.json out/ && cd out
+          git init -q -b addr-data && git add -A
+          git -c user.name=bot -c user.email=bot@example.com commit -qm "Адреса Тюмени из OSM $(date -u +%F)"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" addr-data:addr-data
