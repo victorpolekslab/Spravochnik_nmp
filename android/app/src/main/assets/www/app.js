@@ -108,9 +108,10 @@ const TOPICS = [
   { k: 'inf', t: 'Инфекционные болезни', ids: ['pnevm', 'orvi', 'sinus', 'angina'], c: 'green', i: 'inf' },
   { k: 'preg', t: 'Беременные', ids: ['agb', 'preg_back', 'preg_orvi', 'preg_pnevm', 'preg_uti'], c: 'pink', i: 'agb' },
   { k: 'uro', t: 'Урология', ids: ['uti', 'colic'], c: 'teal', i: 'uro' },
-  { k: 'endo', t: 'Эндокринология', ids: ['sd'], c: 'amber', i: 'sd' }
+  { k: 'endo', t: 'Эндокринология', ids: ['sd'], c: 'amber', i: 'sd' },
+  { k: 'route', t: 'Маршрутизация', ids: ['r_tmn', 'r_onmk', 'r_cardio', 'r_obst', 'r_kids'], c: 'slate', i: 'route' }
 ];
-const TICON = { uro: 'M9 3c-3 0-5 3-5 7s2 7 5 7c1.5 0 2-1 2-2.5V12c0-1-.5-1.5-1.5-1.5M15 3c3 0 5 3 5 7s-2 7-5 7c-1.5 0-2-1-2-2.5V12c0-1 .5-1.5 1.5-1.5M11 17v4M13 17v4', inf: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1' };
+const TICON = { route: 'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11zM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', uro: 'M9 3c-3 0-5 3-5 7s2 7 5 7c1.5 0 2-1 2-2.5V12c0-1-.5-1.5-1.5-1.5M15 3c3 0 5 3 5 7s-2 7-5 7c-1.5 0-2-1-2-2.5V12c0-1 .5-1.5 1.5-1.5M11 17v4M13 17v4', inf: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1' };
 const plural = (n, f) => n + ' ' + (n % 10 === 1 && n % 100 !== 11 ? f[0] : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? f[1] : f[2]);
 const ORDER = TOPICS.flatMap(x => x.ids);
 const DIS = (window.FELD || []).slice().sort((a, b) => (ORDER.indexOf(a.id) + 1 || 99) - (ORDER.indexOf(b.id) + 1 || 99));
@@ -146,7 +147,8 @@ const ICON = {
   preg_pnevm: 'M12 3v8M8 11c-3 0-4 3-4 6 0 2 1 3 3 3s3-2 3-4v-5M16 11c3 0 4 3 4 6 0 2-1 3-3 3s-3-2-3-4v-5',
   preg_uti: 'M9 3c-3 0-5 3-5 7s2 7 5 7c1.5 0 2-1 2-2.5V12c0-1-.5-1.5-1.5-1.5M15 3c3 0 5 3 5 7s-2 7-5 7c-1.5 0-2-1-2-2.5V12c0-1 .5-1.5 1.5-1.5M11 17v4M13 17v4',
   uti: 'M9 3c-3 0-5 3-5 7s2 7 5 7c1.5 0 2-1 2-2.5V12c0-1-.5-1.5-1.5-1.5M15 3c3 0 5 3 5 7s-2 7-5 7c-1.5 0-2-1-2-2.5V12c0-1 .5-1.5 1.5-1.5M11 17v4M13 17v4',
-  colic: 'M13 2L4 14h7l-1 8 9-12h-7z'
+  colic: 'M13 2L4 14h7l-1 8 9-12h-7z',
+  r_tmn: 'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11zM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', r_onmk: 'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11zM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', r_cardio: 'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11zM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', r_obst: 'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11zM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z', r_kids: 'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11zM12 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4z'
 };
 
 // ---------------------------------------------------------------- home (tools)
@@ -564,6 +566,9 @@ function drugRow(x, opt) {
     ${suspBox(x.susp)}
     <div class="dsrc">${srcBadge(x.src)}</div></div>`;
 }
+const DOW = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
+const DOW_S = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+const isToday = c => { const s = String(c).toLowerCase(), d = new Date().getDay(); return s === DOW[d] || s === DOW_S[d]; };
 function block(b) {
   const src = b.src ? `<div class="bsrc">${srcBadge(b.src)}</div>` : '';
   switch (b.t) {
@@ -592,7 +597,7 @@ function block(b) {
         <div class="drugs">${b.rows.map(drugItem).join('')}</div>${b.note ? `<div class="bnote">${esc(b.note)}</div>` : ''}${src}</section>`;
     case 'table':
       return `<section class="b ttab c${b.cols.length}${b.tones ? ' toned' : ''}"><h3>${esc(b.h)}</h3><div class="tw"><table><thead><tr>${b.cols.map((c, i) => `<th class="${b.tones ? 'tt' + (b.tones[i] || '') : ''}">${esc(c)}</th>`).join('')}</tr></thead>
-        <tbody>${b.rows.map(r => `<tr>${r.map((c, i) => i === 0 ? `<th>${esc(c)}</th>` : `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${b.note ? `<div class="bnote">${esc(b.note)}</div>` : ''}${src}</section>`;
+        <tbody>${b.rows.map(r => `<tr${isToday(r[0]) ? ' class="today"' : ''}>${r.map((c, i) => i === 0 ? `<th>${esc(c)}</th>` : `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${b.note ? `<div class="bnote">${esc(b.note)}</div>` : ''}${src}</section>`;
     case 'note':
       return `<section class="b note"><p>${esc(b.text)}</p>${src}</section>`;
     case 'classify': return classifyBlock(b);
@@ -732,7 +737,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '2.4';
+const APP_VERSION = '2.5';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');

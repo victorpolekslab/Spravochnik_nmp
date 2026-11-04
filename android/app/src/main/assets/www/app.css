@@ -443,8 +443,8 @@ nav#tabs a svg { margin-bottom: 2px; }
 .topic .ti { background: color-mix(in srgb, var(--tc) 14%, transparent); } .topic .ti svg { stroke: var(--tc); }
 .trow .nm { flex: 1; min-width: 0; } .trow .nm b { display: block; font-size: 15px; } .trow .nm small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 1px; }
 .trow .hit, .topic .hit { display: block; font-size: 11.5px; color: var(--accent); margin-top: 2px; }
-.t-red { --tc: #C0392B; } .t-rose { --tc: #B23A5A; } .t-violet { --tc: #6E4BB5; } .t-blue { --tc: #1F6FA8; } .t-green { --tc: #23804A; } .t-amber { --tc: #B07A00; } .t-pink { --tc: #B04A8A; } .t-teal { --tc: #0F7C7A; }
-@media (prefers-color-scheme: dark) { .t-red { --tc: #FF8A80; } .t-rose { --tc: #F48FB1; } .t-violet { --tc: #B39DDB; } .t-blue { --tc: #81BEEA; } .t-green { --tc: #8FD3A8; } .t-amber { --tc: #FFD27A; } .t-pink { --tc: #F5A3D3; } .t-teal { --tc: #7FD6CF; } }
+.t-red { --tc: #C0392B; } .t-rose { --tc: #B23A5A; } .t-violet { --tc: #6E4BB5; } .t-blue { --tc: #1F6FA8; } .t-green { --tc: #23804A; } .t-amber { --tc: #B07A00; } .t-pink { --tc: #B04A8A; } .t-teal { --tc: #0F7C7A; } .t-slate { --tc: #3E5C76; }
+@media (prefers-color-scheme: dark) { .t-red { --tc: #FF8A80; } .t-rose { --tc: #F48FB1; } .t-violet { --tc: #B39DDB; } .t-blue { --tc: #81BEEA; } .t-green { --tc: #8FD3A8; } .t-amber { --tc: #FFD27A; } .t-pink { --tc: #F5A3D3; } .t-teal { --tc: #7FD6CF; } .t-slate { --tc: #A9C3DA; } }
 /* ---------- MKB lists ---------- */
 .list { list-style: none; margin: 0; padding: 0 0 8px; }
 .list > li { background: var(--surface); border-bottom: 1px solid var(--line); }
@@ -594,4 +594,10 @@ details.susp .sfoot { margin-top: 6px; color: var(--muted); font-size: 12px; }
 .ttab.toned tr:last-child th, .ttab.toned tr:last-child td { font-weight: 600; }
 .ttab.c2 table { table-layout: auto; }
 .ttab.c2 tbody th { width: auto; color: var(--fg); font-weight: 500; }
-.ttab.c2 td { white-space: nowrap; }
+.ttab.c2 td { min-width: 4.5em; }
+.ttab tr.today th, .ttab tr.today td { background: var(--amber-bg); font-weight: 700; }
+.ttab tr.today th::after { content: ' · сегодня'; font-weight: 400; font-size: 11px; color: var(--muted); }
+.ttab.c7 table, .ttab.c6 table, .ttab.c5 table { font-size: 12px; }
+.ttab.c7 td, .ttab.c6 td { white-space: nowrap; overflow-wrap: normal; hyphens: none; }
+.ttab.c7 tbody th { width: 9%; }
+.ttab.c7 tr.today th::after { content: ''; }
