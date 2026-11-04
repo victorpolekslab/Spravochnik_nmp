@@ -590,6 +590,9 @@ function block(b) {
     case 'rx':
       return `<section class="b rx"><h3><svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="7" rx="3.5" transform="rotate(-45 12 12.5)"/><path d="M9.5 10l5 5"/></svg>${esc(b.h)}</h3>
         <div class="drugs">${b.rows.map(drugItem).join('')}</div>${b.note ? `<div class="bnote">${esc(b.note)}</div>` : ''}${src}</section>`;
+    case 'table':
+      return `<section class="b ttab"><h3>${esc(b.h)}</h3><div class="tw"><table><thead><tr>${b.cols.map((c, i) => `<th class="${b.tones ? 'tt' + (b.tones[i] || '') : ''}">${esc(c)}</th>`).join('')}</tr></thead>
+        <tbody>${b.rows.map(r => `<tr>${r.map((c, i) => i === 0 ? `<th>${esc(c)}</th>` : `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${b.note ? `<div class="bnote">${esc(b.note)}</div>` : ''}${src}</section>`;
     case 'note':
       return `<section class="b note"><p>${esc(b.text)}</p>${src}</section>`;
     case 'classify': return classifyBlock(b);
@@ -729,7 +732,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.3';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
