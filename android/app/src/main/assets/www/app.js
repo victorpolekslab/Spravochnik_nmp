@@ -452,20 +452,31 @@ function learnPage(noFetch) {
     view.innerHTML = `<div class="calc-card lform">
       <h2>Вход</h2><p class="lhint">Логин и пароль выдаёт организатор обучения. Справочник работает и без входа.</p>
       <label class="lf"><span>Логин — фамилия и инициалы</span><input id="lLogin" placeholder="Иванов П.А." autocomplete="username" autocapitalize="words" spellcheck="false"></label>
-      <label class="lf"><span>Пароль</span><input id="lPw" type="password" autocomplete="current-password"></label>
+      <label class="lf"><span>Пароль</span><span class="lpw"><input id="lPw" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false"><button type="button" class="lpeye" id="lEye">показать</button></span></label>
       <div class="lerr" id="lErr"></div>
       <button class="bigbtn" id="lGo">Войти</button></div>
       <p class="disc">Приложение запоминает вход на этом устройстве. Пароль не хранится и никуда не передаётся — проверяется на телефоне.</p>`;
+    const check = (dd, lg, pw) => {
+      const k = learnKey(lg), rec = (dd.users || {})[k], p2 = pw.replace(/\s+/g, '').toLowerCase();
+      return rec && (pwCheck(rec, pw) || (p2 !== pw && pwCheck(rec, p2))) ? k : null;
+    };
+    const ok = (k, lg) => { LS.set('learnUser', { k, name: learnPretty(lg) }); learnPage(true); };
     const go = () => {
       const lg = $('#lLogin').value.trim(), pw = $('#lPw').value, dd = learnData(), er = $('#lErr');
       if (!lg || !pw) { er.textContent = 'Введите логин и пароль'; return; }
-      if (!dd) { er.textContent = LEARN.busy ? 'Загрузка… попробуйте через секунду' : 'Для первого входа нужен интернет'; if (!LEARN.busy) learnFetch(); return; }
       er.textContent = 'Проверка…';
       setTimeout(() => {
-        const k = learnKey(lg);
-        if (pwCheck((dd.users || {})[k], pw)) { LS.set('learnUser', { k, name: learnPretty(lg) }); learnPage(true); } else er.textContent = 'Неверный логин или пароль';
+        const k = dd && check(dd, lg, pw);
+        if (k) return ok(k, lg);
+        // список учёток мог устареть — перекачиваем и проверяем ещё раз
+        learnFetch(() => {
+          const d2 = learnData(), k2 = d2 && check(d2, lg, pw);
+          if (k2) return ok(k2, lg);
+          er.textContent = !d2 ? 'Для первого входа нужен интернет' : LEARN.err ? 'Нет связи — список учётных записей не обновился. Проверьте интернет и попробуйте ещё раз' : 'Неверный логин или пароль';
+        });
       }, 30);
     };
+    $('#lEye').onclick = () => { const f = $('#lPw'), s = f.type === 'password'; f.type = s ? 'text' : 'password'; $('#lEye').textContent = s ? 'скрыть' : 'показать'; };
     $('#lGo').onclick = go;
     $('#lPw').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
     return;
@@ -1140,7 +1151,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '3.1';
+const APP_VERSION = '3.2';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');

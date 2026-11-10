@@ -754,3 +754,6 @@ details.susp .sfoot { margin-top: 6px; color: var(--muted); font-size: 12px; }
 .lvli .h { flex: 1; min-width: 0; } .lvli .t { flex: none; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .lvli.on { background: var(--accent-soft); font-weight: 600; } .lvli.on .n { background: var(--accent); color: var(--accent-fg); }
 .lty.lecture { background: var(--blue); color: #fff; }
+.lpw { position: relative; display: block; }
+.lpw input { padding-right: 96px; }
+.lpeye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: 0; background: none; color: var(--accent); font: inherit; font-size: 13.5px; font-weight: 600; padding: 8px; cursor: pointer; }
