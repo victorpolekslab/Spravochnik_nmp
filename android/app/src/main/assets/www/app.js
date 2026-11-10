@@ -571,10 +571,19 @@ function lecturePage(key) {
   const L = window.LECTURES && LECTURES[key];
   if (!L) return go('#learn');
   setTitle('Лекция', false);
+  if (!L.metaLoaded) {   // тайминг слайдов и версия озвучки — с сайта (можно переозвучить без выпуска приложения)
+    view.innerHTML = '<div class="rwempty">Загрузка лекции…</div>';
+    const done = () => { L.metaLoaded = true; if (cur === '#lecture/' + key) lecturePage(key); };
+    const tm = setTimeout(done, 4000);
+    fetch(SITE + L.dir + 'meta.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(m => {
+      if (m && Array.isArray(m.t) && m.t.length === L.slides.length) { m.t.forEach((t, k) => { L.slides[k].t = t; }); L.dur = m.dur || L.dur; L.ver = m.v || 1; }
+    }).catch(() => {}).finally(() => { clearTimeout(tm); if (!L.metaLoaded) done(); });
+    return;
+  }
   const st = LS.get('lecture_' + key, {}), base = SITE + L.dir, n = L.slides.length;
   if (!window.LECT || LECT.key !== key) {
     if (window.LECT) LECT.audio.pause();
-    const au = new Audio(); au.preload = 'metadata'; au.src = base + L.audio;
+    const au = new Audio(); au.preload = 'metadata'; au.src = base + L.audio + '?v=' + (L.ver || 1);
     window.LECT = { key, audio: au, rate: 1, lastSave: 0 };
     if (st.pos > 5 && !st.done) { const t = st.pos; au.addEventListener('loadedmetadata', () => { au.currentTime = t; }, { once: true }); }
   }
@@ -1151,7 +1160,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '3.2';
+const APP_VERSION = '3.3';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
