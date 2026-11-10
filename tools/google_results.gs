@@ -1,7 +1,7 @@
 /**
  * «Справочник НМП» — сбор результатов обучения в Google Таблицу.
  *
- * Установка: Таблица → Расширения → Apps Script → вставить этот код целиком → Сохранить →
+ * Установка: script.google.com → Новый проект (или Таблица → Расширения → Apps Script) → вставить этот код целиком → Сохранить →
  * Развернуть → Новое развёртывание → Тип: Веб-приложение; Запуск от имени: Я; Доступ: Все → Развернуть →
  * разрешить доступ → скопировать URL веб-приложения (…/exec).
  *
@@ -13,8 +13,21 @@ const READ_KEY = 'ВСТАВЬТЕ_СВОЙ_КЛЮЧ';  // ключ органи
 const USERS_URL = 'https://victorpolekslab.github.io/Spravochnik_nmp/learn.json';
 const HEAD = ['Получено', 'Пройдено', 'Код учётки', 'Материал', 'Событие', 'Баллы', 'Из', 'Ответы', 'Версия', 'Платформа', 'ID события'];
 
+function book_() {   // работает и как отдельный проект: таблица создаётся сама при первом запуске
+  const bound = SpreadsheetApp.getActiveSpreadsheet();
+  if (bound) return bound;
+  const pr = PropertiesService.getScriptProperties(), id = pr.getProperty('SHEET_ID');
+  if (id) { try { return SpreadsheetApp.openById(id); } catch (e) {} }
+  const ss = SpreadsheetApp.create('Справочник НМП — результаты обучения');
+  pr.setProperty('SHEET_ID', ss.getId());
+  return ss;
+}
+
+/** Запустите один раз вручную (кнопка «Выполнить»), чтобы выдать разрешения и создать таблицу. */
+function setup() { const sh = sheet_(); Logger.log('Таблица: ' + sh.getParent().getUrl()); }
+
 function sheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = book_();
   let sh = ss.getSheetByName('Результаты');
   if (!sh) { sh = ss.insertSheet('Результаты'); sh.appendRow(HEAD); sh.setFrozenRows(1); sh.getRange(1, 1, 1, HEAD.length).setFontWeight('bold'); }
   return sh;
@@ -57,7 +70,7 @@ function doPost(e) {
 function doGet(e) {
   if (((e && e.parameter && e.parameter.key) || '') !== READ_KEY) return out_({ ok: false, err: 'key' });
   const v = sheet_().getDataRange().getValues(); v.shift();
-  return out_({ ok: true, rows: v.map(r => ({ at: r[0], ts: r[1], uid: r[2], item: r[3], ev: r[4], score: r[5], total: r[6], ans: r[7] })) });
+  return out_({ ok: true, sheet: sheet_().getParent().getUrl(), rows: v.map(r => ({ at: r[0], ts: r[1], uid: r[2], item: r[3], ev: r[4], score: r[5], total: r[6], ans: r[7] })) });
 }
 
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
