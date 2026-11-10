@@ -79,6 +79,7 @@ window.addEventListener('hashchange', () => {
 function setTitle(t, isRoot) { $('#title').textContent = t; $('#backBtn').hidden = !!isRoot; }
 function setTab(t) { document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.tab === t)); }
 function route() {
+  if (typeof view !== 'undefined' && view) { view.ontouchstart = null; view.ontouchend = null; }
   const h = location.hash || '#home';
   cur = h;
   const [path, qs] = h.slice(1).split('?');
@@ -93,6 +94,7 @@ function route() {
     case 'calc': setTab('home'); calcPage(parts[1]); break;
     case 'route': setTab('home'); routeWizard(); break;
     case 'learn': setTab('home'); learnPage(); break;
+    case 'course': setTab('home'); coursePage(parts[1], parts[2]); break;
     case 'cr': setTab(''); crPage(parts[1]); break;
     case 'about': setTab(''); about(); break;
     case 'doc': doc(parts[1], parts[2], params.get('h') || ''); return;
@@ -467,7 +469,7 @@ function learnPage(noFetch) {
     return;
   }
   const seen = LS.get('learnSeen', []);
-  const TY = { test: ['Тест', 'Пройти тест'], survey: ['Опрос', 'Пройти опрос'], material: ['Материал', 'Открыть'] };
+  const TY = { test: ['Тест', 'Пройти тест'], survey: ['Опрос', 'Пройти опрос'], material: ['Материал', 'Открыть'], course: ['Курс', 'Начать курс'] };
   const items = (d && d.items || []).slice().sort((a, b) => learnPast(a) - learnPast(b));
   const fmt = s => s ? s.split('-').reverse().slice(0, 2).join('.') : '';
   view.innerHTML = `<div class="luser"><span>Вы вошли: <b>${esc(u)}</b></span><a id="lOut">Выйти</a></div>
@@ -475,6 +477,15 @@ function learnPage(noFetch) {
     ${!d ? '<div class="rwempty">Загрузка ленты…</div>' : !items.length ? '<div class="rwempty">Пока заданий нет. Новые появятся здесь.</div>' : ''}
     ${items.map(x => { const t = TY[x.type] || TY.material, past = learnPast(x), isNew = x.new && !seen.includes(x.id) && !past;
       const url = x.url ? x.url.replace(/\{login\}/g, encodeURIComponent(u)) : '';
+      const C = x.type === 'course' && window.COURSES && COURSES[x.course];
+      if (C) {
+        const st = LS.get('course_' + x.course, {}), n = C.cards.length, pos = Math.min(st.pos || 0, n);
+        const btn = st.done ? `Повторить` : pos ? `Продолжить · ${pos + 1}/${n + 1}` : t[1];
+        return `<div class="litem"><div class="lhead"><span class="lty course">Курс</span>${isNew ? '<span class="lnew">новое</span>' : ''}<span class="luntil">${C.cards.length} карточек · ${C.quiz.length} вопросов · ~${C.min} мин</span></div>
+          <h3>${esc(x.title || C.title)}</h3><p>${esc(x.text || C.sub)}</p>
+          ${st.done ? `<div class="ldone">✓ Пройден · проверка ${st.score}/${C.quiz.length}</div>` : ''}
+          <div class="lbtns"><a class="bigbtn lgo" data-id="${esc(x.id)}" href="#course/${x.course}/${st.done ? 0 : pos}">${btn}</a></div></div>`;
+      }
       return `<div class="litem${past ? ' past' : ''}"><div class="lhead"><span class="lty ${x.type}">${t[0]}</span>${isNew ? '<span class="lnew">новое</span>' : ''}${x.until ? `<span class="luntil">${past ? 'завершено' : 'до ' + fmt(x.until)}</span>` : ''}</div>
         <h3>${esc(x.title)}</h3>${x.text ? `<p>${esc(x.text)}</p>` : ''}
         <div class="lbtns">${url && !past ? `<a class="bigbtn lgo" data-id="${esc(x.id)}" href="${esc(url)}" target="_blank" rel="noopener">${t[1]}</a>` : (!past && x.type !== 'material' ? '<span class="lsoon">ссылка появится позже</span>' : '')}
@@ -482,6 +493,53 @@ function learnPage(noFetch) {
     <p class="disc">Результаты тестов и опросов видит организатор обучения. Логин подставляется в форму автоматически.</p>`;
   $('#lOut').onclick = () => { LS.set('learnUser', null); learnPage(true); };
   view.querySelectorAll('[data-id]').forEach(el => el.addEventListener('click', () => { const s = LS.get('learnSeen', []); if (!s.includes(el.dataset.id)) { s.push(el.dataset.id); LS.set('learnSeen', s); } }));
+}
+
+// ---------------------------------------------------------------- курс: карточки + проверка
+function coursePage(key, idx) {
+  const C = window.COURSES && COURSES[key];
+  if (!C) return go('#learn');
+  const n = C.cards.length, st = LS.get('course_' + key, {});
+  let i = Math.max(0, Math.min(parseInt(idx, 10) || 0, n));
+  st.pos = Math.max(st.pos || 0, i); if (i === n && !st.done) st.pos = n; LS.set('course_' + key, st);
+  setTitle(C.title, false);
+  const to = j => { history.replaceState(null, '', '#course/' + key + '/' + j); coursePage(key, j); window.scrollTo(0, 0); };
+  const bar = `<div class="cvbar"><div class="cvprog"><i style="width:${Math.round((i + 1) / (n + 1) * 100)}%"></i></div><span>${i < n ? `${i + 1} / ${n}` : 'Проверка'}</span></div>`;
+  if (i < n) {
+    const c = C.cards[i];
+    view.innerHTML = `<div class="cv">${bar}
+      <article class="cvcard"><div class="cvk">${esc(c.k || '')}</div><h2>${esc(c.h)}</h2>${c.lead ? `<p class="cvlead">${esc(c.lead)}</p>` : ''}
+        <div class="cvb">${(c.blocks || []).map(block).join('')}</div>
+        ${i === 0 ? `<div class="csrc">Основано на: ${esc(C.srcName)}</div>` : ''}</article>
+      <div class="cvnav"><button class="cvbtn sec" id="cvPrev"${i ? '' : ' disabled'}>‹ Назад</button><button class="cvbtn" id="cvNext">${i === n - 1 ? 'К проверке ›' : 'Далее ›'}</button></div></div>`;
+    wireBlocks(view);
+    $('#cvPrev').onclick = () => i && to(i - 1);
+    $('#cvNext').onclick = () => to(i + 1);
+  } else {
+    const ans = {};
+    const render = () => {
+      const done = Object.keys(ans).length === C.quiz.length, score = C.quiz.filter((q, k) => ans[k] === q.a).length;
+      if (done && !st.done) { st.done = true; st.score = score; st.at = Date.now(); LS.set('course_' + key, st); }
+      view.innerHTML = `<div class="cv">${bar}
+        <article class="cvcard"><div class="cvk">Проверка</div><h2>${C.quiz.length} вопросов по курсу</h2><p class="cvlead">Выберите ответ — сразу увидите разбор.</p>
+        ${C.quiz.map((q, k) => `<div class="qz${k in ans ? (ans[k] === q.a ? ' ok' : ' bad') : ''}"><div class="qq"><b>${k + 1}.</b> ${esc(q.q)}</div>
+          ${q.o.map((o, m) => `<button class="qo${k in ans ? (m === q.a ? ' right' : (m === ans[k] ? ' wrong' : '')) : ''}" data-q="${k}" data-o="${m}"${k in ans ? ' disabled' : ''}>${esc(o)}</button>`).join('')}
+          ${k in ans ? `<div class="qe"><b>${ans[k] === q.a ? 'Верно.' : 'Не совсем.'}</b> ${esc(q.e)}</div>` : ''}</div>`).join('')}
+        ${done ? `<div class="qres"><div class="qsc">${score} / ${C.quiz.length}</div><div>${score === C.quiz.length ? 'Отлично — курс пройден без ошибок.' : score >= C.quiz.length - 2 ? 'Курс пройден. Загляните в карточки, где были ошибки.' : 'Стоит пролистать карточки ещё раз.'}</div></div>` : ''}
+        </article>
+        <div class="cvnav"><button class="cvbtn sec" id="cvPrev">‹ К карточкам</button><a class="cvbtn" href="#learn">К ленте</a></div></div>`;
+      view.querySelectorAll('.qo').forEach(b => b.onclick = () => { const y = window.scrollY; ans[+b.dataset.q] = +b.dataset.o; render(); window.scrollTo(0, y); });
+      $('#cvPrev').onclick = () => to(n - 1);
+    };
+    render();
+  }
+  // свайп между карточками
+  let x0 = null, y0 = null;
+  view.ontouchstart = e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; };
+  view.ontouchend = e => {
+    if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5 && i < n) { if (dx < 0) to(i + 1); else if (i) to(i - 1); }
+  };
 }
 
 // ---------------------------------------------------------------- MKB-10
@@ -987,7 +1045,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '2.9';
+const APP_VERSION = '3.0';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
