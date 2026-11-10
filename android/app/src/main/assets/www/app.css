@@ -727,3 +727,30 @@ details.susp .sfoot { margin-top: 6px; color: var(--muted); font-size: 12px; }
 .cvb .ttab table { table-layout: auto; }
 .cvb .ttab th, .cvb .ttab td { hyphens: manual; -webkit-hyphens: manual; word-break: normal; overflow-wrap: break-word; }
 .cvb .ttab tbody th { width: 26%; }
+
+/* лекция */
+.lv { padding-bottom: 8px; }
+.lslide { position: relative; margin: 12px 12px 0; aspect-ratio: 16 / 9; background: #1E2430; border-radius: 14px; overflow: hidden; cursor: zoom-in; }
+.lslide img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.lvmsg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; text-align: center; color: #D9DEE6; font-size: 14px; }
+.lvmsg[hidden] { display: none; }
+.lvfs { position: absolute; right: 8px; bottom: 6px; color: #fff; opacity: .7; font-size: 18px; text-shadow: 0 1px 3px #000; }
+.lslide.full { position: fixed; inset: 0; margin: 0; z-index: 1000; border-radius: 0; aspect-ratio: auto; background: #000; cursor: zoom-out; }
+.lvmeta { display: flex; gap: 10px; align-items: baseline; margin: 10px 14px 0; font-size: 15px; }
+.lvmeta span { color: var(--muted); font-size: 13px; flex: none; }
+#lvSeek { width: calc(100% - 28px); margin: 10px 14px 0; accent-color: var(--accent); }
+.lvtime { display: flex; justify-content: space-between; margin: 0 14px; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lvctl { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 8px 12px 4px; }
+.lvb { width: 48px; height: 48px; border: 0; border-radius: 50%; background: var(--surface2); color: var(--fg); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; font: inherit; font-weight: 700; font-size: 14px; }
+.lvb svg { width: 22px; height: 22px; fill: currentColor; }
+.lvb.play { width: 64px; height: 64px; background: var(--accent); color: var(--accent-fg); }
+.lvb.play svg { width: 28px; height: 28px; }
+.lvb.rate { font-size: 14px; }
+.lvtest { margin: 10px 12px 0; width: auto; }
+.lvlist { margin: 0 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.lvli { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--line); color: var(--fg); text-decoration: none; cursor: pointer; font-size: 14.5px; }
+.lvli:first-child { border-top: 0; }
+.lvli .n { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--surface2); font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.lvli .h { flex: 1; min-width: 0; } .lvli .t { flex: none; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.lvli.on { background: var(--accent-soft); font-weight: 600; } .lvli.on .n { background: var(--accent); color: var(--accent-fg); }
+.lty.lecture { background: var(--blue); color: #fff; }

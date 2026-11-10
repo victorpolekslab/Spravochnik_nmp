@@ -36,6 +36,7 @@ jobs:
           npm install --no-audit --no-fund
           python3 build.py
           cp ../learn/learn.json dist/learn.json
+          cp -r ../media dist/media
       - name: Android-приложение (ветка apk)
         run: |
           if git fetch --depth=1 origin apk; then

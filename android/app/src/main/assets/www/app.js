@@ -80,6 +80,7 @@ function setTitle(t, isRoot) { $('#title').textContent = t; $('#backBtn').hidden
 function setTab(t) { document.querySelectorAll('#tabs a').forEach(a => a.classList.toggle('on', a.dataset.tab === t)); }
 function route() {
   if (typeof view !== 'undefined' && view) { view.ontouchstart = null; view.ontouchend = null; }
+  if (window.LECT && !(location.hash || '').startsWith('#lecture/' + LECT.key + '?') && location.hash !== '#lecture/' + LECT.key) { LECT.audio.pause(); }
   const h = location.hash || '#home';
   cur = h;
   const [path, qs] = h.slice(1).split('?');
@@ -95,6 +96,7 @@ function route() {
     case 'route': setTab('home'); routeWizard(); break;
     case 'learn': setTab('home'); learnPage(); break;
     case 'course': setTab('home'); coursePage(parts[1], parts[2]); break;
+    case 'lecture': setTab('home'); parts[2] === 'test' ? lectureTest(parts[1]) : lecturePage(parts[1]); break;
     case 'cr': setTab(''); crPage(parts[1]); break;
     case 'about': setTab(''); about(); break;
     case 'doc': doc(parts[1], parts[2], params.get('h') || ''); return;
@@ -478,6 +480,15 @@ function learnPage(noFetch) {
     ${items.map(x => { const t = TY[x.type] || TY.material, past = learnPast(x), isNew = x.new && !seen.includes(x.id) && !past;
       const url = x.url ? x.url.replace(/\{login\}/g, encodeURIComponent(u)) : '';
       const C = x.type === 'course' && window.COURSES && COURSES[x.course];
+      const LC = x.type === 'lecture' && window.LECTURES && LECTURES[x.lecture];
+      if (LC) {
+        const st = LS.get('lecture_' + x.lecture, {}), mm = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+        const btn = st.done ? 'Слушать снова' : st.pos > 5 ? `Продолжить · ${mm(st.pos)}` : 'Слушать лекцию';
+        return `<div class="litem"><div class="lhead"><span class="lty lecture">Лекция</span>${isNew ? '<span class="lnew">новое</span>' : ''}<span class="luntil">${Math.round(LC.dur / 60)} мин · ${LC.slides.length} слайдов · тест ${LC.quiz.length}</span></div>
+          <h3>${esc(x.title || LC.title)}</h3><p>${esc(x.text || LC.sub)}</p>
+          ${st.done ? `<div class="ldone">✓ Тест: ${st.score}/${LC.quiz.length}</div>` : ''}
+          <div class="lbtns"><a class="bigbtn lgo" data-id="${esc(x.id)}" href="#lecture/${x.lecture}">${btn}</a>${st.heard || st.done ? `<a class="lread" href="#lecture/${x.lecture}/test">${st.done ? 'Пройти тест ещё раз' : 'К тесту'} ›</a>` : ''}</div></div>`;
+      }
       if (C) {
         const st = LS.get('course_' + x.course, {}), n = C.cards.length, pos = Math.min(st.pos || 0, n);
         const btn = st.done ? `Повторить` : pos ? `Продолжить · ${pos + 1}/${n + 1}` : t[1];
@@ -540,6 +551,90 @@ function coursePage(key, idx) {
     if (x0 == null) return; const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0; x0 = null;
     if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5 && i < n) { if (dx < 0) to(i + 1); else if (i) to(i - 1); }
   };
+}
+
+// ---------------------------------------------------------------- лекция: аудио + слайды под голос, тест в конце
+const fmtT = s => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const PLAY_I = '<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>', PAUSE_I = '<svg viewBox="0 0 24 24"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>';
+function lecturePage(key) {
+  const L = window.LECTURES && LECTURES[key];
+  if (!L) return go('#learn');
+  setTitle('Лекция', false);
+  const st = LS.get('lecture_' + key, {}), base = SITE + L.dir, n = L.slides.length;
+  if (!window.LECT || LECT.key !== key) {
+    if (window.LECT) LECT.audio.pause();
+    const au = new Audio(); au.preload = 'metadata'; au.src = base + L.audio;
+    window.LECT = { key, audio: au, rate: 1, lastSave: 0 };
+    if (st.pos > 5 && !st.done) { const t = st.pos; au.addEventListener('loadedmetadata', () => { au.currentTime = t; }, { once: true }); }
+  }
+  const au = LECT.audio, idxAt = t => { let i = 0; L.slides.forEach((s, k) => { if (t >= s.t - 0.05) i = k; }); return i; };
+  view.innerHTML = `<div class="lv">
+    <div class="lslide" id="lvBox"><img id="lvImg" alt=""><div class="lvmsg" id="lvMsg">Загрузка…</div><span class="lvfs">⤢</span></div>
+    <div class="lvmeta"><span id="lvNum"></span><b id="lvTitle"></b></div>
+    <input type="range" id="lvSeek" min="0" max="${L.dur}" step="0.5" value="0">
+    <div class="lvtime"><span id="lvCur">0:00</span><span>${fmtT(L.dur)}</span></div>
+    <div class="lvctl"><button class="lvb" id="lvPrev" aria-label="Предыдущий слайд"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button class="lvb play" id="lvPlay" aria-label="Слушать">${PLAY_I}</button>
+      <button class="lvb" id="lvNext" aria-label="Следующий слайд"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+      <button class="lvb rate" id="lvRate">${LECT.rate}×</button></div>
+    <div id="lvTest"></div>
+    <div class="sec-h">Слайды</div><div class="lvlist">${L.slides.map((s, k) => `<a class="lvli" data-k="${k}"><span class="n">${k + 1}</span><span class="h">${esc(s.h)}</span><span class="t">${fmtT(s.t)}</span></a>`).join('')}</div>
+    <p class="disc">Источники: ${esc(L.srcName)}. Озвучка — синтез речи. Для просмотра нужен интернет.</p></div>`;
+  const img = $('#lvImg'), msg = $('#lvMsg'); let shown = -1;
+  const show = i => {
+    if (i === shown) return; shown = i;
+    img.src = base + 's' + String(i + 1).padStart(2, '0') + '.jpg';
+    if (i + 1 < n) new Image().src = base + 's' + String(i + 2).padStart(2, '0') + '.jpg';
+    $('#lvNum').textContent = `${i + 1} / ${n}`; $('#lvTitle').textContent = L.slides[i].h;
+    view.querySelectorAll('.lvli').forEach(el => el.classList.toggle('on', +el.dataset.k === i));
+    if (i === n - 1) unlock();
+  };
+  const unlock = () => { const s = LS.get('lecture_' + key, {}); if (!s.heard) { s.heard = true; LS.set('lecture_' + key, s); } testBtn(); };
+  const testBtn = () => { const s = LS.get('lecture_' + key, {}); $('#lvTest').innerHTML = s.heard || s.done ? `<a class="bigbtn lvtest" href="#lecture/${key}/test">${s.done ? `Тест пройден: ${s.score}/${L.quiz.length} · пройти ещё раз` : `Пройти тест · ${L.quiz.length} вопросов`}</a>` : ''; };
+  const sync = () => {
+    const t = au.currentTime || 0;
+    if (!seeking) $('#lvSeek').value = t;
+    $('#lvCur').textContent = fmtT(t); show(idxAt(t));
+    $('#lvPlay').innerHTML = au.paused ? PLAY_I : PAUSE_I;
+    if (Date.now() - LECT.lastSave > 3000) { LECT.lastSave = Date.now(); const s = LS.get('lecture_' + key, {}); s.pos = t; LS.set('lecture_' + key, s); }
+  };
+  let seeking = false;
+  img.onload = () => { msg.hidden = true; };
+  img.onerror = () => { msg.hidden = false; msg.textContent = 'Нет связи — лекция загружается из интернета'; };
+  au.onerror = () => { msg.hidden = false; msg.textContent = 'Не удалось загрузить звук — проверьте интернет'; };
+  au.ontimeupdate = () => { if (cur.startsWith('#lecture/' + key)) sync(); };
+  au.onplay = au.onpause = au.ontimeupdate;
+  au.onended = () => { const s = LS.get('lecture_' + key, {}); s.pos = 0; s.heard = true; LS.set('lecture_' + key, s); if (cur === '#lecture/' + key) go('#lecture/' + key + '/test'); };
+  $('#lvPlay').onclick = () => { if (au.paused) { au.playbackRate = LECT.rate; const p = au.play(); if (p && p.catch) p.catch(() => { msg.hidden = false; msg.textContent = 'Не удалось воспроизвести — проверьте интернет'; }); } else au.pause(); };
+  const jump = k => { k = Math.max(0, Math.min(n - 1, k)); au.currentTime = L.slides[k].t + (k ? 0.05 : 0); sync(); };
+  $('#lvPrev').onclick = () => { const i = idxAt(au.currentTime); jump(au.currentTime - L.slides[i].t > 3 ? i : i - 1); };
+  $('#lvNext').onclick = () => jump(idxAt(au.currentTime) + 1);
+  $('#lvRate').onclick = () => { const R = [1, 1.25, 1.5]; LECT.rate = R[(R.indexOf(LECT.rate) + 1) % R.length]; au.playbackRate = LECT.rate; $('#lvRate').textContent = String(LECT.rate).replace('.', ',') + '×'; };
+  const sk = $('#lvSeek');
+  sk.oninput = () => { seeking = true; $('#lvCur').textContent = fmtT(+sk.value); show(idxAt(+sk.value)); };
+  sk.onchange = () => { au.currentTime = +sk.value; seeking = false; sync(); };
+  view.querySelectorAll('.lvli').forEach(el => el.onclick = () => { jump(+el.dataset.k); if (au.paused) $('#lvPlay').click(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+  $('#lvBox').onclick = () => $('#lvBox').classList.toggle('full');
+  show(idxAt(st.pos > 5 && !st.done ? st.pos : 0)); testBtn(); sync();
+}
+function lectureTest(key) {
+  const L = window.LECTURES && LECTURES[key];
+  if (!L) return go('#learn');
+  if (window.LECT) LECT.audio.pause();
+  setTitle('Тест по лекции', false);
+  const ans = {}; let saved = false;
+  const render = () => {
+    const done = Object.keys(ans).length === L.quiz.length, score = L.quiz.filter((q, k) => ans[k] === q.a).length;
+    if (done && !saved) { saved = true; const s = LS.get('lecture_' + key, {}); s.done = true; s.score = score; s.heard = true; s.at = Date.now(); LS.set('lecture_' + key, s); }
+    view.innerHTML = `<div class="cv"><article class="cvcard"><div class="cvk">Тест по лекции</div><h2>${esc(L.title.replace(/^Лекция:\s*/, '').replace(/^./, c => c.toUpperCase()))}</h2><p class="cvlead">${L.quiz.length} вопросов. Выберите ответ — сразу увидите разбор.</p>
+      ${L.quiz.map((q, k) => `<div class="qz${k in ans ? (ans[k] === q.a ? ' ok' : ' bad') : ''}"><div class="qq"><b>${k + 1}.</b> ${esc(q.q)}</div>
+        ${q.o.map((o, m) => `<button class="qo${k in ans ? (m === q.a ? ' right' : (m === ans[k] ? ' wrong' : '')) : ''}" data-q="${k}" data-o="${m}"${k in ans ? ' disabled' : ''}>${esc(o)}</button>`).join('')}
+        ${k in ans ? `<div class="qe"><b>${ans[k] === q.a ? 'Верно.' : 'Не совсем.'}</b> ${esc(q.e)}</div>` : ''}</div>`).join('')}
+      ${done ? `<div class="qres"><div class="qsc">${score} / ${L.quiz.length}</div><div>${score === L.quiz.length ? 'Отлично — все ответы верные.' : score >= L.quiz.length - 1 ? 'Хороший результат.' : 'Стоит переслушать лекцию — особенно клинические случаи.'}</div></div>` : ''}
+      </article><div class="cvnav"><a class="cvbtn sec" href="#lecture/${key}">‹ К лекции</a><a class="cvbtn" href="#learn">К ленте</a></div></div>`;
+    view.querySelectorAll('.qo').forEach(b => b.onclick = () => { const y = window.scrollY; ans[+b.dataset.q] = +b.dataset.o; render(); window.scrollTo(0, y); });
+  };
+  render();
 }
 
 // ---------------------------------------------------------------- MKB-10
@@ -1045,7 +1140,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '3.0';
+const APP_VERSION = '3.1';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
