@@ -92,6 +92,7 @@ function route() {
     case 'mkb': setTab('home'); parts[1] ? mkbNode(+parts[1]) : mkbRoot(params.get('q')); break;
     case 'calc': setTab('home'); calcPage(parts[1]); break;
     case 'route': setTab('home'); routeWizard(); break;
+    case 'learn': setTab('home'); learnPage(); break;
     case 'cr': setTab(''); crPage(parts[1]); break;
     case 'about': setTab(''); about(); break;
     case 'doc': doc(parts[1], parts[2], params.get('h') || ''); return;
@@ -167,6 +168,8 @@ function home() {
       <div class="mk-h"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><path d="M12 7v6M9 10h6"/></svg>
         <div><div class="tt">Дежурные стационары</div><div class="ts">куда везти: повод, район или адрес, день дежурства</div></div><span class="chev">›</span></div>
     </a>
+    <a class="learncard" href="#learn"><svg viewBox="0 0 24 24"><path d="M3 9l9-5 9 5-9 5z"/><path d="M7 11.5V16c0 1.5 2.5 3 5 3s5-1.5 5-3v-4.5M21 9v6"/></svg>
+      <span><b>Обучение и опросы</b><small>тесты, опросы, материалы</small></span>${learnNewCount() ? `<span class="lbadge">${learnNewCount()}</span>` : ''}<span class="chev">›</span></a>
     <a class="mkbcard" href="#mkb">
       <div class="mk-h"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h6M9 8h3"/></svg>
         <div><div class="tt">Классификатор МКБ-10</div><div class="ts">рубрики, поиск по коду и нозологии, клинические рекомендации по коду</div></div></div>
@@ -382,6 +385,103 @@ function routeWizard() {
     ddEl.querySelector('.rwddar').onclick = () => ddEl.classList.toggle('open');
     if (s.open === ddEl.dataset.dd) { s.open = ''; setTimeout(() => pq.focus(), 50); }
   });
+}
+
+// ---------------------------------------------------------------- обучение и опросы (лента: learn.json на сайте)
+function sha256(s) {
+  const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+  const b = Array.from(new TextEncoder().encode(s)), l = b.length * 8;
+  b.push(0x80); while (b.length % 64 !== 56) b.push(0);
+  for (let i = 7; i >= 0; i--) b.push(i > 3 ? 0 : (l >>> (i * 8)) & 255);
+  let [h0, h1, h2, h3, h4, h5, h6, h7] = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const w = new Array(64), r = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let o = 0; o < b.length; o += 64) {
+    for (let i = 0; i < 16; i++) w[i] = (b[o + 4 * i] << 24) | (b[o + 4 * i + 1] << 16) | (b[o + 4 * i + 2] << 8) | b[o + 4 * i + 3];
+    for (let i = 16; i < 64; i++) { const s0 = r(w[i - 15], 7) ^ r(w[i - 15], 18) ^ (w[i - 15] >>> 3), s1 = r(w[i - 2], 17) ^ r(w[i - 2], 19) ^ (w[i - 2] >>> 10); w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0; }
+    let [A, B, C, D, E, F, G, H] = [h0, h1, h2, h3, h4, h5, h6, h7];
+    for (let i = 0; i < 64; i++) {
+      const t1 = (H + (r(E, 6) ^ r(E, 11) ^ r(E, 25)) + ((E & F) ^ (~E & G)) + K[i] + w[i]) | 0, t2 = ((r(A, 2) ^ r(A, 13) ^ r(A, 22)) + ((A & B) ^ (A & C) ^ (B & C))) | 0;
+      H = G; G = F; F = E; E = (D + t1) | 0; D = C; C = B; B = A; A = (t1 + t2) | 0;
+    }
+    h0 = (h0 + A) | 0; h1 = (h1 + B) | 0; h2 = (h2 + C) | 0; h3 = (h3 + D) | 0; h4 = (h4 + E) | 0; h5 = (h5 + F) | 0; h6 = (h6 + G) | 0; h7 = (h7 + H) | 0;
+  }
+  return [h0, h1, h2, h3, h4, h5, h6, h7].map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+function pwCheck(rec, pw) {
+  const [salt, hash] = String(rec || '').split('$'); if (!salt) return false;
+  let x = sha256(salt + ':' + pw); for (let i = 0; i < 1999; i++) x = sha256(x + pw);
+  return x === hash;
+}
+const LEARN = { busy: false, err: '' };
+const learnData = () => LS.get('learn', null);
+const learnAcc = () => { const v = LS.get('learnUser', null); return v && v.k ? v : null; };
+const learnUser = () => (learnAcc() || {}).name || '';
+const learnNorm = s => String(s).toLowerCase().replace(/ё/g, 'е').replace(/[^0-9a-zа-я]/g, '');
+const learnKey = s => sha256('u:' + learnNorm(s)).slice(0, 24);
+const learnPretty = s => {
+  const m = s.trim().match(/^([A-Za-zА-Яа-яЁё-]+)[\s.,]+([A-Za-zА-Яа-яЁё.\s]{1,8})$/);
+  if (!m) return s.trim();
+  const sur = m[1].split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join('-');
+  return sur + ' ' + m[2].replace(/[^A-Za-zА-Яа-яЁё]/g, '').toUpperCase().split('').map(c => c + '.').join('');
+};
+function learnNewCount() {
+  const d = learnData(); if (!d || !learnUser()) return 0;
+  const seen = LS.get('learnSeen', []);
+  return (d.items || []).filter(x => x.new && !seen.includes(x.id) && !learnPast(x)).length;
+}
+const learnPast = x => x.until && new Date(x.until + 'T23:59:59') < new Date();
+function learnFetch(cb) {
+  LEARN.busy = true;
+  fetch(SITE + 'learn.json?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(d => { LS.set('learn', d); LEARN.err = ''; const ac = learnAcc(); if (ac && !(d.users || {})[ac.k]) LS.set('learnUser', null); })
+    .catch(e => { LEARN.err = 'Нет связи с сервером — показана сохранённая лента'; })
+    .finally(() => { LEARN.busy = false; cb && cb(); });
+}
+function learnPage(noFetch) {
+  setTitle('Обучение и опросы', false);
+  const d = learnData(), u = learnUser();
+  if (!noFetch) learnFetch(() => { if (cur === '#learn') learnPage(true); });
+  if (!u) {
+    view.innerHTML = `<div class="calc-card lform">
+      <h2>Вход</h2><p class="lhint">Логин и пароль выдаёт организатор обучения. Справочник работает и без входа.</p>
+      <label class="lf"><span>Логин — фамилия и инициалы</span><input id="lLogin" placeholder="Иванов П.А." autocomplete="username" autocapitalize="words" spellcheck="false"></label>
+      <label class="lf"><span>Пароль</span><input id="lPw" type="password" autocomplete="current-password"></label>
+      <div class="lerr" id="lErr"></div>
+      <button class="bigbtn" id="lGo">Войти</button></div>
+      <p class="disc">Приложение запоминает вход на этом устройстве. Пароль не хранится и никуда не передаётся — проверяется на телефоне.</p>`;
+    const go = () => {
+      const lg = $('#lLogin').value.trim(), pw = $('#lPw').value, dd = learnData(), er = $('#lErr');
+      if (!lg || !pw) { er.textContent = 'Введите логин и пароль'; return; }
+      if (!dd) { er.textContent = LEARN.busy ? 'Загрузка… попробуйте через секунду' : 'Для первого входа нужен интернет'; if (!LEARN.busy) learnFetch(); return; }
+      er.textContent = 'Проверка…';
+      setTimeout(() => {
+        const k = learnKey(lg);
+        if (pwCheck((dd.users || {})[k], pw)) { LS.set('learnUser', { k, name: learnPretty(lg) }); learnPage(true); } else er.textContent = 'Неверный логин или пароль';
+      }, 30);
+    };
+    $('#lGo').onclick = go;
+    $('#lPw').addEventListener('keydown', e => { if (e.key === 'Enter') go(); });
+    return;
+  }
+  const seen = LS.get('learnSeen', []);
+  const TY = { test: ['Тест', 'Пройти тест'], survey: ['Опрос', 'Пройти опрос'], material: ['Материал', 'Открыть'] };
+  const items = (d && d.items || []).slice().sort((a, b) => learnPast(a) - learnPast(b));
+  const fmt = s => s ? s.split('-').reverse().slice(0, 2).join('.') : '';
+  view.innerHTML = `<div class="luser"><span>Вы вошли: <b>${esc(u)}</b></span><a id="lOut">Выйти</a></div>
+    ${LEARN.err ? `<div class="lnote">${esc(LEARN.err)}</div>` : ''}
+    ${!d ? '<div class="rwempty">Загрузка ленты…</div>' : !items.length ? '<div class="rwempty">Пока заданий нет. Новые появятся здесь.</div>' : ''}
+    ${items.map(x => { const t = TY[x.type] || TY.material, past = learnPast(x), isNew = x.new && !seen.includes(x.id) && !past;
+      const url = x.url ? x.url.replace(/\{login\}/g, encodeURIComponent(u)) : '';
+      return `<div class="litem${past ? ' past' : ''}"><div class="lhead"><span class="lty ${x.type}">${t[0]}</span>${isNew ? '<span class="lnew">новое</span>' : ''}${x.until ? `<span class="luntil">${past ? 'завершено' : 'до ' + fmt(x.until)}</span>` : ''}</div>
+        <h3>${esc(x.title)}</h3>${x.text ? `<p>${esc(x.text)}</p>` : ''}
+        <div class="lbtns">${url && !past ? `<a class="bigbtn lgo" data-id="${esc(x.id)}" href="${esc(url)}" target="_blank" rel="noopener">${t[1]}</a>` : (!past && x.type !== 'material' ? '<span class="lsoon">ссылка появится позже</span>' : '')}
+          ${x.read ? `<a class="lread" data-id="${esc(x.id)}" href="${esc(x.read)}">${x.type === 'material' ? 'Открыть в справочнике' : 'Повторить раздел'} ›</a>` : ''}</div></div>`; }).join('')}
+    <p class="disc">Результаты тестов и опросов видит организатор обучения. Логин подставляется в форму автоматически.</p>`;
+  $('#lOut').onclick = () => { LS.set('learnUser', null); learnPage(true); };
+  view.querySelectorAll('[data-id]').forEach(el => el.addEventListener('click', () => { const s = LS.get('learnSeen', []); if (!s.includes(el.dataset.id)) { s.push(el.dataset.id); LS.set('learnSeen', s); } }));
 }
 
 // ---------------------------------------------------------------- MKB-10
@@ -887,7 +987,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '2.8';
+const APP_VERSION = '2.9';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
