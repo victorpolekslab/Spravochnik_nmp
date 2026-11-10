@@ -96,6 +96,7 @@ function route() {
     case 'route': setTab('home'); routeWizard(); break;
     case 'learn': setTab('home'); learnPage(); break;
     case 'course': setTab('home'); coursePage(parts[1], parts[2]); break;
+    case 'report': setTab(''); reportPage(); break;
     case 'lecture': setTab('home'); parts[2] === 'test' ? lectureTest(parts[1]) : lecturePage(parts[1]); break;
     case 'cr': setTab(''); crPage(parts[1]); break;
     case 'about': setTab(''); about(); break;
@@ -444,10 +445,32 @@ function learnFetch(cb) {
     .catch(e => { LEARN.err = 'Нет связи с сервером — показана сохранённая лента'; })
     .finally(() => { LEARN.busy = false; cb && cb(); });
 }
+// результаты обучения → Google Таблица организатора (адрес — "report" в learn.json); очередь на случай отсутствия сети
+function learnSend(ev) {
+  const ac = learnAcc(); if (!ac) return;
+  const q = LS.get('learnQueue', []);
+  q.push(Object.assign({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), uid: ac.k, ts: new Date().toISOString(), v: APP_VERSION, p: window.App ? 'android' : 'web' }, ev));
+  LS.set('learnQueue', q.slice(-200)); learnFlush();
+}
+function learnBackfill() {   // результаты, полученные до появления отправки (версии ≤ 3.4)
+  if (!learnAcc()) return;
+  [['course', window.COURSES], ['lecture', window.LECTURES]].forEach(([t, M]) => Object.keys(M || {}).forEach(k => {
+    const s = LS.get(t + '_' + k, {});
+    if (s.done && !s.sent && s.score != null) { s.sent = true; LS.set(t + '_' + k, s); learnSend({ item: t + ':' + k, ev: 'quiz', score: s.score, total: M[k].quiz.length, ts: new Date(s.at || Date.now()).toISOString() }); }
+  }));
+}
+function learnFlush() {
+  const q = LS.get('learnQueue', []), d = learnData(), url = d && d.report;
+  if (!q.length || !url || !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url) || LEARN.flushing) return;
+  LEARN.flushing = true; const batch = q.slice(0, 50);
+  fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(batch) })
+    .then(() => { const ids = new Set(batch.map(x => x.id)); LS.set('learnQueue', LS.get('learnQueue', []).filter(x => !ids.has(x.id))); })
+    .catch(() => {}).finally(() => { LEARN.flushing = false; });
+}
 function learnPage(noFetch) {
   setTitle('Обучение и опросы', false);
   const d = learnData(), u = learnUser();
-  if (!noFetch) learnFetch(() => { if (cur === '#learn') learnPage(true); });
+  if (!noFetch) learnFetch(() => { learnBackfill(); learnFlush(); if (cur === '#learn') learnPage(true); });
   if (!u) {
     view.innerHTML = `<div class="calc-card lform">
       <h2>Вход</h2><p class="lhint">Логин и пароль выдаёт организатор обучения. Справочник работает и без входа.</p>
@@ -538,10 +561,12 @@ function coursePage(key, idx) {
     $('#cvPrev').onclick = () => i && to(i - 1);
     $('#cvNext').onclick = () => to(i + 1);
   } else {
-    const ans = {};
+    const ans = {}; let sent = false;
+    if (!st.cardsSent) { st.cardsSent = true; LS.set('course_' + key, st); learnSend({ item: 'course:' + key, ev: 'cards', score: n, total: n }); }
     const render = () => {
       const done = Object.keys(ans).length === C.quiz.length, score = C.quiz.filter((q, k) => ans[k] === q.a).length;
       if (done && !st.done) { st.done = true; st.score = score; st.at = Date.now(); LS.set('course_' + key, st); }
+      if (done && !sent) { sent = true; st.sent = true; LS.set('course_' + key, st); learnSend({ item: 'course:' + key, ev: 'quiz', score, total: C.quiz.length, ans: C.quiz.map((q, k) => ans[k] === q.a ? 1 : 0).join('') }); }
       view.innerHTML = `<div class="cv">${bar}
         <article class="cvcard"><div class="cvk">Проверка</div><h2>${C.quiz.length} вопросов по курсу</h2><p class="cvlead">Выберите ответ — сразу увидите разбор.</p>
         ${C.quiz.map((q, k) => `<div class="qz${k in ans ? (ans[k] === q.a ? ' ok' : ' bad') : ''}"><div class="qq"><b>${k + 1}.</b> ${esc(q.q)}</div>
@@ -609,7 +634,7 @@ function lecturePage(key) {
     view.querySelectorAll('.lvli').forEach(el => el.classList.toggle('on', +el.dataset.k === i));
     if (i === n - 1) unlock();
   };
-  const unlock = () => { const s = LS.get('lecture_' + key, {}); if (!s.heard) { s.heard = true; LS.set('lecture_' + key, s); } testBtn(); };
+  const unlock = () => { const s = LS.get('lecture_' + key, {}); if (!s.heard) { s.heard = true; LS.set('lecture_' + key, s); } if (!s.heardSent) { s.heardSent = true; LS.set('lecture_' + key, s); learnSend({ item: 'lecture:' + key, ev: 'heard', score: n, total: n }); } testBtn(); };
   const testBtn = () => { const s = LS.get('lecture_' + key, {}); $('#lvTest').innerHTML = s.heard || s.done ? `<a class="bigbtn lvtest" href="#lecture/${key}/test">${s.done ? `Тест пройден: ${s.score}/${L.quiz.length} · пройти ещё раз` : `Пройти тест · ${L.quiz.length} вопросов`}</a>` : ''; };
   const sync = () => {
     const t = au.currentTime || 0;
@@ -648,7 +673,8 @@ function lectureTest(key) {
   const ans = {}; let saved = false;
   const render = () => {
     const done = Object.keys(ans).length === L.quiz.length, score = L.quiz.filter((q, k) => ans[k] === q.a).length;
-    if (done && !saved) { saved = true; const s = LS.get('lecture_' + key, {}); s.done = true; s.score = score; s.heard = true; s.at = Date.now(); LS.set('lecture_' + key, s); }
+    if (done && !saved) { saved = true; const s = LS.get('lecture_' + key, {}); s.done = true; s.score = score; s.heard = true; s.at = Date.now(); s.sent = true; LS.set('lecture_' + key, s);
+      learnSend({ item: 'lecture:' + key, ev: 'quiz', score, total: L.quiz.length, ans: L.quiz.map((q, k) => ans[k] === q.a ? 1 : 0).join('') }); }
     view.innerHTML = `<div class="cv"><article class="cvcard"><div class="cvk">Тест по лекции</div><h2>${esc(L.title.replace(/^Лекция:\s*/, '').replace(/^./, c => c.toUpperCase()))}</h2><p class="cvlead">${L.quiz.length} вопросов. Выберите ответ — сразу увидите разбор.</p>
       ${L.quiz.map((q, k) => `<div class="qz${k in ans ? (ans[k] === q.a ? ' ok' : ' bad') : ''}"><div class="qq"><b>${k + 1}.</b> ${esc(q.q)}</div>
         ${q.o.map((o, m) => `<button class="qo${k in ans ? (m === q.a ? ' right' : (m === ans[k] ? ' wrong' : '')) : ''}" data-q="${k}" data-o="${m}"${k in ans ? ' disabled' : ''}>${esc(o)}</button>`).join('')}
@@ -658,6 +684,63 @@ function lectureTest(key) {
     view.querySelectorAll('.qo').forEach(b => b.onclick = () => { const y = window.scrollY; ans[+b.dataset.q] = +b.dataset.o; render(); window.scrollTo(0, y); });
   };
   render();
+}
+
+// ---------------------------------------------------------------- отчёт организатора (ФИО хранятся только на этом телефоне)
+function reportPage(edit) {
+  setTitle('Отчёт по обучению', false);
+  const d = learnData(), url = d && d.report, key = LS.get('orgKey', ''), names = LS.get('orgNames', '');
+  if (!d) { learnFetch(() => { if (cur === '#report') reportPage(edit); }); view.innerHTML = '<div class="rwempty">Загрузка…</div>'; return; }
+  if (!url) { view.innerHTML = '<div class="rwempty">Сбор результатов ещё не подключён: в настройках обучения нет адреса Google Таблицы.</div>'; return; }
+  if (edit || !key || !names.trim()) {
+    view.innerHTML = `<div class="calc-card lform"><h2>Настройка отчёта</h2>
+      <p class="lhint">Ключ и список ФИО сохраняются только на этом телефоне. В Google Таблице фамилий нет — только коды учёток; приложение сопоставит их со списком.</p>
+      <label class="lf"><span>Ключ организатора</span><input id="oKey" value="${esc(key)}" autocapitalize="none" spellcheck="false"></label>
+      <label class="lf"><span>Список ФИО — по одному в строке, как логины («Иванов П.А.»)</span><textarea id="oNames" rows="10">${esc(names)}</textarea></label>
+      <div class="lerr" id="oErr"></div><button class="bigbtn" id="oSave">Сохранить и показать отчёт</button></div>`;
+    $('#oSave').onclick = () => {
+      const k = $('#oKey').value.trim(), nm = $('#oNames').value;
+      if (!k || !nm.trim()) { $('#oErr').textContent = 'Заполните ключ и список'; return; }
+      LS.set('orgKey', k); LS.set('orgNames', nm); reportPage();
+    };
+    return;
+  }
+  view.innerHTML = '<div class="rwempty">Загрузка результатов…</div>';
+  fetch(url + '?key=' + encodeURIComponent(key) + '&t=' + Date.now()).then(r => r.json()).then(res => {
+    if (!res.ok) { view.innerHTML = `<div class="rwempty">${res.err === 'key' ? 'Неверный ключ организатора.' : 'Таблица вернула ошибку.'}</div><div class="cvnav"><button class="cvbtn sec" id="oEdit">Изменить ключ и список</button></div>`; $('#oEdit').onclick = () => reportPage(true); return; }
+    const people = names.split(/\n+/).map(s => s.trim()).filter(Boolean).map(s => ({ name: learnPretty(s), k: learnKey(s) }));
+    const byK = new Map(people.map(p => [p.k, p]));
+    const items = [];
+    const title = it => { const [t, k] = it.split(':'); return t === 'lecture' ? 'Лекция: ' + ((window.LECTURES && LECTURES[k] || {}).title || k).replace(/^Лекция:\s*/, '').replace(/^./, c => c.toUpperCase()) : t === 'course' ? 'Курс: ' + ((window.COURSES && COURSES[k] || {}).title || k) : it; };
+    const R = {}; let unknown = 0;
+    (res.rows || []).forEach(r => {
+      if (!byK.has(r.uid)) { unknown++; return; }
+      if (!items.includes(r.item)) items.push(r.item);
+      const c = ((R[r.uid] = R[r.uid] || {})[r.item] = R[r.uid][r.item] || { best: -1, total: 0, tries: 0, seen: false, at: '' });
+      const at = r.ts || r.at;
+      if (r.ev === 'quiz') { c.tries++; if (+r.score > c.best) { c.best = +r.score; c.total = +r.total; } if (!c.at || at > c.at) c.at = at; }
+      else c.seen = true;
+    });
+    items.sort();
+    const dd = s => { const x = new Date(s); return isNaN(x) ? '' : String(x.getDate()).padStart(2, '0') + '.' + String(x.getMonth() + 1).padStart(2, '0'); };
+    const cell = c => !c ? '<span class="rq no">—</span>' : c.best >= 0 ? `<span class="rq ${c.best >= c.total - 1 ? 'ok' : c.best / c.total >= 0.6 ? 'mid' : 'low'}">${c.best}/${c.total}</span><small>${dd(c.at)}${c.tries > 1 ? ' · ' + c.tries + ' попыт.' : ''}</small>` : `<span class="rq seen">${/^lecture/.test('' + c.kind) ? 'слушал' : 'начал'}</span>`;
+    const sum = items.map(it => { const n = people.filter(p => R[p.k] && R[p.k][it] && R[p.k][it].best >= 0).length; return `<div class="rsum"><b>${n}</b> из ${people.length}<span>${esc(title(it))} — тест пройден</span></div>`; }).join('');
+    view.innerHTML = `<div class="rep">${sum || '<div class="rwempty">Результатов пока нет.</div>'}
+      ${items.length ? `<div class="tw rtab"><table><thead><tr><th>ФИО</th>${items.map(it => `<th>${esc(title(it))}</th>`).join('')}</tr></thead><tbody>
+        ${people.slice().sort((a, b) => a.name.localeCompare(b.name, 'ru')).map(p => `<tr><th>${esc(p.name)}</th>${items.map(it => `<td>${cell(R[p.k] && R[p.k][it] && Object.assign(R[p.k][it], { kind: it }))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : ''}
+      ${unknown ? `<p class="disc">Ещё ${unknown} записей от учёток, которых нет в вашем списке.</p>` : ''}
+      <div class="cvnav"><button class="cvbtn sec" id="oCopy">Скопировать для Excel</button><button class="cvbtn" id="oRef">Обновить</button></div>
+      <p class="disc"><a id="oEdit">Изменить ключ и список ФИО</a> · «—» — не проходил; «слушал» / «начал» — открыл материал, но тест не сдавал.</p></div>`;
+    $('#oRef').onclick = () => reportPage();
+    $('#oEdit').onclick = () => reportPage(true);
+    $('#oCopy').onclick = () => {
+      const tsv = ['ФИО\t' + items.map(title).join('\t')].concat(people.map(p => p.name + '\t' + items.map(it => { const c = R[p.k] && R[p.k][it]; return !c ? '' : c.best >= 0 ? `${c.best}/${c.total} (${dd(c.at)})` : 'открыл'; }).join('\t'))).join('\n');
+      const ta = document.createElement('textarea'); ta.value = tsv; document.body.appendChild(ta); ta.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (e) {} ta.remove();
+      if (!ok && navigator.clipboard) navigator.clipboard.writeText(tsv).then(() => {}, () => {});
+      $('#oCopy').textContent = 'Скопировано';
+    };
+  }).catch(() => { view.innerHTML = '<div class="rwempty">Нет связи с Google Таблицей — проверьте интернет.</div>'; });
 }
 
 // ---------------------------------------------------------------- MKB-10
@@ -1163,7 +1246,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '3.4';
+const APP_VERSION = '3.5';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
@@ -1189,6 +1272,7 @@ function about() {
   view.innerHTML = `<div class="about">
     <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION} · клинические рекомендации от 03.11.2026</p>
       ${window.App ? '<button class="lnkbtn" id="updChk">Проверить обновления</button><span class="updres" id="updRes"></span>' : ''}</div>
+    <div class="card"><b>Обучение</b><p><a href="#report">Отчёт по обучению</a> — для организатора: кто прослушал лекции и прошёл тесты.</p></div>
     <div class="card"><b>Поделиться с коллегами</b><p>iPhone и любой браузер: <a href="${SITE}">${SITE.replace('https://', '')}</a> — открыть в Safari → «Поделиться» → «На экран Домой».</p>
       <p>Android: <a href="${SITE}download/SpravochnikNMP.apk">скачать приложение (APK)</a>. Новые версии приложение предлагает само.</p></div>
     <div class="card"><b>Что это</b><p>Справочник фельдшера неотложной медицинской помощи по действующим клиническим рекомендациям Минздрава России. Во вкладках «Неотложно» — помощь до приезда СМП: без кислородотерапии, тромболизиса, наркотических анальгетиков и инфузомата. <span class="onebadge" style="margin:0">ОДИН ИЗ</span> — взаимозаменяемые препараты, выбирается один.</p>
