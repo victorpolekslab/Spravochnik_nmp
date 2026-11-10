@@ -421,6 +421,23 @@ function pwCheck(rec, pw) {
   return x === hash;
 }
 const LEARN = { busy: false, err: '' };
+const hexBytes = h => Uint8Array.from(h.match(/../g).map(x => parseInt(x, 16)));
+function orgDerive(salt, pw) { let x = sha256(salt + ':' + pw); for (let i = 0; i < 1999; i++) x = sha256(x + pw); return x; }
+function orgOpen(o, K) {   // блок организатора из learn.json: {readKey, names}
+  try {
+    if (!o || !K || sha256(K + ':mac:' + o.nonce + ':' + o.ct) !== o.mac) return null;
+    const ct = Uint8Array.from(atob(o.ct), c => c.charCodeAt(0)), pt = new Uint8Array(ct.length);
+    for (let i = 0, blk = 0; i < ct.length; blk++) { const ks = hexBytes(sha256(K + ':' + o.nonce + ':' + blk)); for (let j = 0; j < 32 && i < ct.length; j++, i++) pt[i] = ct[i] ^ ks[j]; }
+    return JSON.parse(new TextDecoder().decode(pt));
+  } catch (e) { return null; }
+}
+function orgApply(d) {   // организатор: ключ отчёта и список ФИО — из зашифрованного блока
+  const ac = learnAcc(), K = LS.get('orgK', '');
+  if (!ac || !d || !d.org || d.org.k !== ac.k || !K) return false;
+  const v = orgOpen(d.org, K); if (!v) return false;
+  LS.set('orgKey', v.readKey); LS.set('orgNames', (v.names || []).join('\n')); return true;
+}
+const isOrg = () => { const ac = learnAcc(), d = learnData(); return !!(ac && d && d.org && d.org.k === ac.k && LS.get('orgK', '')); };
 const learnData = () => LS.get('learn', null);
 const learnAcc = () => { const v = LS.get('learnUser', null); return v && v.k ? v : null; };
 const learnUser = () => (learnAcc() || {}).name || '';
@@ -441,9 +458,15 @@ const learnPast = x => x.until && new Date(x.until + 'T23:59:59') < new Date();
 function learnFetch(cb) {
   LEARN.busy = true;
   fetch(SITE + 'learn.json?t=' + Date.now(), { cache: 'no-store' }).then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-    .then(d => { LS.set('learn', d); LEARN.err = ''; const ac = learnAcc(); if (ac && !(d.users || {})[ac.k]) LS.set('learnUser', null); })
+    .then(d => { LS.set('learn', d); LEARN.err = ''; const ac = learnAcc(); if (ac && !(d.users || {})[ac.k]) LS.set('learnUser', null); else orgApply(d); })
     .catch(e => { LEARN.err = 'Нет связи с сервером — показана сохранённая лента'; })
     .finally(() => { LEARN.busy = false; cb && cb(); });
+}
+// прогресс курсов и лекций — отдельно для каждой учётки (на одном телефоне могут входить разные люди)
+function pk(name) {
+  const ac = learnAcc(), id = ac ? ac.k : 'anon', key = name + '@' + id;
+  if (ac && LS.get(key, null) === null) { const old = LS.get(name, null); if (old) { LS.set(key, old); LS.set(name, null); } }   // прогресс из версий ≤ 3.5 — первому вошедшему
+  return key;
 }
 // результаты обучения → Google Таблица организатора (адрес — "report" в learn.json); очередь на случай отсутствия сети
 function learnSend(ev) {
@@ -455,8 +478,8 @@ function learnSend(ev) {
 function learnBackfill() {   // результаты, полученные до появления отправки (версии ≤ 3.4)
   if (!learnAcc()) return;
   [['course', window.COURSES], ['lecture', window.LECTURES]].forEach(([t, M]) => Object.keys(M || {}).forEach(k => {
-    const s = LS.get(t + '_' + k, {});
-    if (s.done && !s.sent && s.score != null) { s.sent = true; LS.set(t + '_' + k, s); learnSend({ item: t + ':' + k, ev: 'quiz', score: s.score, total: M[k].quiz.length, ts: new Date(s.at || Date.now()).toISOString() }); }
+    const s = LS.get(pk(t + '_' + k), {});
+    if (s.done && !s.sent && s.score != null) { s.sent = true; LS.set(pk(t + '_' + k), s); learnSend({ item: t + ':' + k, ev: 'quiz', score: s.score, total: M[k].quiz.length, ts: new Date(s.at || Date.now()).toISOString() }); }
   }));
 }
 function learnFlush() {
@@ -479,22 +502,31 @@ function learnPage(noFetch) {
       <div class="lerr" id="lErr"></div>
       <button class="bigbtn" id="lGo">Войти</button></div>
       <p class="disc">Приложение запоминает вход на этом устройстве. Пароль не хранится и никуда не передаётся — проверяется на телефоне.</p>`;
+    let LAST_PW = '';
     const check = (dd, lg, pw) => {
       const k = learnKey(lg), rec = (dd.users || {})[k], p2 = pw.replace(/\s+/g, '').toLowerCase();
-      return rec && (pwCheck(rec, pw) || (p2 !== pw && pwCheck(rec, p2))) ? k : null;
+      if (!rec) return null;
+      if (pwCheck(rec, pw)) { LAST_PW = pw; return k; }
+      if (p2 !== pw && pwCheck(rec, p2)) { LAST_PW = p2; return k; }
+      return null;
     };
-    const ok = (k, lg) => { LS.set('learnUser', { k, name: learnPretty(lg) }); learnPage(true); };
+    const ok = (k, lg, pw) => {
+      LS.set('learnUser', { k, name: learnPretty(lg) });
+      const dd = learnData();
+      if (dd && dd.org && dd.org.k === k) { const K = orgDerive(dd.org.salt, pw); if (orgOpen(dd.org, K)) { LS.set('orgK', K); orgApply(dd); } }
+      learnPage(true);
+    };
     const go = () => {
       const lg = $('#lLogin').value.trim(), pw = $('#lPw').value, dd = learnData(), er = $('#lErr');
       if (!lg || !pw) { er.textContent = 'Введите логин и пароль'; return; }
       er.textContent = 'Проверка…';
       setTimeout(() => {
         const k = dd && check(dd, lg, pw);
-        if (k) return ok(k, lg);
+        if (k) return ok(k, lg, LAST_PW);
         // список учёток мог устареть — перекачиваем и проверяем ещё раз
         learnFetch(() => {
           const d2 = learnData(), k2 = d2 && check(d2, lg, pw);
-          if (k2) return ok(k2, lg);
+          if (k2) return ok(k2, lg, LAST_PW);
           er.textContent = !d2 ? 'Для первого входа нужен интернет' : LEARN.err ? 'Нет связи — список учётных записей не обновился. Проверьте интернет и попробуйте ещё раз' : 'Неверный логин или пароль';
         });
       }, 30);
@@ -508,7 +540,8 @@ function learnPage(noFetch) {
   const TY = { test: ['Тест', 'Пройти тест'], survey: ['Опрос', 'Пройти опрос'], material: ['Материал', 'Открыть'], course: ['Курс', 'Начать курс'] };
   const items = (d && d.items || []).slice().sort((a, b) => learnPast(a) - learnPast(b));
   const fmt = s => s ? s.split('-').reverse().slice(0, 2).join('.') : '';
-  view.innerHTML = `<div class="luser"><span>Вы вошли: <b>${esc(u)}</b></span><a id="lOut">Выйти</a></div>
+  view.innerHTML = `<div class="luser"><span>Вы вошли: <b>${esc(u)}</b>${isOrg() ? ' · организатор' : ''}</span><a id="lOut">Выйти</a></div>
+    ${isOrg() ? `<a class="orgcard" href="#report"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span><b>Отчёт по обучению</b><small>кто прослушал лекции и прошёл тесты</small></span><span class="chev">›</span></a>` : ''}
     ${LEARN.err ? `<div class="lnote">${esc(LEARN.err)}</div>` : ''}
     ${!d ? '<div class="rwempty">Загрузка ленты…</div>' : !items.length ? '<div class="rwempty">Пока заданий нет. Новые появятся здесь.</div>' : ''}
     ${items.map(x => { const t = TY[x.type] || TY.material, past = learnPast(x), isNew = x.new && !seen.includes(x.id) && !past;
@@ -516,7 +549,7 @@ function learnPage(noFetch) {
       const C = x.type === 'course' && window.COURSES && COURSES[x.course];
       const LC = x.type === 'lecture' && window.LECTURES && LECTURES[x.lecture];
       if (LC) {
-        const st = LS.get('lecture_' + x.lecture, {}), mm = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+        const st = LS.get(pk('lecture_' + x.lecture), {}), mm = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
         const btn = st.done ? 'Слушать снова' : st.pos > 5 ? `Продолжить · ${mm(st.pos)}` : 'Слушать лекцию';
         return `<div class="litem"><div class="lhead"><span class="lty lecture">Лекция</span>${isNew ? '<span class="lnew">новое</span>' : ''}<span class="luntil">${Math.round(LC.dur / 60)} мин · ${LC.slides.length} слайдов · тест ${LC.quiz.length}</span></div>
           <h3>${esc(x.title || LC.title)}</h3><p>${esc(x.text || LC.sub)}</p>
@@ -524,7 +557,7 @@ function learnPage(noFetch) {
           <div class="lbtns"><a class="bigbtn lgo" data-id="${esc(x.id)}" href="#lecture/${x.lecture}">${btn}</a>${st.heard || st.done ? `<a class="lread" href="#lecture/${x.lecture}/test">${st.done ? 'Пройти тест ещё раз' : 'К тесту'} ›</a>` : ''}</div></div>`;
       }
       if (C) {
-        const st = LS.get('course_' + x.course, {}), n = C.cards.length, pos = Math.min(st.pos || 0, n);
+        const st = LS.get(pk('course_' + x.course), {}), n = C.cards.length, pos = Math.min(st.pos || 0, n);
         const btn = st.done ? `Повторить` : pos ? `Продолжить · ${pos + 1}/${n + 1}` : t[1];
         return `<div class="litem"><div class="lhead"><span class="lty course">Курс</span>${isNew ? '<span class="lnew">новое</span>' : ''}<span class="luntil">${C.cards.length} карточек · ${C.quiz.length} вопросов · ~${C.min} мин</span></div>
           <h3>${esc(x.title || C.title)}</h3><p>${esc(x.text || C.sub)}</p>
@@ -536,7 +569,7 @@ function learnPage(noFetch) {
         <div class="lbtns">${url && !past ? `<a class="bigbtn lgo" data-id="${esc(x.id)}" href="${esc(url)}" target="_blank" rel="noopener">${t[1]}</a>` : (!past && x.type !== 'material' ? '<span class="lsoon">ссылка появится позже</span>' : '')}
           ${x.read ? `<a class="lread" data-id="${esc(x.id)}" href="${esc(x.read)}">${x.type === 'material' ? 'Открыть в справочнике' : 'Повторить раздел'} ›</a>` : ''}</div></div>`; }).join('')}
     <p class="disc">Результаты тестов и опросов видит организатор обучения. Логин подставляется в форму автоматически.</p>`;
-  $('#lOut').onclick = () => { LS.set('learnUser', null); learnPage(true); };
+  $('#lOut').onclick = () => { if (isOrg()) { LS.set('orgK', ''); LS.set('orgKey', ''); LS.set('orgNames', ''); } LS.set('learnUser', null); learnPage(true); };
   view.querySelectorAll('[data-id]').forEach(el => el.addEventListener('click', () => { const s = LS.get('learnSeen', []); if (!s.includes(el.dataset.id)) { s.push(el.dataset.id); LS.set('learnSeen', s); } }));
 }
 
@@ -544,9 +577,9 @@ function learnPage(noFetch) {
 function coursePage(key, idx) {
   const C = window.COURSES && COURSES[key];
   if (!C) return go('#learn');
-  const n = C.cards.length, st = LS.get('course_' + key, {});
+  const n = C.cards.length, st = LS.get(pk('course_' + key), {});
   let i = Math.max(0, Math.min(parseInt(idx, 10) || 0, n));
-  st.pos = Math.max(st.pos || 0, i); if (i === n && !st.done) st.pos = n; LS.set('course_' + key, st);
+  st.pos = Math.max(st.pos || 0, i); if (i === n && !st.done) st.pos = n; LS.set(pk('course_' + key), st);
   setTitle(C.title, false);
   const to = j => { history.replaceState(null, '', '#course/' + key + '/' + j); coursePage(key, j); window.scrollTo(0, 0); };
   const bar = `<div class="cvbar"><div class="cvprog"><i style="width:${Math.round((i + 1) / (n + 1) * 100)}%"></i></div><span>${i < n ? `${i + 1} / ${n}` : 'Проверка'}</span></div>`;
@@ -562,11 +595,11 @@ function coursePage(key, idx) {
     $('#cvNext').onclick = () => to(i + 1);
   } else {
     const ans = {}; let sent = false;
-    if (!st.cardsSent) { st.cardsSent = true; LS.set('course_' + key, st); learnSend({ item: 'course:' + key, ev: 'cards', score: n, total: n }); }
+    if (!st.cardsSent) { st.cardsSent = true; LS.set(pk('course_' + key), st); learnSend({ item: 'course:' + key, ev: 'cards', score: n, total: n }); }
     const render = () => {
       const done = Object.keys(ans).length === C.quiz.length, score = C.quiz.filter((q, k) => ans[k] === q.a).length;
-      if (done && !st.done) { st.done = true; st.score = score; st.at = Date.now(); LS.set('course_' + key, st); }
-      if (done && !sent) { sent = true; st.sent = true; LS.set('course_' + key, st); learnSend({ item: 'course:' + key, ev: 'quiz', score, total: C.quiz.length, ans: C.quiz.map((q, k) => ans[k] === q.a ? 1 : 0).join('') }); }
+      if (done && !st.done) { st.done = true; st.score = score; st.at = Date.now(); LS.set(pk('course_' + key), st); }
+      if (done && !sent) { sent = true; st.sent = true; LS.set(pk('course_' + key), st); learnSend({ item: 'course:' + key, ev: 'quiz', score, total: C.quiz.length, ans: C.quiz.map((q, k) => ans[k] === q.a ? 1 : 0).join('') }); }
       view.innerHTML = `<div class="cv">${bar}
         <article class="cvcard"><div class="cvk">Проверка</div><h2>${C.quiz.length} вопросов по курсу</h2><p class="cvlead">Выберите ответ — сразу увидите разбор.</p>
         ${C.quiz.map((q, k) => `<div class="qz${k in ans ? (ans[k] === q.a ? ' ok' : ' bad') : ''}"><div class="qq"><b>${k + 1}.</b> ${esc(q.q)}</div>
@@ -605,7 +638,7 @@ function lecturePage(key) {
     }).catch(() => {}).finally(() => { clearTimeout(tm); if (!L.metaLoaded) done(); });
     return;
   }
-  const st = LS.get('lecture_' + key, {}), base = SITE + L.dir, n = L.slides.length;
+  const st = LS.get(pk('lecture_' + key), {}), base = SITE + L.dir, n = L.slides.length;
   if (!window.LECT || LECT.key !== key) {
     if (window.LECT) LECT.audio.pause();
     const au = new Audio(); au.preload = 'metadata'; au.src = base + (L.audioFile || L.audio) + '?v=' + (L.ver || 1);
@@ -634,14 +667,14 @@ function lecturePage(key) {
     view.querySelectorAll('.lvli').forEach(el => el.classList.toggle('on', +el.dataset.k === i));
     if (i === n - 1) unlock();
   };
-  const unlock = () => { const s = LS.get('lecture_' + key, {}); if (!s.heard) { s.heard = true; LS.set('lecture_' + key, s); } if (!s.heardSent) { s.heardSent = true; LS.set('lecture_' + key, s); learnSend({ item: 'lecture:' + key, ev: 'heard', score: n, total: n }); } testBtn(); };
-  const testBtn = () => { const s = LS.get('lecture_' + key, {}); $('#lvTest').innerHTML = s.heard || s.done ? `<a class="bigbtn lvtest" href="#lecture/${key}/test">${s.done ? `Тест пройден: ${s.score}/${L.quiz.length} · пройти ещё раз` : `Пройти тест · ${L.quiz.length} вопросов`}</a>` : ''; };
+  const unlock = () => { const s = LS.get(pk('lecture_' + key), {}); if (!s.heard) { s.heard = true; LS.set(pk('lecture_' + key), s); } if (!s.heardSent) { s.heardSent = true; LS.set(pk('lecture_' + key), s); learnSend({ item: 'lecture:' + key, ev: 'heard', score: n, total: n }); } testBtn(); };
+  const testBtn = () => { const s = LS.get(pk('lecture_' + key), {}); $('#lvTest').innerHTML = s.heard || s.done ? `<a class="bigbtn lvtest" href="#lecture/${key}/test">${s.done ? `Тест пройден: ${s.score}/${L.quiz.length} · пройти ещё раз` : `Пройти тест · ${L.quiz.length} вопросов`}</a>` : ''; };
   const sync = () => {
     const t = au.currentTime || 0;
     if (!seeking) $('#lvSeek').value = t;
     $('#lvCur').textContent = fmtT(t); show(idxAt(t));
     $('#lvPlay').innerHTML = au.paused ? PLAY_I : PAUSE_I;
-    if (Date.now() - LECT.lastSave > 3000) { LECT.lastSave = Date.now(); const s = LS.get('lecture_' + key, {}); s.pos = t; LS.set('lecture_' + key, s); }
+    if (Date.now() - LECT.lastSave > 3000) { LECT.lastSave = Date.now(); const s = LS.get(pk('lecture_' + key), {}); s.pos = t; LS.set(pk('lecture_' + key), s); }
   };
   let seeking = false;
   img.onload = () => { msg.hidden = true; };
@@ -652,7 +685,7 @@ function lecturePage(key) {
   };
   au.ontimeupdate = () => { if (cur.startsWith('#lecture/' + key)) sync(); };
   au.onplay = au.onpause = au.ontimeupdate;
-  au.onended = () => { const s = LS.get('lecture_' + key, {}); s.pos = 0; s.heard = true; LS.set('lecture_' + key, s); if (cur === '#lecture/' + key) go('#lecture/' + key + '/test'); };
+  au.onended = () => { const s = LS.get(pk('lecture_' + key), {}); s.pos = 0; s.heard = true; LS.set(pk('lecture_' + key), s); if (cur === '#lecture/' + key) go('#lecture/' + key + '/test'); };
   $('#lvPlay').onclick = () => { if (au.paused) { au.playbackRate = LECT.rate; const p = au.play(); if (p && p.catch) p.catch(() => { msg.hidden = false; msg.textContent = 'Не удалось воспроизвести — проверьте интернет'; }); } else au.pause(); };
   const jump = k => { k = Math.max(0, Math.min(n - 1, k)); au.currentTime = L.slides[k].t + (k ? 0.05 : 0); sync(); };
   $('#lvPrev').onclick = () => { const i = idxAt(au.currentTime); jump(au.currentTime - L.slides[i].t > 3 ? i : i - 1); };
@@ -673,7 +706,7 @@ function lectureTest(key) {
   const ans = {}; let saved = false;
   const render = () => {
     const done = Object.keys(ans).length === L.quiz.length, score = L.quiz.filter((q, k) => ans[k] === q.a).length;
-    if (done && !saved) { saved = true; const s = LS.get('lecture_' + key, {}); s.done = true; s.score = score; s.heard = true; s.at = Date.now(); s.sent = true; LS.set('lecture_' + key, s);
+    if (done && !saved) { saved = true; const s = LS.get(pk('lecture_' + key), {}); s.done = true; s.score = score; s.heard = true; s.at = Date.now(); s.sent = true; LS.set(pk('lecture_' + key), s);
       learnSend({ item: 'lecture:' + key, ev: 'quiz', score, total: L.quiz.length, ans: L.quiz.map((q, k) => ans[k] === q.a ? 1 : 0).join('') }); }
     view.innerHTML = `<div class="cv"><article class="cvcard"><div class="cvk">Тест по лекции</div><h2>${esc(L.title.replace(/^Лекция:\s*/, '').replace(/^./, c => c.toUpperCase()))}</h2><p class="cvlead">${L.quiz.length} вопросов. Выберите ответ — сразу увидите разбор.</p>
       ${L.quiz.map((q, k) => `<div class="qz${k in ans ? (ans[k] === q.a ? ' ok' : ' bad') : ''}"><div class="qq"><b>${k + 1}.</b> ${esc(q.q)}</div>
@@ -1246,7 +1279,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '3.5';
+const APP_VERSION = '3.6';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
