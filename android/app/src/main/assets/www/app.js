@@ -109,7 +109,7 @@ function route() {
 // ---------------------------------------------------------------- data
 const TOPICS = [
   { k: 'shock', t: 'Шоки', ids: ['shock', 'angio'], c: 'red', i: 'shock' },
-  { k: 'cardio', t: 'Кардиология', ids: ['ag', 'oks', 'ibs', 'ar', 'hsn'], c: 'rose', i: 'oks' },
+  { k: 'cardio', t: 'Кардиология', ids: ['ag', 'oks', 'ibs', 'ar', 'hsn', 'dlp'], c: 'rose', i: 'oks' },
   { k: 'neuro', t: 'Неврология', ids: ['onmk', 'bol'], c: 'violet', i: 'onmk' },
   { k: 'pulm', t: 'Пульмонология', ids: ['astma', 'hobl'], c: 'blue', i: 'astma' },
   { k: 'inf', t: 'Инфекционные болезни', ids: ['pnevm', 'orvi', 'sinus', 'angina'], c: 'green', i: 'inf' },
@@ -1279,7 +1279,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '3.6';
+const APP_VERSION = '3.7';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
