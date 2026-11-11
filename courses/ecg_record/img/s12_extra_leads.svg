@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" font-family="DejaVu Sans, Arial, sans-serif">
+<title>Дополнительные отведения V3R–V4R и V7–V9</title>
+<rect width="960" height="540" rx="18" fill="#ffffff"/>
+<text x="480.0" y="40.0" font-size="24" fill="#1f2430" text-anchor="middle" font-weight="bold">Дополнительные отведения: правые и задние</text>
+<ellipse cx="350" cy="290" rx="260" ry="165" fill="#fafafa" stroke="#c4c9d1" stroke-width="2"/>
+<text x="350.0" y="151.0" font-size="13" fill="#6b7280" text-anchor="middle" font-weight="normal">спереди</text>
+<rect x="336" y="411" width="28" height="32" rx="6" fill="#e5e7eb"/>
+<text x="350.0" y="403.0" font-size="12" fill="#6b7280" text-anchor="middle" font-weight="normal">позвоночник</text>
+<text x="104.0" y="340.0" font-size="13" fill="#6b7280" text-anchor="start" font-weight="normal">справа</text>
+<text x="596.0" y="320.0" font-size="13" fill="#6b7280" text-anchor="end" font-weight="normal">слева</text>
+<ellipse cx="385" cy="270" rx="90" ry="66" fill="#f3c1bd" stroke="#d0342c" stroke-width="1.5" transform="rotate(-20 385 270)"/>
+<ellipse cx="342" cy="246" rx="46" ry="28" fill="#c9d8f0" stroke="#2f6fb5" stroke-width="1.5" transform="rotate(-15 342 246)"/>
+<text x="342.0" y="251.0" font-size="15" fill="#2f6fb5" text-anchor="middle" font-weight="bold">ПЖ</text>
+<text x="415.0" y="295.0" font-size="15" fill="#d0342c" text-anchor="middle" font-weight="bold">ЛЖ</text>
+<circle cx="304.9" cy="127.5" r="9" fill="#9aa0a8" stroke="#ffffff" stroke-width="2"/>
+<text x="299.6" y="111.8" font-size="15" fill="#6b7280" text-anchor="middle" font-weight="bold">V1</text>
+<circle cx="395.1" cy="127.5" r="9" fill="#9aa0a8" stroke="#ffffff" stroke-width="2"/>
+<text x="400.4" y="111.8" font-size="15" fill="#6b7280" text-anchor="middle" font-weight="bold">V2</text>
+<circle cx="472.1" cy="144.3" r="9" fill="#9aa0a8" stroke="#ffffff" stroke-width="2"/>
+<text x="486.1" y="130.9" font-size="15" fill="#6b7280" text-anchor="middle" font-weight="bold">V3</text>
+<circle cx="533.8" cy="173.3" r="9" fill="#9aa0a8" stroke="#ffffff" stroke-width="2"/>
+<text x="555.1" y="163.8" font-size="15" fill="#6b7280" text-anchor="middle" font-weight="bold">V4</text>
+<circle cx="591.1" cy="228.2" r="9" fill="#9aa0a8" stroke="#ffffff" stroke-width="2"/>
+<text x="618.9" y="225.9" font-size="15" fill="#6b7280" text-anchor="middle" font-weight="bold">V5</text>
+<circle cx="610.0" cy="290.0" r="9" fill="#9aa0a8" stroke="#ffffff" stroke-width="2"/>
+<text x="640.0" y="296.0" font-size="15" fill="#6b7280" text-anchor="middle" font-weight="bold">V6</text>
+<circle cx="227.9" cy="144.3" r="9" fill="#2f6fb5" stroke="#ffffff" stroke-width="2"/>
+<text x="213.9" y="130.9" font-size="15" fill="#2f6fb5" text-anchor="middle" font-weight="bold">V3R</text>
+<circle cx="166.2" cy="173.3" r="9" fill="#2f6fb5" stroke="#ffffff" stroke-width="2"/>
+<text x="144.9" y="163.8" font-size="15" fill="#2f6fb5" text-anchor="middle" font-weight="bold">V4R</text>
+<circle cx="579.6" cy="367.5" r="9" fill="#e08a00" stroke="#ffffff" stroke-width="2"/>
+<text x="606.1" y="383.8" font-size="15" fill="#e08a00" text-anchor="middle" font-weight="bold">V7</text>
+<circle cx="510.1" cy="420.0" r="9" fill="#e08a00" stroke="#ffffff" stroke-width="2"/>
+<text x="528.5" y="443.4" font-size="15" fill="#e08a00" text-anchor="middle" font-weight="bold">V8</text>
+<circle cx="421.7" cy="448.6" r="9" fill="#e08a00" stroke="#ffffff" stroke-width="2"/>
+<text x="429.9" y="475.8" font-size="15" fill="#e08a00" text-anchor="middle" font-weight="bold">V9</text>
+<rect x="658" y="100" width="290" height="360" rx="14" fill="#f8fafc" stroke="#e2e8f0"/>
+<text x="672.0" y="132.0" font-size="20" fill="#2f6fb5" text-anchor="start" font-weight="bold">V3R–V4R</text>
+<text x="672.0" y="160.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">справа, зеркально V3–V4</text>
+<text x="672.0" y="183.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">→ правый желудочек</text>
+<text x="672.0" y="206.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">нижний ИМпST — снять</text>
+<text x="672.0" y="229.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">ST ↑ ≥ 1 мм = ИМ ПЖ</text>
+<text x="672.0" y="280.0" font-size="20" fill="#e08a00" text-anchor="start" font-weight="bold">V7–V9</text>
+<text x="672.0" y="308.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">на уровне V4–V6:</text>
+<text x="672.0" y="331.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">V7 — задняя подмышечная</text>
+<text x="672.0" y="354.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">V8 — лопаточная</text>
+<text x="672.0" y="377.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">V9 — паравертебральная</text>
+<text x="672.0" y="400.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">→ задняя стенка ЛЖ</text>
+<text x="672.0" y="444.0" font-size="13" fill="#6b7280" text-anchor="start" font-weight="normal">КР157_5</text>
+</svg>

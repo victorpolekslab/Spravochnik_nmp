@@ -26,10 +26,11 @@ RESERVED = {'gbn'}   # курсы, написанные вручную в conten
 
 BLOCKS = {'targets': ['h', 'items'], 'exam': ['h', 'items'], 'flags': ['h', 'items'], 'warn': ['h', 'items'],
           'steps': ['h', 'items'], 'scheme': ['h', 'items'], 'table': ['h', 'cols', 'rows'], 'rx': ['h', 'rows'],
-          'note': ['text'], 'fold': ['h', 'items']}
+          'note': ['text'], 'fold': ['h', 'items'], 'img': ['img']}
 LAYOUTS = {'title': ['h'], 'points': ['h', 'items'], 'big': ['value', 'text'], 'compare': ['h', 'left', 'right'],
            'table': ['h', 'cols', 'rows'], 'flags': ['h', 'items'], 'case': ['kicker', 'h', 'facts'],
-           'answer': ['kicker', 'h', 'items', 'verdict'], 'meme': ['left', 'right'], 'end': ['h', 'items']}
+           'answer': ['kicker', 'h', 'items', 'verdict'], 'meme': ['left', 'right'], 'end': ['h', 'items'], 'image': ['h', 'img']}
+IMG_EXT = ('.svg', '.png', '.jpg', '.jpeg', '.webp')
 LIMITS = {'points': ('items', 6), 'big': ('items', 3), 'table': ('rows', 7), 'flags': ('items', 14), 'case': ('facts', 6),
           'answer': ('items', 5), 'end': ('items', 5)}
 
@@ -42,6 +43,7 @@ def path_of(arg):
 
 
 def load(arg):
+    IMG_BASE[0] = os.path.dirname(os.path.abspath(path_of(arg)))
     with open(path_of(arg), encoding='utf-8') as f:
         return json.load(f)
 
@@ -50,8 +52,19 @@ def words(t):
     return len(re.findall(r'\w+', t or ''))
 
 
-def check(c):
+def check(c, base=None):
     E, W = [], []
+    base = base or os.path.join(COURSES, c.get('id', ''))
+
+    def img_ok(rel, where):
+        rel = str(rel or '')
+        if not re.fullmatch(r'img/[\w.-]+', rel) or not rel.lower().endswith(IMG_EXT): E.append(f'{where}: картинка «{rel}» — нужен путь img/<файл>.svg|png|jpg|webp'); return
+        f = os.path.join(base, rel)
+        if not os.path.exists(f): E.append(f'{where}: нет файла {rel} в папке курса'); return
+        if os.path.getsize(f) > 1_500_000: E.append(f'{where}: {rel} больше 1,5 МБ')
+        if rel.lower().endswith('.svg'):
+            t = open(f, encoding='utf-8', errors='replace').read()
+            if re.search(r'<script|<foreignObject|\bon\w+\s*=|(xlink:)?href\s*=\s*["\'](https?:|//|data:text)', t, re.I): E.append(f'{where}: в {rel} скрипты или внешние ссылки — недопустимо')
     req = lambda o, keys, where: [E.append(f'{where}: нет поля «{k}»') for k in keys if not o.get(k) and o.get(k) != 0]
     if c.get('format') != 1: E.append('format должен быть 1')
     cid = c.get('id', '')
@@ -90,6 +103,7 @@ def check(c):
                 if t not in BLOCKS: E.append(f'{w}: неизвестный тип «{t}»'); continue
                 req(b, BLOCKS[t], f'{w} ({t})')
                 src_ok(b, w)
+                if t == 'img': img_ok(b.get('img'), w)
                 if t == 'steps' and any(not isinstance(x, dict) or 's' not in x for x in b.get('items') or []): E.append(f'{w}: в steps элементы {{s, note?}}')
                 if t == 'scheme' and any(not isinstance(x, dict) or 's' not in x or 'text' not in x for x in b.get('items') or []): E.append(f'{w}: в scheme элементы {{s, text}}')
                 if t == 'table':
@@ -114,6 +128,10 @@ def check(c):
             if lay not in LAYOUTS: E.append(f'{w}: неизвестный макет «{lay}»'); continue
             req(s, LAYOUTS[lay] + ['say'], f'{w} ({lay})')
             if not s.get('h'): W.append(f'{w}: нет h — в списке слайдов будет пусто')
+            if s.get('img'):
+                img_ok(s['img'], w)
+                if lay in ('title', 'meme'): E.append(f'{w}: на макете {lay} картинка не ставится')
+                if s.get('imgMode', 'side') not in ('side', 'full'): E.append(f'{w}: imgMode — side или full')
             if lay in LIMITS:
                 k, n = LIMITS[lay]
                 if len(s.get(k) or []) > n: E.append(f'{w}: в «{k}» не больше {n}')
@@ -122,7 +140,7 @@ def check(c):
             if n < 15 or n > 170: W.append(f'{w}: в озвучке {n} слов (норма 40–130)')
             bad = sorted(set(re.findall(r'[0-9%≥≤<>±×/+=]|[A-Za-z]+', say)))
             if bad: W.append(f'{w}: в озвучке есть «{" ".join(bad[:8])}» — синтез прочитает плохо; числа и знаки пишите словами')
-            ab = sorted(set(re.findall(r'\b[А-ЯЁ]{2,}\b', say)))
+            ab = sorted(a for a in set(re.findall(r'\b[А-ЯЁ]{2,}\b', say)) - set(SAY_FIX) if not vosk_knows(a))
             if ab: W.append(f'{w}: сокращения «{" ".join(ab[:6])}» — проверьте на слух или напишите полностью')
         if sl and not (450 <= total <= 1400): W.append(f'лекция: {total} слов ≈ {total / 125:.1f} мин (норма 5–10 мин)')
         quiz(le.get('quiz'), 'lecture.quiz', 3, 8)
@@ -192,6 +210,15 @@ tr:nth-child(even) td{background:#f6f3ee}td:first-child{font-weight:700;width:28
 .q{margin-top:auto;font-size:1.25em;font-weight:700;color:#e8a33d;line-height:1.25}
 .verdict{margin-top:auto;background:#1f2430;color:#fff;border-radius:16px;padding:.8em 1em;font-size:1.15em;font-weight:700;line-height:1.3}
 .ans .kick{color:#b83a35}
+/* картинка */
+.pic{display:flex;align-items:center;justify-content:center;min-width:0;min-height:0;overflow:hidden}
+.pic img{max-width:100%;max-height:100%;border-radius:18px;box-shadow:0 6px 24px rgba(31,36,48,.18);background:#fff}
+.side .in{flex-direction:row;gap:44px;align-items:stretch}.side .txt{flex:0 0 38%;display:flex;flex-direction:column;min-width:0;min-height:0}
+.side .pic{flex:1}.side h2{font-size:1.75em}
+.full .in{top:44px;bottom:58px;left:80px;right:80px}.full .pic{flex:1;margin:.35em 0 .35em}
+.fh{font-family:Rubik,sans-serif;font-size:42px;font-weight:800;line-height:1.1;display:flex;align-items:baseline;gap:.6em;flex-wrap:wrap}
+.fh .kick{font-size:20px;margin:0;color:#b83a35}.case .fh .kick,.title .fh .kick{color:#e8a33d}.full .cap{font-size:24px}.full .src{bottom:16px;left:80px;font-size:18px}
+.cap{font-size:.8em;line-height:1.3;color:#5d6270}.case .cap,.title .cap{color:#c9ccd3}
 /* end */
 ol.nums{list-style:none;counter-reset:n}
 ol.nums li{counter-increment:n;position:relative;padding-left:2.3em;margin-bottom:.8em;line-height:1.3;font-size:1.1em;min-height:1.6em}
@@ -232,12 +259,39 @@ def slide_html(s):
     elif L == 'end':
         body = f'{k}<h2>{md(s["h"])}</h2><ol class="nums">' + ''.join(f'<li>{md(i)}</li>' for i in s['items']) + f'</ol>{note}'
     src = f'<div class="src">{md(s["src"])}</div>' if s.get('src') else ''
+    if L == 'image':
+        cls, body = 'image full', f'{k}<h2>{md(s["h"])}</h2>'
+    im = s.get('img')
+    if im:
+        uri = img_uri(im)
+        mode = 'full' if L in ('image', 'compare') else s.get('imgMode', 'side')
+        if mode == 'full':
+            cap = s.get('caption') or s.get('verdict') or s.get('question') or s.get('note') or ''
+            head = '<div class="fh">' + (f'<span class="kick">{md(s["kicker"])}</span>' if s.get('kicker') else '') + f'<b>{md(s.get("h", ""))}</b></div>'
+            body = f'{head}<div class="pic"><img src="{uri}"></div>' + (f'<div class="cap">{md(cap)}</div>' if cap else '')
+            cls = cls.replace(' full', '') + ' full'
+        else:
+            body = f'<div class="txt">{body}</div><div class="pic"><img src="{uri}"></div>'
+            cls += ' side'
     return f'<section class="{cls}"><div class="in">{body}</div>{src}</section>'
 
 
+IMG_BASE = [None]   # папка курса, откуда брать img/…
+
+
+def img_uri(rel):
+    import base64, mimetypes
+    f = os.path.join(IMG_BASE[0], rel)
+    mt = 'image/svg+xml' if f.lower().endswith('.svg') else (mimetypes.guess_type(f)[0] or 'image/png')
+    return f'data:{mt};base64,' + base64.b64encode(open(f, 'rb').read()).decode()
+
+
 FIT = """() => { const s = document.querySelector('section'), i = s.querySelector('.in');
-  let f = 40; i.style.setProperty('--f', f + 'px'); const over = () => i.scrollHeight > i.clientHeight + 2 || [...i.querySelectorAll('.card,.two')].some(e => e.scrollHeight > e.clientHeight + 2);
-  while (over() && f > 20) { f -= 1; i.style.setProperty('--f', f + 'px'); } return f; }"""
+  let f = 40; i.style.setProperty('--f', f + 'px'); const over = () => i.scrollHeight > i.clientHeight + 2 || [...i.querySelectorAll('.card,.two,.txt')].some(e => e.scrollHeight > e.clientHeight + 2);
+  while (over() && f > 20) { f -= 1; i.style.setProperty('--f', f + 'px'); }
+  i.querySelectorAll('.pic').forEach(p => { const im = p.querySelector('img'), b = p.getBoundingClientRect(), r = (im.naturalWidth || 16) / (im.naturalHeight || 9);
+    const w = Math.min(b.width, b.height * r); im.style.width = w + 'px'; im.style.height = (w / r) + 'px'; im.style.maxWidth = 'none'; im.style.maxHeight = 'none'; });
+  return f; }"""
 
 
 def render(slides, out, prefix='s'):
@@ -248,7 +302,7 @@ def render(slides, out, prefix='s'):
         b = p.chromium.launch(); pg = b.new_page(viewport={'width': 1600, 'height': 900})
         for i, s in enumerate(slides, 1):
             pg.set_content(f'<!doctype html><html><head><meta charset="utf-8">{FONTS}<style>{CSS}</style></head><body>{slide_html(s)}</body></html>', wait_until='networkidle')
-            pg.evaluate('document.fonts.ready'); f = pg.evaluate(FIT)
+            pg.evaluate('document.fonts.ready'); pg.wait_for_function('[...document.images].every(i => i.complete)'); f = pg.evaluate(FIT)
             if f <= 20: small.append(i)
             png = f'{out}/{prefix}{i:02d}.png'
             pg.locator('section').screenshot(path=png)
@@ -270,7 +324,21 @@ def contact(jpgs, out):
 
 
 # ------------------------------------------------------------------ озвучка
+# сокращения, которые словарь Vosk читает неверно (ЭКГ, ЧСС, ИБС, ВИЧ он знает — «экагэ», «чэсэсэ»…)
+SAY_FIX = {'ОКС': 'о-ка-эс', 'АД': 'давление'}
+_DIC = [None]
+
+
+def vosk_knows(word):
+    if _DIC[0] is None:
+        p = os.path.join(VOSK, 'dictionary'); _DIC[0] = set()
+        if os.path.exists(p):
+            with open(p, encoding='utf-8') as f: _DIC[0] = {l.split(' ', 1)[0] for l in f}
+    return word.lower() in _DIC[0]
+
+
 def clean(t):
+    for a, b in SAY_FIX.items(): t = re.sub(rf'\b{a}\b', b, t)
     t = re.sub(r'[«»“”„"()\[\]]', '', t).replace('…', '...').replace('—', ',').replace('–', ',')
     return re.sub(r'\s*,\s*,', ',', re.sub(r'\s+', ' ', t)).strip()
 
@@ -316,7 +384,15 @@ def gen():
         if c.get('status') != 'ready': continue
         if c.get('course'):
             co = {k: c[k] for k in ('title', 'sub', 'src', 'srcName') if c.get(k)}
-            co.update(min=c['course'].get('min', 7), cards=c['course']['cards'], quiz=c['course']['quiz'])
+            import hashlib
+            cards = json.loads(json.dumps(c['course']['cards']))
+            for cd in cards:
+                for b in cd.get('blocks', []):
+                    if b.get('t') == 'img':
+                        f = os.path.join(COURSES, cid, b['img'])
+                        h = hashlib.sha256(open(f, 'rb').read()).hexdigest()[:10] if os.path.exists(f) else '0'
+                        b['img'] = f'media/{cid}/img/{os.path.basename(b["img"])}?v={h}'
+            co.update(min=c['course'].get('min', 7), cards=cards, quiz=c['course']['quiz'])
             out.append(f'COURSES[{json.dumps(cid)}] = {json.dumps(co, ensure_ascii=False, indent=1)};')
         meta_p = os.path.join(MEDIA, cid, 'meta.json')
         if c.get('lecture') and os.path.exists(meta_p):
@@ -348,12 +424,23 @@ def feed(c):
 
 
 def build(arg):
-    c = load(arg); E, W = check(c); report(c, E, W)
+    c = load(arg); E, W = check(c, IMG_BASE[0]); report(c, E, W)
     if E: sys.exit('Исправьте ошибки в course.json')
     if c['status'] != 'ready': sys.exit('status = draft: курс не выпускается')
     cid = c['id']; dst = os.path.join(COURSES, cid, 'course.json')
     if os.path.abspath(path_of(arg)) != os.path.abspath(dst):
         os.makedirs(os.path.dirname(dst), exist_ok=True); shutil.copy(path_of(arg), dst)
+        if os.path.isdir(os.path.join(IMG_BASE[0], 'img')):
+            shutil.rmtree(os.path.join(COURSES, cid, 'img'), ignore_errors=True)
+            shutil.copytree(os.path.join(IMG_BASE[0], 'img'), os.path.join(COURSES, cid, 'img'))
+    # картинки карточек — на сайт (media/<id>/img/), имена с версией содержимого против кэша
+    used = sorted({b['img'] for cd in (c.get('course') or {}).get('cards', []) for b in cd.get('blocks', []) if b.get('t') == 'img'})
+    mimg = os.path.join(MEDIA, cid, 'img')
+    shutil.rmtree(mimg, ignore_errors=True)
+    if used:
+        os.makedirs(mimg)
+        for rel in used: shutil.copy(os.path.join(COURSES, cid, rel), os.path.join(mimg, os.path.basename(rel)))
+        print('  картинок в карточках:', len(used))
     if c.get('lecture'):
         md_dir = os.path.join(MEDIA, cid); os.makedirs(md_dir, exist_ok=True)
         meta_p = os.path.join(md_dir, 'meta.json')
@@ -381,11 +468,19 @@ def main():
         data = subprocess.run(['git', '-C', ROOT, 'show', f'origin/courses:courses/{cid}/course.json'], check=True, capture_output=True).stdout
         dst = os.path.join(COURSES, cid); os.makedirs(dst, exist_ok=True)
         open(os.path.join(dst, 'course.json'), 'wb').write(data)
-        c = load(cid); report(c, *check(c))
+        names = subprocess.run(['git', '-C', ROOT, 'ls-tree', '--name-only', f'origin/courses:courses/{cid}/img/'], capture_output=True, text=True).stdout.split()
+        if names:
+            shutil.rmtree(os.path.join(dst, 'img'), ignore_errors=True); os.makedirs(os.path.join(dst, 'img'))
+            for n in names:
+                if n.lower().endswith(IMG_EXT):
+                    b = subprocess.run(['git', '-C', ROOT, 'show', f'origin/courses:courses/{cid}/img/{n}'], check=True, capture_output=True).stdout
+                    open(os.path.join(dst, 'img', n), 'wb').write(b)
+            print('  картинок:', len([n for n in names if n.lower().endswith(IMG_EXT)]))
+        c = load(cid); report(c, *check(c, IMG_BASE[0]))
     elif cmd == 'check':
-        c = load(a[1]); E, W = check(c); report(c, E, W); sys.exit(1 if E else 0)
+        c = load(a[1]); E, W = check(c, IMG_BASE[0]); report(c, E, W); sys.exit(1 if E else 0)
     elif cmd == 'preview':
-        c = load(a[1]); E, W = check(c); report(c, E, W)
+        c = load(a[1]); E, W = check(c, IMG_BASE[0]); report(c, E, W)
         if E or not c.get('lecture'): sys.exit(1 if E else 0)
         out = a[2] if len(a) > 2 else os.path.join(ROOT, 'build', 'preview', c['id'])
         shutil.rmtree(out, ignore_errors=True)

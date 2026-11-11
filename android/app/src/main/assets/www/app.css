@@ -800,3 +800,11 @@ details.more > summary span { font-weight: 600; color: var(--muted); font-size: 
 .cvb .ttab:not(.c2) th, .cvb .ttab:not(.c2) td { overflow-wrap: anywhere; hyphens: auto; -webkit-hyphens: auto; }
 .cvb .ttab:not(.c2) table { font-size: 12.5px; }
 .cvb .ttab:not(.c2) th, .cvb .ttab:not(.c2) td { padding: 6px 5px; }
+
+/* схема (картинка) в карточке курса; нажатие открывает её крупно в браузере */
+.bimg { margin: 10px 0; }
+.bimg a { display: block; border-radius: 12px; overflow: hidden; background: #fff; border: 1px solid var(--line); }
+.bimg img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; }
+.bimg figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.35; }
+.bimg .imgoff { display: none; font-size: 13px; color: var(--muted); padding: 8px 0; }
+.bimg.noimg a { display: none; } .bimg.noimg .imgoff { display: block; }

@@ -1144,6 +1144,11 @@ function block(b) {
         <tbody>${b.rows.map(r => `<tr${isToday(r[0]) ? ' class="today"' : ''}>${r.map((c, i) => i === 0 ? `<th>${esc(c)}</th>` : `<td>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>${b.note ? `<div class="bnote">${esc(b.note)}</div>` : ''}${src}</section>`;
     case 'note':
       return `<section class="b note"><p>${esc(b.text)}</p>${src}</section>`;
+    case 'img': {
+      const u = /^https?:/.test(b.img) ? b.img : SITE + b.img;
+      return `<figure class="b bimg">${b.h ? `<h3>${esc(b.h)}</h3>` : ''}<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="${esc(b.caption || b.h || 'схема')}" loading="lazy"
+        onerror="this.closest('figure').classList.add('noimg')"></a><div class="imgoff">Схема не загрузилась — нужен интернет.</div>${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ''}${src}</figure>`;
+    }
     case 'classify': return classifyBlock(b);
     case 'tiles': return tilesBlock(b);
     case 'fold':
