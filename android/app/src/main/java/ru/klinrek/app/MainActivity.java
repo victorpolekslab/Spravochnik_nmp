@@ -138,11 +138,11 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (!updateChecked) { updateChecked = true; checkUpdate(false); }
+                if (!updateChecked) { updateChecked = true; checkUpdate(false); checkContent(); }
             }
         });
         setContentView(web);
-        web.loadUrl("file:///android_asset/www/index.html");
+        web.loadUrl(Ota.startUrl(this));
     }
 
     // ------------------------------------------------------------ update check
@@ -154,6 +154,14 @@ public class MainActivity extends Activity {
     public class AppBridge {
         @android.webkit.JavascriptInterface
         public void checkUpdate() { MainActivity.this.checkUpdate(true); }
+        /** Страница стартовала нормально — скачанная версия содержимого рабочая. */
+        @android.webkit.JavascriptInterface
+        public void otaOk() { Ota.ok(MainActivity.this); }
+        /** Версия содержимого, которая сейчас запущена (из APK или скачанная). */
+        @android.webkit.JavascriptInterface
+        public String contentVersion() { return String.valueOf(Ota.running(MainActivity.this)); }
+        @android.webkit.JavascriptInterface
+        public void checkContent() { MainActivity.this.checkContent(); }
     }
 
     private void js(String script) {
@@ -193,11 +201,30 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    // ------------------------------------------------------------ content updates (OTA)
+    private long pausedAt = 0;
+
+    private void checkContent() {
+        Ota.check(this, () -> js("window.onContentReady&&onContentReady()"));
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        pausedAt = System.currentTimeMillis();
+    }
+
     @Override
     protected void onResume() {
         super.onResume();
+        if (web == null) return;
+        // скачанное обновление содержимого применяем, если приложение было свёрнуто больше 10 минут
+        if (pausedAt > 0 && System.currentTimeMillis() - pausedAt > 10 * 60 * 1000 && Ota.pending(this)) {
+            web.loadUrl(Ota.startUrl(this));
+            return;
+        }
         // the app often stays in memory for days: check again when it comes back, at most every 30 minutes
-        if (web != null && updateChecked && System.currentTimeMillis() - lastCheck > 30 * 60 * 1000) checkUpdate(false);
+        if (updateChecked && System.currentTimeMillis() - lastCheck > 30 * 60 * 1000) { checkUpdate(false); checkContent(); }
     }
 
     @Override

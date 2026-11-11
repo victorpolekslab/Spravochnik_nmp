@@ -779,3 +779,5 @@ details.more > summary { cursor: pointer; font-size: 12px; font-weight: 700; col
 details.more > summary::-webkit-details-marker { display: none; }
 details.more > summary::before { content: "▸ "; } details.more[open] > summary::before { content: "▾ "; }
 details.more > summary span { font-weight: 600; color: var(--muted); font-size: 11px; background: var(--surface2); border-radius: 8px; padding: 0 6px; }
+.toast { position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); max-width: calc(100% - 32px); background: #1F2328; color: #fff; padding: 11px 16px; border-radius: 12px; font-size: 14px; line-height: 1.35; box-shadow: 0 6px 20px rgba(0,0,0,.25); opacity: 0; transition: opacity .3s, transform .3s; z-index: 2000; text-align: center; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }

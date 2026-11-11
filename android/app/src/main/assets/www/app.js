@@ -1283,7 +1283,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '4.0';
+const APP_VERSION = '4.1';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
@@ -1307,7 +1307,7 @@ function about() {
   const names = crNames();
   const bundled = Object.values(crData()).filter(x => x.off);
   view.innerHTML = `<div class="about">
-    <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION} · клинические рекомендации от 03.11.2026</p>
+    <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION}${contentLabel()} · клинические рекомендации от 03.11.2026</p>
       ${window.App ? '<button class="lnkbtn" id="updChk">Проверить обновления</button><span class="updres" id="updRes"></span>' : ''}</div>
     <div class="card"><b>Обучение</b><p><a href="#report">Отчёт по обучению</a> — для организатора: кто прослушал лекции и прошёл тесты.</p></div>
     <div class="card"><b>Поделиться с коллегами</b><p>iPhone и любой браузер: <a href="${SITE}">${SITE.replace('https://', '')}</a> — открыть в Safari → «Поделиться» → «На экран Домой».</p>
@@ -1319,7 +1319,7 @@ function about() {
     <div class="card"><b>Встроенные рекомендации</b>${bundled.sort((x, y) => x.name.localeCompare(y.name)).map(x => `<p><a href="#doc/${x.id}">КР${esc(x.id)}</a> — ${esc(x.name)}</p>`).join('')}</div>
   </div>`;
   const b = $('#updChk');
-  if (b) b.onclick = () => { $('#updRes').textContent = 'Проверяю…'; try { window.App.checkUpdate(); } catch (e) { onUpdateFail(); } };
+  if (b) b.onclick = () => { $('#updRes').textContent = 'Проверяю…'; try { window.App.checkUpdate(); if (window.App.checkContent) window.App.checkContent(); } catch (e) { onUpdateFail(); } };
 }
 // ---------------------------------------------------------------- Document viewer
 let docState = null;
@@ -1483,3 +1483,20 @@ function showToc() {
 // ---------------------------------------------------------------- start
 stack.push(location.hash || '#home');
 route();
+// ---------------------------------------------------------------- обновление содержимого без переустановки (Android)
+function contentVer() { try { return window.App && App.contentVersion ? String(App.contentVersion()) : ''; } catch (e) { return ''; } }
+function contentLabel() {
+  const v = contentVer(); if (!/^\d{12}$/.test(v)) return '';
+  return ` · содержимое от ${v.slice(6, 8)}.${v.slice(4, 6)}.${v.slice(0, 4)}`;
+}
+function toast(text) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = text; document.body.appendChild(t);
+  setTimeout(() => t.classList.add('on'), 30); setTimeout(() => { t.classList.remove('on'); setTimeout(() => t.remove(), 400); }, 4500);
+}
+window.onContentReady = () => toast('Загружено обновление справочника — применится при следующем открытии');
+setTimeout(() => {
+  try { if (window.App && App.otaOk) App.otaOk(); } catch (e) {}
+  const v = contentVer(), seen = LS.get('contentSeen', '');
+  if (v && seen && v !== seen && v > seen) toast('Справочник обновлён');
+  if (v) LS.set('contentSeen', v);
+}, 1500);
