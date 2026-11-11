@@ -93,8 +93,9 @@ public class KrWatch extends JobService {
         Map<String, String[]> remote = null;
         for (String u : URLS) {
             try {
-                remote = parse(get(u));
-                if (remote.size() >= 300) break;
+                String body = get(u);
+                remote = parse(body);
+                if (remote.size() >= 300) { saveList(c, body, u.replaceAll(".*op=", "")); break; }
                 err = "в ответе " + u.replaceAll(".*op=", "") + " только " + remote.size() + " КР";
                 remote = null;
             } catch (Exception e) {
@@ -216,6 +217,82 @@ public class KrWatch extends JobService {
                 .setContentText(fresh == 1 ? first : first + " и ещё " + (fresh - 1))
                 .setContentIntent(pi).setAutoCancel(true).build();
         try { nm.notify(JOB_ID, nt); } catch (SecurityException ignored) { }   // нет разрешения на уведомления
+    }
+
+    // ------------------------------------------------------------------ передача в чат разработки (через Google-скрипт организатора)
+    static File listFile(Context c) { return new File(c.getFilesDir(), "kr_list.json.gz"); }
+
+    private static void saveList(Context c, String body, String op) {
+        try (java.util.zip.GZIPOutputStream g = new java.util.zip.GZIPOutputStream(new java.io.FileOutputStream(listFile(c)))) {
+            g.write(body.getBytes("UTF-8"));
+            sp(c).edit().putString("listOp", op).apply();
+        } catch (Exception ignored) { }
+    }
+
+    interface UpCb { void item(String name, boolean ok, String msg); void done(int ok, int total); }
+
+    private static volatile boolean uploading = false;
+
+    /** Отправить список КР (последний скачанный) и тексты КР ids на скрипт url. */
+    static void upload(Context ctx, String url, String key, JSONArray ids, UpCb cb) {
+        if (uploading) return;
+        uploading = true;
+        final Context c = ctx.getApplicationContext();
+        new Thread(() -> {
+            int ok = 0, total = ids.length() + 1;
+            try {
+                // 1. список действующих КР — исходный ответ сайта
+                try {
+                    File lf = listFile(c);
+                    if (!lf.exists()) throw new Exception("сначала нажмите «Проверить сейчас»");
+                    byte[] gz = java.nio.file.Files.readAllBytes(lf.toPath());
+                    post(url, key, "list.json.gz", sp(c).getString("listOp", ""), gz);
+                    ok++; cb.item("список КР", true, "");
+                } catch (Exception e) { cb.item("список КР", false, msg(e)); }
+                // 2. тексты КР
+                for (int i = 0; i < ids.length(); i++) {
+                    String id = ids.optString(i);
+                    try {
+                        if (!id.matches("\\d+_\\d+")) throw new Exception("неверный номер");
+                        String json = Downloader.fetch(id, null).replaceAll("data:image/[a-zA-Z+]+;base64,[A-Za-z0-9+/=\\s]+", "");
+                        if (!json.contains("\"sections\"")) throw new Exception("в ответе Минздрава нет текста");
+                        java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+                        try (java.util.zip.GZIPOutputStream g = new java.util.zip.GZIPOutputStream(bo)) { g.write(json.getBytes("UTF-8")); }
+                        post(url, key, id + ".json.gz", "GetClinrec2", bo.toByteArray());
+                        ok++; cb.item(id, true, (bo.size() / 1024) + " КБ");
+                    } catch (Exception e) { cb.item(id, false, msg(e)); }
+                }
+            } finally { uploading = false; cb.done(ok, total); }
+        }).start();
+    }
+
+    private static String msg(Exception e) {
+        if (e instanceof java.net.UnknownHostException || e instanceof java.net.ConnectException || e instanceof java.net.SocketTimeoutException) return "нет связи";
+        return String.valueOf(e.getMessage());
+    }
+
+    @SuppressWarnings("deprecation")
+    private static void post(String url, String key, String name, String src, byte[] gz) throws Exception {
+        if (!url.matches("https://script\\.google\\.com/macros/s/[\\w-]+/exec")) throw new Exception("нет адреса скрипта");
+        String body = new JSONObject().put("op", "kr").put("key", key).put("name", name).put("src", src)
+                .put("data", android.util.Base64.encodeToString(gz, android.util.Base64.NO_WRAP)).toString();
+        HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+        c.setConnectTimeout(20000); c.setReadTimeout(180000); c.setDoOutput(true); c.setRequestMethod("POST");
+        c.setInstanceFollowRedirects(true);
+        c.setRequestProperty("Content-Type", "text/plain;charset=utf-8");
+        byte[] b = body.getBytes("UTF-8");
+        c.setFixedLengthStreamingMode(b.length);
+        try {
+            try (java.io.OutputStream o = c.getOutputStream()) { o.write(b); }
+            int code = c.getResponseCode();
+            String resp = "";
+            try (InputStream in = code < 400 ? c.getInputStream() : c.getErrorStream()) {
+                if (in != null) { ByteArrayOutputStream bo = new ByteArrayOutputStream(); byte[] buf = new byte[8192]; int n; while ((n = in.read(buf)) > 0) bo.write(buf, 0, n); resp = bo.toString("UTF-8"); }
+            }
+            if (resp.contains("\"err\":\"key\"")) throw new Exception("скрипт не принял ключ организатора");
+            if (resp.contains("\"ok\":false") || !resp.contains("\"ok\":true"))
+                throw new Exception(code != 200 ? "скрипт ответил HTTP " + code : "скрипт не умеет принимать КР — обновите его код");
+        } finally { c.disconnect(); }
     }
 
     // ------------------------------------------------------------------ сеть

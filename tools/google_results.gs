@@ -8,6 +8,10 @@
  * В таблицу пишутся только код учётки (обезличенный), материал, баллы и дата — без фамилий.
  * Принимаются только коды учёток из learn.json на сайте справочника.
  * Чтение результатов (экран «Отчёт по обучению» в приложении) — только с ключом READ_KEY.
+ *
+ * КР с телефона организатора: сайт Минздрава недоступен с зарубежных серверов, поэтому телефон скачивает новые КР
+ * и присылает их сюда (op: 'kr', с ключом READ_KEY). Файлы лежат на Google Диске в папке
+ * «Справочник НМП — КР с телефона»; чат разработки забирает их через doGet (op=kr_list / kr_get).
  */
 const READ_KEY = 'ВСТАВЬТЕ_СВОЙ_КЛЮЧ';  // ключ организатора: длинная случайная строка
 const USERS_URL = 'https://victorpolekslab.github.io/Spravochnik_nmp/learn.json';
@@ -49,6 +53,7 @@ const clean_ = (v, re, n) => { v = String(v == null ? '' : v); return re.test(v)
 function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
+    if (d && d.op === 'kr') return krPut_(d);
     const list = (Array.isArray(d) ? d : [d]).slice(0, 50);
     const ok = validUids_(), sh = sheet_();
     const lock = LockService.getScriptLock(); lock.waitLock(10000);
@@ -69,8 +74,44 @@ function doPost(e) {
 
 function doGet(e) {
   if (((e && e.parameter && e.parameter.key) || '') !== READ_KEY) return out_({ ok: false, err: 'key' });
+  const op = e.parameter.op || '';
+  if (op === 'kr_list') {
+    const res = [], it = krFolder_().getFiles();
+    while (it.hasNext()) { const f = it.next(); res.push({ name: f.getName(), size: f.getSize(), at: f.getLastUpdated(), src: f.getDescription() }); }
+    return out_({ ok: true, files: res });
+  }
+  if (op === 'kr_get') {
+    const it = krFolder_().getFilesByName(String(e.parameter.name || ''));
+    if (!it.hasNext()) return out_({ ok: false, err: 'nofile' });
+    const f = it.next();
+    return out_({ ok: true, name: f.getName(), data: Utilities.base64Encode(f.getBlob().getBytes()) });
+  }
   const v = sheet_().getDataRange().getValues(); v.shift();
   return out_({ ok: true, sheet: sheet_().getParent().getUrl(), rows: v.map(r => ({ at: r[0], ts: r[1], uid: r[2], item: r[3], ev: r[4], score: r[5], total: r[6], ans: r[7] })) });
 }
+
+function krFolder_() {
+  const pr = PropertiesService.getScriptProperties(), id = pr.getProperty('KR_FOLDER');
+  if (id) { try { return DriveApp.getFolderById(id); } catch (e) {} }
+  const f = DriveApp.createFolder('Справочник НМП — КР с телефона');
+  pr.setProperty('KR_FOLDER', f.getId());
+  return f;
+}
+
+function krPut_(d) {
+  if (String(d.key || '') !== READ_KEY) return out_({ ok: false, err: 'key' });
+  const name = String(d.name || '');
+  if (!/^(list|\d+_\d+)\.json\.gz$/.test(name)) return out_({ ok: false, err: 'name' });
+  const bytes = Utilities.base64Decode(String(d.data || ''));
+  if (!bytes.length) return out_({ ok: false, err: 'empty' });
+  const folder = krFolder_(), old = folder.getFilesByName(name);
+  while (old.hasNext()) old.next().setTrashed(true);
+  const f = folder.createFile(Utilities.newBlob(bytes, 'application/gzip', name));
+  f.setDescription(String(d.src || '').slice(0, 40));
+  return out_({ ok: true, name: name, size: bytes.length });
+}
+
+/** Запустите один раз вручную, чтобы выдать доступ к Google Диску (для приёма КР с телефона). */
+function setupKr() { Logger.log('Папка КР: ' + krFolder_().getUrl()); }
 
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }

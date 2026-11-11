@@ -186,6 +186,16 @@ public class MainActivity extends Activity {
                 return o.toString();
             } catch (Exception e) { return "{}"; }
         }
+        /** Передать список КР и тексты ids (JSON-массив) на Google-скрипт организатора. */
+        @android.webkit.JavascriptInterface
+        public void krUpload(String url, String key, String idsJson) {
+            try {
+                KrWatch.upload(MainActivity.this, url, key, new org.json.JSONArray(idsJson), new KrWatch.UpCb() {
+                    public void item(String name, boolean ok, String msg) { js("window.onKrUp&&onKrUp(" + org.json.JSONObject.quote(name) + "," + ok + "," + org.json.JSONObject.quote(msg) + ")"); }
+                    public void done(int ok, int total) { js("window.onKrUpDone&&onKrUpDone(" + ok + "," + total + ")"); }
+                });
+            } catch (Exception e) { js("window.onKrUpDone&&onKrUpDone(0,0)"); }
+        }
         @android.webkit.JavascriptInterface
         public void krCheck() { KrWatch.maybeCheck(MainActivity.this, true, () -> js("window.onKrStatus&&onKrStatus()")); }
     }

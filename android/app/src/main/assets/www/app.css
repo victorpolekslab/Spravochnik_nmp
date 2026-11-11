@@ -793,3 +793,6 @@ details.more > summary span { font-weight: 600; color: var(--muted); font-size: 
 .kritem.fresh { box-shadow: inset 4px 0 0 var(--accent); }
 .krn { display: block; font-size: 15px; line-height: 1.3; }
 .krm { display: block; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+.kradd { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.kradd input { font: inherit; font-size: 15px; color: var(--fg); padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
+.kruplog { font-size: 13px; line-height: 1.45; } .kruplog .ok { color: #2e7d4f; } .kruplog .bad { color: var(--accent); } .kruplog .sum { margin-top: 6px; font-weight: 600; color: var(--fg); }

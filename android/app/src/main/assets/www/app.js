@@ -1285,7 +1285,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '4.2';
+const APP_VERSION = '4.3';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
@@ -1536,9 +1536,42 @@ function krPage() {
     ${empty ? '<div class="rwempty">Справочник совпадает с рубрикатором Минздрава — новых и обновлённых КР нет.</div>' : ''}
     ${!st.ok && !st.err ? '<div class="rwempty">Проверка ещё не выполнялась.</div>' : ''}
     ${sec('new', 'Новые КР')}${sec('upd', 'Обновлённые КР')}${sec('gone', 'Сняты с рубрикатора', 'Есть в справочнике, но на сайте их больше нет среди действующих.')}
-    <p class="disc">Телефон проверяет сайт Минздрава раз в сутки и присылает уведомление о новых находках. Нажмите на КР, чтобы открыть её на сайте.
-      Чтобы добавить изменения в справочник, напишите в чате разработки: «обнови базу КР».</p></div>`;
+    ${krUpBox(r)}
+    <p class="disc">Телефон проверяет сайт Минздрава раз в сутки и присылает уведомление о новых находках. Нажмите на КР, чтобы открыть её на сайте.</p></div>`;
   LS.set('krSeen', [...new Set([...seen, ...(r.new || []).map(x => x.id), ...(r.upd || []).map(x => x.id)])]);
+  krUpWire(r);
   $('#krNow').onclick = () => { const b = $('#krNow'); b.disabled = true; b.textContent = 'Проверяю…'; try { App.krCheck(); } catch (e) {} };
 }
 window.onKrStatus = () => { if (cur === '#krnew') krPage(); else if (cur === '#home' || cur === '') home(); };
+
+// передача КР в чат разработки: телефон скачивает тексты с сайта Минздрава и отправляет их на Google-скрипт организатора
+function krUpIds(r) { const sent = LS.get('krSent', {}); return [...(r.new || []), ...(r.upd || [])].map(x => x.id).filter(id => !sent[id]); }
+function krUpBox(r) {
+  if (!(window.App && App.krUpload)) return '';
+  const ids = krUpIds(r), sent = Object.keys(LS.get('krSent', {}));
+  return `<div class="sec-h">Передать в справочник</div><div class="krstat krup">
+    <div>Телефон скачает ${ids.length ? `<b>${ids.length} КР</b> (новые и обновлённые) и ` : ''}список действующих КР с сайта Минздрава и отправит их на ваш Google Диск через скрипт отчётов. Потом напишите в чате разработки: <b>«обнови базу КР»</b>.</div>
+    <label class="kradd">Ещё КР по номеру (необязательно): <input id="krExtra" placeholder="например 400_2, 616_1" autocomplete="off" spellcheck="false"></label>
+    <button class="cvbtn" id="krUp">Скачать и передать</button><div id="krUpLog" class="kruplog"></div>
+    ${sent.length ? `<small class="krm">Уже передано: ${sent.length} КР. Последняя передача: ${esc(LS.get('krSentAt', ''))}</small>` : ''}</div>`;
+}
+function krUpWire(r) {
+  const b = $('#krUp'); if (!b) return;
+  b.onclick = () => {
+    const d = learnData(), url = d && d.report, key = LS.get('orgKey', ''), log = $('#krUpLog');
+    if (!url || !key) { log.textContent = 'Нет адреса скрипта или ключа организатора — войдите организатором заново.'; return; }
+    const extra = ($('#krExtra').value.match(/\d+_\d+/g) || []);
+    const ids = [...new Set([...krUpIds(r), ...extra])];
+    b.disabled = true; b.textContent = 'Передаю…'; log.innerHTML = '';
+    window.onKrUp = (name, ok, msg) => {
+      log.insertAdjacentHTML('beforeend', `<div class="${ok ? 'ok' : 'bad'}">${ok ? '✓' : '✗'} ${esc(name)}${msg ? ' — ' + esc(msg) : ''}</div>`);
+      if (ok && /^\d+_\d+$/.test(name)) { const s = LS.get('krSent', {}); s[name] = Date.now(); LS.set('krSent', s); }
+    };
+    window.onKrUpDone = (ok, total) => {
+      LS.set('krSentAt', new Date().toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }));
+      b.disabled = false; b.textContent = 'Скачать и передать';
+      log.insertAdjacentHTML('beforeend', `<div class="sum">${ok === total ? `Готово: передано ${ok} из ${total}. Напишите в чате разработки «обнови базу КР».` : `Передано ${ok} из ${total}. Можно нажать ещё раз — повторятся только неудачные.`}</div>`);
+    };
+    try { App.krUpload(url, key, JSON.stringify(ids)); } catch (e) { onKrUpDone(0, 0); }
+  };
+}
