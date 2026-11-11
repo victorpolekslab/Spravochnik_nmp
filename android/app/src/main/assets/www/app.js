@@ -492,6 +492,7 @@ function learnFlush() {
     .then(() => { const ids = new Set(batch.map(x => x.id)); LS.set('learnQueue', LS.get('learnQueue', []).filter(x => !ids.has(x.id))); })
     .catch(() => {}).finally(() => { LEARN.flushing = false; });
 }
+let LEARN_TAB = 'course';   // вкладка ленты обучения: по умолчанию «Курсы»
 function learnPage(noFetch) {
   setTitle('Обучение и опросы', false);
   const d = learnData(), u = learnUser();
@@ -540,12 +541,18 @@ function learnPage(noFetch) {
   }
   const seen = LS.get('learnSeen', []);
   const TY = { test: ['Тест', 'Пройти тест'], survey: ['Опрос', 'Пройти опрос'], material: ['Материал', 'Открыть'], course: ['Курс', 'Начать курс'] };
-  const items = (d && d.items || []).slice().sort((a, b) => learnPast(a) - learnPast(b));
+  const all = (d && d.items || []).slice().sort((a, b) => learnPast(a) - learnPast(b));
+  const isLect = x => x.type === 'lecture';
+  const items = all.filter(x => isLect(x) === (LEARN_TAB === 'lecture'));
+  const newIn = f => all.filter(x => f(x) && x.new && !seen.includes(x.id) && !learnPast(x)).length;
+  const nL = newIn(isLect), nC = newIn(x => !isLect(x));
+  const tabs = d && all.length ? `<div class="seg n2 ltabs"><a class="${LEARN_TAB === 'course' ? 'on' : ''}" data-tab="course">Курсы${nC ? ` <i class="tnew">${nC}</i>` : ''}</a><a class="${LEARN_TAB === 'lecture' ? 'on' : ''}" data-tab="lecture">Лекции${nL ? ` <i class="tnew">${nL}</i>` : ''}</a></div>` : '';
   const fmt = s => s ? s.split('-').reverse().slice(0, 2).join('.') : '';
   view.innerHTML = `<div class="luser"><span>Вы вошли: <b>${esc(u)}</b>${isOrg() ? ' · организатор' : ''}</span><a id="lOut">Выйти</a></div>
     ${isOrg() ? `<a class="orgcard" href="#report"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span><b>Отчёт по обучению</b><small>кто прослушал лекции и прошёл тесты</small></span><span class="chev">›</span></a>${krCan() ? `<a class="orgcard" href="#krnew"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span><b>Новое в КР</b><small>проверить рубрикатор Минздрава, передать новые КР в справочник</small></span><span class="chev">›</span></a>` : ''}` : ''}
     ${LEARN.err ? `<div class="lnote">${esc(LEARN.err)}</div>` : ''}
-    ${!d ? '<div class="rwempty">Загрузка ленты…</div>' : !items.length ? '<div class="rwempty">Пока заданий нет. Новые появятся здесь.</div>' : ''}
+    ${tabs}
+    ${!d ? '<div class="rwempty">Загрузка ленты…</div>' : !items.length ? `<div class="rwempty">${LEARN_TAB === 'lecture' ? 'Лекций пока нет.' : 'Курсов пока нет.'} Новые появятся здесь.</div>` : ''}
     ${items.map(x => { const t = TY[x.type] || TY.material, past = learnPast(x), isNew = x.new && !seen.includes(x.id) && !past;
       const url = x.url ? x.url.replace(/\{login\}/g, encodeURIComponent(u)) : '';
       const C = x.type === 'course' && window.COURSES && COURSES[x.course];
@@ -572,6 +579,7 @@ function learnPage(noFetch) {
           ${x.read ? `<a class="lread" data-id="${esc(x.id)}" href="${esc(x.read)}">${x.type === 'material' ? 'Открыть в справочнике' : 'Повторить раздел'} ›</a>` : ''}</div></div>`; }).join('')}
     <p class="disc">Результаты тестов и опросов видит организатор обучения. Логин подставляется в форму автоматически.</p>`;
   $('#lOut').onclick = () => { if (isOrg()) { LS.set('orgK', ''); LS.set('orgKey', ''); LS.set('orgNames', ''); krEnable(false); } LS.set('learnUser', null); learnPage(true); };
+  view.querySelectorAll('.ltabs a').forEach(a => a.onclick = () => { LEARN_TAB = a.dataset.tab; learnPage(true); scrollTo(0, 0); });
   view.querySelectorAll('[data-id]').forEach(el => el.addEventListener('click', () => { const s = LS.get('learnSeen', []); if (!s.includes(el.dataset.id)) { s.push(el.dataset.id); LS.set('learnSeen', s); } }));
 }
 
