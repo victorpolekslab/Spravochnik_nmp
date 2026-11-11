@@ -100,6 +100,7 @@ function route() {
     case 'lecture': setTab('home'); parts[2] === 'test' ? lectureTest(parts[1]) : lecturePage(parts[1]); break;
     case 'cr': setTab(''); crPage(parts[1]); break;
     case 'about': setTab(''); about(); break;
+    case 'krnew': setTab('home'); krPage(); break;
     case 'doc': doc(parts[1], parts[2], params.get('h') || ''); return;
     default: setTab('home'); home();
   }
@@ -173,6 +174,7 @@ function home() {
       <div class="mk-h"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><path d="M12 7v6M9 10h6"/></svg>
         <div><div class="tt">Дежурные стационары</div><div class="ts">куда везти: повод, район или адрес, день дежурства</div></div><span class="chev">›</span></div>
     </a>
+    ${krBanner()}
     <a class="learncard" href="#learn"><svg viewBox="0 0 24 24"><path d="M3 9l9-5 9 5-9 5z"/><path d="M7 11.5V16c0 1.5 2.5 3 5 3s5-1.5 5-3v-4.5M21 9v6"/></svg>
       <span><b>Обучение и опросы</b><small>тесты, опросы, материалы</small></span>${learnNewCount() ? `<span class="lbadge">${learnNewCount()}</span>` : ''}<span class="chev">›</span></a>
     <a class="mkbcard" href="#mkb">
@@ -513,7 +515,7 @@ function learnPage(noFetch) {
     const ok = (k, lg, pw) => {
       LS.set('learnUser', { k, name: learnPretty(lg) });
       const dd = learnData();
-      if (dd && dd.org && dd.org.k === k) { const K = orgDerive(dd.org.salt, pw); if (orgOpen(dd.org, K)) { LS.set('orgK', K); orgApply(dd); } }
+      if (dd && dd.org && dd.org.k === k) { const K = orgDerive(dd.org.salt, pw); if (orgOpen(dd.org, K)) { LS.set('orgK', K); orgApply(dd); krEnable(true); } }
       learnPage(true);
     };
     const go = () => {
@@ -569,7 +571,7 @@ function learnPage(noFetch) {
         <div class="lbtns">${url && !past ? `<a class="bigbtn lgo" data-id="${esc(x.id)}" href="${esc(url)}" target="_blank" rel="noopener">${t[1]}</a>` : (!past && x.type !== 'material' ? '<span class="lsoon">ссылка появится позже</span>' : '')}
           ${x.read ? `<a class="lread" data-id="${esc(x.id)}" href="${esc(x.read)}">${x.type === 'material' ? 'Открыть в справочнике' : 'Повторить раздел'} ›</a>` : ''}</div></div>`; }).join('')}
     <p class="disc">Результаты тестов и опросов видит организатор обучения. Логин подставляется в форму автоматически.</p>`;
-  $('#lOut').onclick = () => { if (isOrg()) { LS.set('orgK', ''); LS.set('orgKey', ''); LS.set('orgNames', ''); } LS.set('learnUser', null); learnPage(true); };
+  $('#lOut').onclick = () => { if (isOrg()) { LS.set('orgK', ''); LS.set('orgKey', ''); LS.set('orgNames', ''); krEnable(false); } LS.set('learnUser', null); learnPage(true); };
   view.querySelectorAll('[data-id]').forEach(el => el.addEventListener('click', () => { const s = LS.get('learnSeen', []); if (!s.includes(el.dataset.id)) { s.push(el.dataset.id); LS.set('learnSeen', s); } }));
 }
 
@@ -1283,7 +1285,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '4.1';
+const APP_VERSION = '4.2';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
@@ -1496,7 +1498,47 @@ function toast(text) {
 window.onContentReady = () => toast('Загружено обновление справочника — применится при следующем открытии');
 setTimeout(() => {
   try { if (window.App && App.otaOk) App.otaOk(); } catch (e) {}
+  try { if (krCan()) krEnable(isOrg()); } catch (e) {}
   const v = contentVer(), seen = LS.get('contentSeen', '');
   if (v && seen && v !== seen && v > seen) toast('Справочник обновлён');
   if (v) LS.set('contentSeen', v);
 }, 1500);
+
+// ---------------------------------------------------------------- новые КР в рубрикаторе (только организатор, Android)
+function krCan() { return !!(window.App && App.krStatus); }
+function krEnable(on) { try { if (krCan()) App.krWatch(!!on); } catch (e) {} }
+function krState() { try { return krCan() ? JSON.parse(App.krStatus() || '{}') : {}; } catch (e) { return {}; } }
+function krUnseen(st) {
+  const r = st.res || {}, seen = new Set(LS.get('krSeen', []));
+  return [...(r.new || []), ...(r.upd || [])].filter(x => !seen.has(x.id)).length;
+}
+function krBanner() {
+  if (!krCan() || !isOrg()) return '';
+  const st = krState(), n = krUnseen(st);
+  if (!n) return '';
+  return `<a class="learncard krcard" href="#krnew"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>
+    <span><b>Новое в клинических рекомендациях</b><small>новые и обновлённые КР на сайте Минздрава</small></span><span class="lbadge">${n}</span><span class="chev">›</span></a>`;
+}
+function krPage() {
+  setTitle('Новое в КР', false);
+  if (!krCan()) { view.innerHTML = '<div class="rwempty">Проверка новых КР работает в приложении для Android.</div>'; return; }
+  if (!isOrg()) { view.innerHTML = '<div class="rwempty">Раздел доступен организатору. Войдите в «Обучение и опросы».</div>'; return; }
+  const st = krState(), r = st.res || {}, seen = new Set(LS.get('krSeen', []));
+  const when = t => t ? new Date(t).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+  const item = (x, k) => `<a class="kritem${seen.has(x.id) || k === 'gone' ? '' : ' fresh'}" href="https://cr.minzdrav.gov.ru/preview-cr/${esc(x.id)}">
+      <span class="krn">${esc(x.name)}</span><span class="krm">КР${esc(x.id)}${x.date ? ' · ' + esc(x.date) : ''}${k === 'upd' && x.was ? ' · в справочнике версия ' + esc(x.was.split('_')[1]) : ''}</span></a>`;
+  const sec = (k, h, note) => (r[k] || []).length ? `<div class="sec-h">${h} · ${r[k].length}</div>${note ? `<p class="krnote">${note}</p>` : ''}<div class="krlist">${r[k].map(x => item(x, k)).join('')}</div>` : '';
+  const empty = st.ok && !(r.new || []).length && !(r.upd || []).length && !(r.gone || []).length;
+  view.innerHTML = `<div class="krpage">
+    <div class="krstat"><div>Последняя проверка: <b>${when(st.at)}</b>${st.ok ? ` · на сайте ${r.remote || '?'} КР, в справочнике ${r.local || '?'}` : ''}</div>
+      ${st.err ? `<div class="krerr">Не удалось проверить: ${esc(st.err)}</div>` : ''}
+      <button class="cvbtn sec" id="krNow">Проверить сейчас</button></div>
+    ${empty ? '<div class="rwempty">Справочник совпадает с рубрикатором Минздрава — новых и обновлённых КР нет.</div>' : ''}
+    ${!st.ok && !st.err ? '<div class="rwempty">Проверка ещё не выполнялась.</div>' : ''}
+    ${sec('new', 'Новые КР')}${sec('upd', 'Обновлённые КР')}${sec('gone', 'Сняты с рубрикатора', 'Есть в справочнике, но на сайте их больше нет среди действующих.')}
+    <p class="disc">Телефон проверяет сайт Минздрава раз в сутки и присылает уведомление о новых находках. Нажмите на КР, чтобы открыть её на сайте.
+      Чтобы добавить изменения в справочник, напишите в чате разработки: «обнови базу КР».</p></div>`;
+  LS.set('krSeen', [...new Set([...seen, ...(r.new || []).map(x => x.id), ...(r.upd || []).map(x => x.id)])]);
+  $('#krNow').onclick = () => { const b = $('#krNow'); b.disabled = true; b.textContent = 'Проверяю…'; try { App.krCheck(); } catch (e) {} };
+}
+window.onKrStatus = () => { if (cur === '#krnew') krPage(); else if (cur === '#home' || cur === '') home(); };

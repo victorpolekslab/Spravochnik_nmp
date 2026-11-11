@@ -781,3 +781,15 @@ details.more > summary::before { content: "▸ "; } details.more[open] > summary
 details.more > summary span { font-weight: 600; color: var(--muted); font-size: 11px; background: var(--surface2); border-radius: 8px; padding: 0 6px; }
 .toast { position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 20px); max-width: calc(100% - 32px); background: #1F2328; color: #fff; padding: 11px 16px; border-radius: 12px; font-size: 14px; line-height: 1.35; box-shadow: 0 6px 20px rgba(0,0,0,.25); opacity: 0; transition: opacity .3s, transform .3s; z-index: 2000; text-align: center; }
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+.krcard svg { stroke: var(--accent); }
+.krpage { padding: 4px 0 24px; }
+.krstat { margin: 10px 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; font-size: 14px; display: flex; flex-direction: column; gap: 10px; }
+.krerr { color: var(--accent); }
+.krnote { margin: 0 16px 6px; font-size: 13px; color: var(--muted); }
+.krlist { margin: 0 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.kritem { display: block; padding: 11px 14px; border-top: 1px solid var(--line); text-decoration: none; color: var(--fg); }
+.kritem:first-child { border-top: 0; }
+.kritem.fresh { box-shadow: inset 4px 0 0 var(--accent); }
+.krn { display: block; font-size: 15px; line-height: 1.3; }
+.krm { display: block; font-size: 12.5px; color: var(--muted); margin-top: 3px; }

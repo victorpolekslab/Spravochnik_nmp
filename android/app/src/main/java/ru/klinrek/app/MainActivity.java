@@ -37,6 +37,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        String h = getIntent() != null ? getIntent().getStringExtra("hash") : null;
+        if (h != null && h.matches("#[a-z]+")) pendingHash = h;
         File db = getDatabasePath(DB_NAME);
         SharedPreferences sp = getSharedPreferences("app", MODE_PRIVATE);
         if (db.exists() && sp.getInt("dbv", 0) == DB_VERSION) {
@@ -139,6 +141,7 @@ public class MainActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url) {
                 if (!updateChecked) { updateChecked = true; checkUpdate(false); checkContent(); }
+                if (pendingHash != null) { view.evaluateJavascript("location.hash=" + org.json.JSONObject.quote(pendingHash), null); pendingHash = null; }
             }
         });
         setContentView(web);
@@ -162,6 +165,39 @@ public class MainActivity extends Activity {
         public String contentVersion() { return String.valueOf(Ota.running(MainActivity.this)); }
         @android.webkit.JavascriptInterface
         public void checkContent() { MainActivity.this.checkContent(); }
+        /** Слежение за новыми КР (включается при входе организатора). */
+        @android.webkit.JavascriptInterface
+        public void krWatch(boolean on) {
+            boolean was = KrWatch.on(MainActivity.this);
+            KrWatch.enable(MainActivity.this, on);
+            if (on && !was && android.os.Build.VERSION.SDK_INT >= 33
+                    && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                runOnUiThread(() -> requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 1));
+            if (on) KrWatch.maybeCheck(MainActivity.this, false, () -> js("window.onKrStatus&&onKrStatus()"));
+        }
+        @android.webkit.JavascriptInterface
+        public String krStatus() {
+            SharedPreferences p = KrWatch.sp(MainActivity.this);
+            try {
+                org.json.JSONObject o = new org.json.JSONObject().put("on", p.getBoolean("on", false)).put("at", p.getLong("at", 0))
+                        .put("ok", p.getLong("ok", 0)).put("err", p.getString("err", ""));
+                String r = p.getString("res", null);
+                if (r != null) o.put("res", new org.json.JSONObject(r));
+                return o.toString();
+            } catch (Exception e) { return "{}"; }
+        }
+        @android.webkit.JavascriptInterface
+        public void krCheck() { KrWatch.maybeCheck(MainActivity.this, true, () -> js("window.onKrStatus&&onKrStatus()")); }
+    }
+
+    /** Открыть раздел из уведомления (extra "hash", например #krnew). */
+    private String pendingHash = null;
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        String h = intent.getStringExtra("hash");
+        if (h != null && h.matches("#[a-z]+") && web != null) web.evaluateJavascript("location.hash=" + org.json.JSONObject.quote(h), null);
     }
 
     private void js(String script) {
@@ -225,6 +261,7 @@ public class MainActivity extends Activity {
         }
         // the app often stays in memory for days: check again when it comes back, at most every 30 minutes
         if (updateChecked && System.currentTimeMillis() - lastCheck > 30 * 60 * 1000) { checkUpdate(false); checkContent(); }
+        KrWatch.maybeCheck(this, false, () -> js("window.onKrStatus&&onKrStatus()"));
     }
 
     @Override
