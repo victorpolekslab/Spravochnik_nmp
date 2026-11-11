@@ -99,17 +99,19 @@ function route() {
     case 'route': setTab('home'); routeWizard(); break;
     case 'learn': setTab('home'); learnPage(); break;
     case 'course': setTab('home'); coursePage(parts[1], parts[2]); break;
-    case 'report': setTab(''); reportPage(); break;
+    case 'report': setTab('stats'); LS.set('statsTab', 'report'); reportPage(); break;
+    case 'stats': go('#' + (['usage', 'krnew', 'report'].includes(LS.get('statsTab', '')) ? LS.get('statsTab') : 'usage')); return;
     case 'lecture': setTab('home'); parts[2] === 'test' ? lectureTest(parts[1]) : lecturePage(parts[1]); break;
     case 'cr': setTab(''); crPage(parts[1]); break;
     case 'about': setTab(''); about(); break;
-    case 'krnew': setTab('home'); krPage(); break;
-    case 'usage': setTab(''); usagePage(); break;
+    case 'krnew': setTab('stats'); LS.set('statsTab', 'krnew'); krPage(); break;
+    case 'usage': setTab('stats'); LS.set('statsTab', 'usage'); usagePage(); break;
     case 'doc': doc(parts[1], parts[2], params.get('h') || ''); return;
     default: setTab('home'); home();
   }
   window.scrollTo(0, S.scroll[h] || 0);
   try { anView(parts); } catch (e) {}
+  try { statsTabSync(); } catch (e) {}
 }
 
 // ---------------------------------------------------------------- data
@@ -179,7 +181,6 @@ function home() {
       <div class="mk-h"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><path d="M12 7v6M9 10h6"/></svg>
         <div><div class="tt">Дежурные стационары</div><div class="ts">куда везти: повод, район или адрес, день дежурства</div></div><span class="chev">›</span></div>
     </a>
-    ${krBanner()}
     <a class="learncard" href="#learn"><svg viewBox="0 0 24 24"><path d="M3 9l9-5 9 5-9 5z"/><path d="M7 11.5V16c0 1.5 2.5 3 5 3s5-1.5 5-3v-4.5M21 9v6"/></svg>
       <span><b>Обучение и опросы</b><small>тесты, опросы, материалы</small></span>${learnNewCount() ? `<span class="lbadge">${learnNewCount()}</span>` : ''}<span class="chev">›</span></a>
     <a class="mkbcard" href="#mkb">
@@ -555,7 +556,6 @@ function learnPage(noFetch) {
   const tabs = d && all.length ? `<div class="seg n2 ltabs"><a class="${LEARN_TAB === 'course' ? 'on' : ''}" data-tab="course">Курсы${nC ? ` <i class="tnew">${nC}</i>` : ''}</a><a class="${LEARN_TAB === 'lecture' ? 'on' : ''}" data-tab="lecture">Лекции${nL ? ` <i class="tnew">${nL}</i>` : ''}</a></div>` : '';
   const fmt = s => s ? s.split('-').reverse().slice(0, 2).join('.') : '';
   view.innerHTML = `<div class="luser"><span>Вы вошли: <b>${esc(u)}</b>${isOrg() ? ' · организатор' : ''}</span><a id="lOut">Выйти</a></div>
-    ${isOrg() ? `<a class="orgcard" href="#report"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span><b>Отчёт по обучению</b><small>кто прослушал лекции и прошёл тесты</small></span><span class="chev">›</span></a><a class="orgcard" href="#usage"><svg viewBox="0 0 24 24"><path d="M3 12h4l3 7 4-14 3 7h4"/></svg><span><b>Использование приложения</b><small>сколько человек открывают, какие разделы, что ищут</small></span><span class="chev">›</span></a>${krCan() ? `<a class="orgcard" href="#krnew"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span><b>Новое в КР</b><small>проверить рубрикатор Минздрава, передать новые КР в справочник</small></span><span class="chev">›</span></a>` : ''}` : ''}
     ${LEARN.err ? `<div class="lnote">${esc(LEARN.err)}</div>` : ''}
     ${tabs}
     ${!d ? '<div class="rwempty">Загрузка ленты…</div>' : !items.length ? `<div class="rwempty">${LEARN_TAB === 'lecture' ? 'Лекций пока нет.' : 'Курсов пока нет.'} Новые появятся здесь.</div>` : ''}
@@ -584,7 +584,8 @@ function learnPage(noFetch) {
         <div class="lbtns">${url && !past ? `<a class="bigbtn lgo" data-id="${esc(x.id)}" href="${esc(url)}" target="_blank" rel="noopener">${t[1]}</a>` : (!past && x.type !== 'material' ? '<span class="lsoon">ссылка появится позже</span>' : '')}
           ${x.read ? `<a class="lread" data-id="${esc(x.id)}" href="${esc(x.read)}">${x.type === 'material' ? 'Открыть в справочнике' : 'Повторить раздел'} ›</a>` : ''}</div></div>`; }).join('')}
     <p class="disc">Результаты тестов и опросов видит организатор обучения. Логин подставляется в форму автоматически.</p>`;
-  $('#lOut').onclick = () => { if (isOrg()) { LS.set('orgK', ''); LS.set('orgKey', ''); LS.set('orgNames', ''); krEnable(false); } LS.set('learnUser', null); learnPage(true); };
+  $('#lOut').onclick = () => { if (isOrg()) { LS.set('orgK', ''); LS.set('orgKey', ''); LS.set('orgNames', ''); krEnable(false); } LS.set('learnUser', null); learnPage(true); statsTabSync(); };
+  statsTabSync();
   view.querySelectorAll('.ltabs a').forEach(a => a.onclick = () => { LEARN_TAB = a.dataset.tab; learnPage(true); scrollTo(0, 0); });
   view.querySelectorAll('[data-id]').forEach(el => el.addEventListener('click', () => { const s = LS.get('learnSeen', []); if (!s.includes(el.dataset.id)) { s.push(el.dataset.id); LS.set('learnSeen', s); } }));
 }
@@ -742,10 +743,10 @@ function lectureTest(key) {
 function reportPage(edit) {
   setTitle('Отчёт по обучению', false);
   const d = learnData(), url = d && d.report, key = LS.get('orgKey', ''), names = LS.get('orgNames', '');
-  if (!d) { learnFetch(() => { if (cur === '#report') reportPage(edit); }); view.innerHTML = '<div class="rwempty">Загрузка…</div>'; return; }
-  if (!url) { view.innerHTML = '<div class="rwempty">Сбор результатов ещё не подключён: в настройках обучения нет адреса Google Таблицы.</div>'; return; }
+  if (!d) { learnFetch(() => { if (cur === '#report') reportPage(edit); }); view.innerHTML = statsSeg('report') + '<div class="rwempty">Загрузка…</div>'; return; }
+  if (!url) { view.innerHTML = statsSeg('report') + '<div class="rwempty">Сбор результатов ещё не подключён: в настройках обучения нет адреса Google Таблицы.</div>'; return; }
   if (edit || !key || !names.trim()) {
-    view.innerHTML = `<div class="calc-card lform"><h2>Настройка отчёта</h2>
+    view.innerHTML = statsSeg('report') + `<div class="calc-card lform"><h2>Настройка отчёта</h2>
       <p class="lhint">Ключ и список ФИО сохраняются только на этом телефоне. В Google Таблице фамилий нет — только коды учёток; приложение сопоставит их со списком.</p>
       <label class="lf"><span>Ключ организатора</span><input id="oKey" value="${esc(key)}" autocapitalize="none" spellcheck="false"></label>
       <label class="lf"><span>Список ФИО — по одному в строке, как логины («Иванов П.А.»)</span><textarea id="oNames" rows="10">${esc(names)}</textarea></label>
@@ -757,9 +758,9 @@ function reportPage(edit) {
     };
     return;
   }
-  view.innerHTML = '<div class="rwempty">Загрузка результатов…</div>';
+  view.innerHTML = statsSeg('report') + '<div class="rwempty">Загрузка результатов…</div>';
   fetch(url + '?key=' + encodeURIComponent(key) + '&t=' + Date.now()).then(r => r.json()).then(res => {
-    if (!res.ok) { view.innerHTML = `<div class="rwempty">${res.err === 'key' ? 'Неверный ключ организатора.' : 'Таблица вернула ошибку.'}</div><div class="cvnav"><button class="cvbtn sec" id="oEdit">Изменить ключ и список</button></div>`; $('#oEdit').onclick = () => reportPage(true); return; }
+    if (!res.ok) { view.innerHTML = statsSeg('report') + `<div class="rwempty">${res.err === 'key' ? 'Неверный ключ организатора.' : 'Таблица вернула ошибку.'}</div><div class="cvnav"><button class="cvbtn sec" id="oEdit">Изменить ключ и список</button></div>`; $('#oEdit').onclick = () => reportPage(true); return; }
     const people = names.split(/\n+/).map(s => s.trim()).filter(Boolean).map(s => ({ name: learnPretty(s), k: learnKey(s) }));
     const byK = new Map(people.map(p => [p.k, p]));
     const items = [];
@@ -777,7 +778,7 @@ function reportPage(edit) {
     const dd = s => { const x = new Date(s); return isNaN(x) ? '' : String(x.getDate()).padStart(2, '0') + '.' + String(x.getMonth() + 1).padStart(2, '0'); };
     const cell = c => !c ? '<span class="rq no">—</span>' : c.best >= 0 ? `<span class="rq ${c.best >= c.total - 1 ? 'ok' : c.best / c.total >= 0.6 ? 'mid' : 'low'}">${c.best}/${c.total}</span><small>${dd(c.at)}${c.tries > 1 ? ' · ' + c.tries + ' попыт.' : ''}</small>` : `<span class="rq seen">${/^lecture/.test('' + c.kind) ? 'слушал' : 'начал'}</span>`;
     const sum = items.map(it => { const n = people.filter(p => R[p.k] && R[p.k][it] && R[p.k][it].best >= 0).length; return `<div class="rsum"><b>${n}</b> из ${people.length}<span>${esc(title(it))} — тест пройден</span></div>`; }).join('');
-    view.innerHTML = `<div class="rep">${sum || '<div class="rwempty">Результатов пока нет.</div>'}
+    view.innerHTML = statsSeg('report') + `<div class="rep">${sum || '<div class="rwempty">Результатов пока нет.</div>'}
       ${items.length ? `<div class="tw rtab"><table><thead><tr><th>ФИО</th>${items.map(it => `<th>${esc(title(it))}</th>`).join('')}</tr></thead><tbody>
         ${people.slice().sort((a, b) => a.name.localeCompare(b.name, 'ru')).map(p => `<tr><th>${esc(p.name)}</th>${items.map(it => `<td>${cell(R[p.k] && R[p.k][it] && Object.assign(R[p.k][it], { kind: it }))}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : ''}
       ${unknown ? `<p class="disc">Ещё ${unknown} записей от учёток, которых нет в вашем списке.</p>` : ''}
@@ -792,7 +793,7 @@ function reportPage(edit) {
       if (!ok && navigator.clipboard) navigator.clipboard.writeText(tsv).then(() => {}, () => {});
       $('#oCopy').textContent = 'Скопировано';
     };
-  }).catch(() => { view.innerHTML = '<div class="rwempty">Нет связи с Google Таблицей — проверьте интернет.</div>'; });
+  }).catch(() => { view.innerHTML = statsSeg('report') + '<div class="rwempty">Нет связи с Google Таблицей — проверьте интернет.</div>'; });
 }
 
 // ---------------------------------------------------------------- MKB-10
@@ -1545,15 +1546,15 @@ function krBanner() {
 }
 function krPage() {
   setTitle('Новое в КР', false);
-  if (!krCan()) { view.innerHTML = '<div class="rwempty">Проверка новых КР работает в приложении для Android.</div>'; return; }
-  if (!isOrg()) { view.innerHTML = '<div class="rwempty">Раздел доступен организатору. Войдите в «Обучение и опросы».</div>'; return; }
+  if (!krCan()) { view.innerHTML = statsSeg('krnew') + '<div class="rwempty">Проверка новых КР работает в приложении для Android.</div>'; return; }
+  if (!isOrg()) { view.innerHTML = statsSeg('krnew') + '<div class="rwempty">Раздел доступен организатору. Войдите в «Обучение и опросы».</div>'; return; }
   const st = krState(), r = st.res || {}, seen = new Set(LS.get('krSeen', []));
   const when = t => t ? new Date(t).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
   const item = (x, k) => `<a class="kritem${seen.has(x.id) || k === 'gone' ? '' : ' fresh'}" href="https://cr.minzdrav.gov.ru/preview-cr/${esc(x.id)}">
       <span class="krn">${esc(x.name)}</span><span class="krm">КР${esc(x.id)}${x.date ? ' · ' + esc(x.date) : ''}${k === 'upd' && x.was ? ' · в справочнике версия ' + esc(x.was.split('_')[1]) : ''}</span></a>`;
   const sec = (k, h, note) => (r[k] || []).length ? `<div class="sec-h">${h} · ${r[k].length}</div>${note ? `<p class="krnote">${note}</p>` : ''}<div class="krlist">${r[k].map(x => item(x, k)).join('')}</div>` : '';
   const empty = st.ok && !(r.new || []).length && !(r.upd || []).length && !(r.gone || []).length;
-  view.innerHTML = `<div class="krpage">
+  view.innerHTML = statsSeg('krnew') + `<div class="krpage">
     <div class="krstat"><div>Последняя проверка: <b>${when(st.at)}</b>${st.ok ? ` · на сайте ${r.remote || '?'} КР, в справочнике ${r.local || '?'}` : ''}</div>
       ${st.err ? `<div class="krerr">Не удалось проверить: ${esc(st.err)}</div>` : ''}
       <button class="cvbtn sec" id="krNow">Проверить сейчас</button></div>
@@ -1563,10 +1564,11 @@ function krPage() {
     ${krUpBox(r)}
     <p class="disc">Телефон проверяет сайт Минздрава раз в сутки и присылает уведомление о новых находках. Нажмите на КР, чтобы открыть её на сайте.</p></div>`;
   LS.set('krSeen', [...new Set([...seen, ...(r.new || []).map(x => x.id), ...(r.upd || []).map(x => x.id)])]);
+  const sb = view.querySelector('.sseg .tnew'); if (sb) sb.remove(); statsTabSync();
   krUpWire(r);
   $('#krNow').onclick = () => { const b = $('#krNow'); b.disabled = true; b.textContent = 'Проверяю…'; try { App.krCheck(); } catch (e) {} };
 }
-window.onKrStatus = () => { if (cur === '#krnew') krPage(); else if (cur === '#home' || cur === '') home(); };
+window.onKrStatus = () => { statsTabSync(); if (cur === '#krnew') krPage(); };
 
 // передача КР в чат разработки: телефон скачивает тексты с сайта Минздрава и отправляет их на Google-скрипт организатора
 function krUpIds(r) { const sent = LS.get('krSent', {}); return [...(r.new || []), ...(r.upd || [])].map(x => x.id).filter(id => !sent[id]); }
@@ -1656,9 +1658,9 @@ function anTitle(k) {
 }
 function usagePage() {
   setTitle('Использование приложения', false);
-  if (!isOrg()) { view.innerHTML = '<div class="rwempty">Раздел доступен организатору. Войдите в «Обучение и опросы».</div>'; return; }
+  if (!isOrg()) { view.innerHTML = statsSeg('usage') + '<div class="rwempty">Раздел доступен организатору. Войдите в «Обучение и опросы».</div>'; return; }
   const d = learnData(), url = d && d.report, key = LS.get('orgKey', '');
-  view.innerHTML = `<div class="seg n3 utabs">${[7, 30, 90].map(n => `<a class="${n === USAGE_DAYS ? 'on' : ''}" data-d="${n}">${n} дней</a>`).join('')}</div><div id="ubox"><div class="rwempty">Загрузка…</div></div>`;
+  view.innerHTML = statsSeg('usage') + `<div class="seg n3 utabs">${[7, 30, 90].map(n => `<a class="${n === USAGE_DAYS ? 'on' : ''}" data-d="${n}">${n} дней</a>`).join('')}</div><div id="ubox"><div class="rwempty">Загрузка…</div></div>`;
   view.querySelectorAll('.utabs a').forEach(a => a.onclick = () => { USAGE_DAYS = +a.dataset.d; usagePage(); });
   if (!url || !key) { $('#ubox').innerHTML = '<div class="rwempty">Нет адреса скрипта или ключа организатора — войдите организатором заново.</div>'; return; }
   anFlush();
@@ -1683,4 +1685,17 @@ function usagePage() {
       <div class="sec-h">Версии приложения</div>${list(u.versions, r => esc(r[0]), '—')}
       <p class="disc">Статистика анонимная: у каждого телефона случайный номер, ФИО и логины не передаются. Телефоны отправляют данные раз в несколько часов, поэтому сегодняшние цифры неполные. <a href="${esc(u.sheet || '#')}" target="_blank" rel="noopener">Открыть таблицу</a></p>`;
   }).catch(() => { const box = $('#ubox'); if (box) box.innerHTML = '<div class="rwempty">Нет связи со скриптом.</div>'; });
+}
+
+// ---------------------------------------------------------------- вкладка «Статистика» (только организатор)
+function statsSeg(on) {
+  const T = [['usage', 'Использование'], ['krnew', 'Новое в КР'], ['report', 'Обучение']];
+  const n = krCan() ? krUnseen(krState()) : 0;
+  return `<div class="seg n3 sseg">${T.map(([k, t]) => `<a class="${k === on ? 'on' : ''}" href="#${k}">${t}${k === 'krnew' && n ? ` <i class="tnew">${n}</i>` : ''}</a>`).join('')}</div>`;
+}
+function statsTabSync() {
+  const t = document.getElementById('tabStats'); if (!t) return;
+  const org = isOrg(); t.hidden = !org;
+  const n = org && krCan() ? krUnseen(krState()) : 0, b = document.getElementById('tabStatsN');
+  if (b) { b.hidden = !n; b.textContent = n || ''; }
 }
