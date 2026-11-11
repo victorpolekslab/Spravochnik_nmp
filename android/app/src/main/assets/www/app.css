@@ -837,3 +837,4 @@ nav#tabs .tbadge { position: absolute; top: 4px; left: calc(50% + 6px); min-widt
 .sseg { position: static; margin: 12px 12px 6px; } .sseg a { font-size: 13.5px; }
 .sseg .tnew { font-style: normal; display: inline-block; min-width: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 11px; line-height: 16px; }
 nav#tabs a[hidden] { display: none; }
+.krerr { white-space: pre-line; font-size: 13px; overflow-wrap: anywhere; }

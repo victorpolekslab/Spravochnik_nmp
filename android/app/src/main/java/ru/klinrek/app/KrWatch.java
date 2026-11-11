@@ -38,9 +38,17 @@ import java.util.Set;
  * Сайт Минздрава недоступен с зарубежных серверов, поэтому проверка идёт именно с телефона.
  */
 public class KrWatch extends JobService {
-    static final String[] URLS = {
-            "https://apicr.minzdrav.gov.ru/api.ashx?op=GetJsonSpecialityClinrecs",
-            "https://apicr.minzdrav.gov.ru/api.ashx?op=GetJsonClinrecs"};
+    static final String API = "https://apicr.minzdrav.gov.ru/api.ashx?op=";
+    /** Варианты запроса списка: {op, метод, тело}. Перебираются по порядку до первого ответа с ≥ 300 КР. */
+    static final String FILTER = "{\"filters\":[{\"fieldName\":\"status\",\"filterType\":1,\"filterValueType\":2,\"value1\":0,\"value2\":\"\",\"values\":[]}],"
+            + "\"sortOption\":{\"fieldName\":\"publishdate\",\"sortType\":2},\"pageSize\":5000,\"currentPage\":1,\"useANDoperator\":true,\"columns\":[]}";
+    static final String[][] TRIES = {
+            {"GetJsonClinrecs", "GET", null},
+            {"GetJsonClinrecs", "POST", ""},
+            {"GetJsonClinrecsFilterV2", "POST", FILTER},
+            {"GetJsonSpecialityClinrecs", "GET", null},
+            {"GetJsonSpecialityClinrecs", "POST", ""},
+            {"GetJsonClinrecsFilter", "POST", FILTER}};
     static final int JOB_ID = 7301;
     static final String CHANNEL = "kr_updates";
     private static volatile boolean busy = false;
@@ -91,22 +99,22 @@ public class KrWatch extends JobService {
         SharedPreferences p = sp(c);
         StringBuilder err = new StringBuilder();
         Map<String, String[]> remote = null;
-        for (String u : URLS) {
-            String op = u.replaceAll(".*op=", "");
+        for (String[] t : TRIES) {
+            String op = t[0] + (t[1].equals("POST") ? " (POST" + (t[2] != null && !t[2].isEmpty() ? " с фильтром" : "") + ")" : "");
             try {
-                String body = get(u);
-                saveList(c, body, op);   // сохраняем ответ в любом случае — его можно передать в чат разработки и разобрать
+                String body = request(API + t[0], t[1], t[2]);
+                saveList(c, body, t[0] + " " + t[1]);   // сохраняем ответ в любом случае — его можно передать в чат разработки и разобрать
                 remote = parse(body);
-                if (remote.size() >= 300) break;
-                err.append(op).append(": найдено ").append(remote.size()).append(" КР, начало ответа: ")
-                        .append(body.substring(0, Math.min(160, body.length())).replaceAll("\\s+", " ")).append("; ");
+                if (remote.size() >= 300) { p.edit().putString("how", t[0] + " " + t[1]).apply(); break; }
+                err.append(op).append(": найдено ").append(remote.size()).append(" КР, ответ: ")
+                        .append(body.substring(0, Math.min(140, body.length())).replaceAll("\\s+", " ")).append("\n");
                 remote = null;
             } catch (Exception e) {
-                err.append(op).append(": ").append(msg(e)).append("; ");
+                err.append(op).append(": ").append(msg(e)).append("\n");
             }
         }
         p.edit().putLong("at", System.currentTimeMillis()).apply();
-        if (remote == null) { p.edit().putString("err", err.toString().replaceAll("; $", "")).apply(); return; }
+        if (remote == null) { p.edit().putString("err", err.toString().trim()).apply(); return; }
         try {
             JSONObject res = diff(c, remote);
             p.edit().putString("err", "").putString("res", res.toString()).putLong("ok", System.currentTimeMillis()).apply();
@@ -303,13 +311,29 @@ public class KrWatch extends JobService {
 
     // ------------------------------------------------------------------ сеть
     @SuppressWarnings("deprecation")
-    private static String get(String url) throws Exception {
+    private static String request(String url, String method, String body) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setConnectTimeout(20000); c.setReadTimeout(120000); c.setUseCaches(false);
         c.setRequestProperty("Accept", "application/json, text/plain, */*");
         c.setRequestProperty("Referer", "https://cr.minzdrav.gov.ru/");
+        c.setRequestProperty("Origin", "https://cr.minzdrav.gov.ru");
+        if ("POST".equals(method)) {
+            c.setRequestMethod("POST"); c.setDoOutput(true);
+            byte[] b = (body == null ? "" : body).getBytes("UTF-8");
+            if (b.length > 0) c.setRequestProperty("Content-Type", "application/json;charset=UTF-8");
+            c.setFixedLengthStreamingMode(b.length);
+            try (java.io.OutputStream o = c.getOutputStream()) { o.write(b); }
+        }
         try {
-            if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
+            int code = c.getResponseCode();
+            if (code != 200) {
+                String eb = "";
+                try (InputStream in = c.getErrorStream()) {
+                    if (in != null) { ByteArrayOutputStream o = new ByteArrayOutputStream(); byte[] bb = new byte[4096]; int n; while ((n = in.read(bb)) > 0 && o.size() < 4096) o.write(bb, 0, n);
+                        eb = o.toString("UTF-8").replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim(); }
+                } catch (Exception ignored) { }
+                throw new Exception("HTTP " + code + (eb.isEmpty() ? "" : " — " + eb.substring(0, Math.min(120, eb.length()))));
+            }
             ByteArrayOutputStream o = new ByteArrayOutputStream();
             try (InputStream in = c.getInputStream()) { byte[] b = new byte[16384]; int n; while ((n = in.read(b)) > 0) o.write(b, 0, n); }
             return o.toString("UTF-8");
