@@ -70,6 +70,9 @@ window.appBack = function () {
 };
 $('#backBtn').onclick = () => window.appBack() || go('#home');
 $('#infoBtn').onclick = () => go('#about');
+// состояние аналитики и экрана «Использование» (объявлено до первого route())
+const AN = { last: '', lastAt: 0, sq: {} };
+let USAGE_DAYS = 30;
 window.addEventListener('hashchange', () => {
   if (cur) S.scroll[cur] = window.scrollY;
   const h = location.hash || '#home';
@@ -101,10 +104,12 @@ function route() {
     case 'cr': setTab(''); crPage(parts[1]); break;
     case 'about': setTab(''); about(); break;
     case 'krnew': setTab('home'); krPage(); break;
+    case 'usage': setTab(''); usagePage(); break;
     case 'doc': doc(parts[1], parts[2], params.get('h') || ''); return;
     default: setTab('home'); home();
   }
   window.scrollTo(0, S.scroll[h] || 0);
+  try { anView(parts); } catch (e) {}
 }
 
 // ---------------------------------------------------------------- data
@@ -238,6 +243,7 @@ function renderRec() {
     }).join('')}</div>`;
   }
   box.innerHTML = h || '<div class="empty">Ничего не найдено</div>';
+  anSearch('rec', S.q, (h.match(/class="trow"/g) || []).length);
 }
 
 function topicPage(k) {
@@ -549,7 +555,7 @@ function learnPage(noFetch) {
   const tabs = d && all.length ? `<div class="seg n2 ltabs"><a class="${LEARN_TAB === 'course' ? 'on' : ''}" data-tab="course">Курсы${nC ? ` <i class="tnew">${nC}</i>` : ''}</a><a class="${LEARN_TAB === 'lecture' ? 'on' : ''}" data-tab="lecture">Лекции${nL ? ` <i class="tnew">${nL}</i>` : ''}</a></div>` : '';
   const fmt = s => s ? s.split('-').reverse().slice(0, 2).join('.') : '';
   view.innerHTML = `<div class="luser"><span>Вы вошли: <b>${esc(u)}</b>${isOrg() ? ' · организатор' : ''}</span><a id="lOut">Выйти</a></div>
-    ${isOrg() ? `<a class="orgcard" href="#report"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span><b>Отчёт по обучению</b><small>кто прослушал лекции и прошёл тесты</small></span><span class="chev">›</span></a>${krCan() ? `<a class="orgcard" href="#krnew"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span><b>Новое в КР</b><small>проверить рубрикатор Минздрава, передать новые КР в справочник</small></span><span class="chev">›</span></a>` : ''}` : ''}
+    ${isOrg() ? `<a class="orgcard" href="#report"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span><b>Отчёт по обучению</b><small>кто прослушал лекции и прошёл тесты</small></span><span class="chev">›</span></a><a class="orgcard" href="#usage"><svg viewBox="0 0 24 24"><path d="M3 12h4l3 7 4-14 3 7h4"/></svg><span><b>Использование приложения</b><small>сколько человек открывают, какие разделы, что ищут</small></span><span class="chev">›</span></a>${krCan() ? `<a class="orgcard" href="#krnew"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span><b>Новое в КР</b><small>проверить рубрикатор Минздрава, передать новые КР в справочник</small></span><span class="chev">›</span></a>` : ''}` : ''}
     ${LEARN.err ? `<div class="lnote">${esc(LEARN.err)}</div>` : ''}
     ${tabs}
     ${!d ? '<div class="rwempty">Загрузка ленты…</div>' : !items.length ? `<div class="rwempty">${LEARN_TAB === 'lecture' ? 'Лекций пока нет.' : 'Курсов пока нет.'} Новые появятся здесь.</div>` : ''}
@@ -827,6 +833,7 @@ function mkbResults() {
   }
   const r = call('mkbSearch', q);
   const items = r.items || [];
+  anSearch('mkb', q, items.length);
   const code = r.code;
   const ts = code ? null : terms(q);
   let h = `<div class="sec-h">${code ? 'Коды, начинающиеся на ' + esc(code) : 'Найдено'}: ${items.length}${items.length >= 300 ? '+' : ''}</div>`;
@@ -1512,6 +1519,7 @@ window.onContentReady = () => toast('Загружено обновление с�
 setTimeout(() => {
   try { if (window.App && App.otaOk) App.otaOk(); } catch (e) {}
   try { if (krCan()) krEnable(isOrg()); } catch (e) {}
+  try { anOpen(); } catch (e) {}
   const v = contentVer(), seen = LS.get('contentSeen', '');
   if (v && seen && v !== seen && v > seen) toast('Справочник обновлён');
   if (v) LS.set('contentSeen', v);
@@ -1587,4 +1595,89 @@ function krUpWire(r) {
     };
     try { App.krUpload(url, key, JSON.stringify(ids)); } catch (e) { onKrUpDone(0, 0); }
   };
+}
+
+// ---------------------------------------------------------------- аналитика использования (анонимно)
+// Телефон получает случайный номер; события (открытие, просмотр раздела, поиск) копятся и раз в несколько часов
+// уходят пачкой на Google-скрипт отчётов (лист «Использование»). ФИО и логины не отправляются.
+function anDev() { let d = LS.get('anDev', ''); if (!/^[a-z0-9]{12}$/.test(d)) { d = ''; while (d.length < 12) d += Math.random().toString(36).slice(2); d = d.slice(0, 12); LS.set('anDev', d); } return d; }
+function anPush(e, k, n) {
+  const q = LS.get('anQ', []); q.push([Math.floor(Date.now() / 1000), e, String(k || '').slice(0, 60), n == null ? '' : n]);
+  LS.set('anQ', q.slice(-1500));
+  if (Date.now() - LS.get('anSent', 0) > 3 * 3600e3 || q.length >= 300) anFlush();
+}
+function anOpen() {
+  anDev(); anPush('open', window.App ? 'android' : 'web');
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { LS.set('anHid', Date.now()); anFlush(); }
+    else if (Date.now() - LS.get('anHid', Date.now()) > 30 * 60e3) anPush('open', window.App ? 'android' : 'web');
+  });
+}
+function anView(parts) {
+  const p0 = parts[0] || 'home', id = parts[1] || '';
+  const M = { rec: id ? 'topic:' + id : 'rec', d: 'scheme:' + id, mkb: id ? 'mkb:node' : 'mkb', calc: 'calc:' + id, course: 'course:' + id,
+    lecture: (parts[2] === 'test' ? 'lecture-test:' : 'lecture:') + id, cr: 'cr:' + id, doc: 'doc:' + id };
+  const k = (M[p0] || p0).replace(/[^\w:.-]/g, '').slice(0, 60);
+  if (k === AN.last && Date.now() - AN.lastAt < 30 * 60e3) return;
+  AN.last = k; AN.lastAt = Date.now(); anPush('view', k);
+}
+function anSearch(scope, q, n) {   // записываем итоговый запрос, а не каждую букву
+  q = String(q || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  clearTimeout(AN.sq[scope]);
+  if (q.length < 2) return;
+  AN.sq[scope] = setTimeout(() => anPush('search', scope + ':' + q.slice(0, 50), n), 2000);
+}
+function anFlush() {
+  const q = LS.get('anQ', []), d = learnData(), url = d && d.report;
+  if (!q.length || !url || !d.usage || !/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url) || AN.busy) return;   // d.usage — скрипт умеет принимать события
+  AN.busy = true; const batch = q.slice(0, 500);
+  fetch(url, { method: 'POST', mode: 'no-cors', keepalive: batch.length < 150, headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ op: 'ev', dev: anDev(), v: APP_VERSION, p: window.App ? 'android' : 'web', lg: learnUser() ? 1 : 0, ev: batch }) })
+    .then(() => { LS.set('anQ', LS.get('anQ', []).slice(batch.length)); LS.set('anSent', Date.now()); })
+    .catch(() => {}).finally(() => { AN.busy = false; });
+}
+
+// экран организатора «Использование приложения»
+function anTitle(k) {
+  const [a, b] = k.split(':');
+  const plain = { home: 'Главная', rec: 'Справочник (темы)', mkb: 'Поиск по МКБ', route: 'Дежурные стационары', learn: 'Обучение и опросы', about: 'О справочнике',
+    report: 'Отчёт по обучению', krnew: 'Новое в КР', usage: 'Использование', 'mkb:node': 'МКБ: просмотр раздела' };
+  if (plain[k]) return plain[k];
+  if (a === 'scheme') return (byId[b] && byId[b].title) || 'Схема ' + b;
+  if (a === 'topic') { const t = TOPICS.find(x => x.k === b); return 'Тема: ' + (t ? t.t : b); }
+  if (a === 'calc') { const t = TOOLS.find(x => x.h === '#calc/' + b); return (t ? t.t : 'Калькулятор ' + b); }
+  if (a === 'course') return 'Курс: ' + ((window.COURSES && COURSES[b] && COURSES[b].title) || b);
+  if (a === 'lecture' || a === 'lecture-test') return (a === 'lecture' ? 'Лекция: ' : 'Тест к лекции: ') + ((window.LECTURES && LECTURES[b] && LECTURES[b].title.replace(/^Лекция: /, '')) || b);
+  if (a === 'cr' || a === 'doc') { try { crData(); } catch (e) {} return 'КР: ' + ((CRN && CRN[b]) || b) + (a === 'doc' ? ' (текст)' : ''); }
+  return k;
+}
+function usagePage() {
+  setTitle('Использование приложения', false);
+  if (!isOrg()) { view.innerHTML = '<div class="rwempty">Раздел доступен организатору. Войдите в «Обучение и опросы».</div>'; return; }
+  const d = learnData(), url = d && d.report, key = LS.get('orgKey', '');
+  view.innerHTML = `<div class="seg n3 utabs">${[7, 30, 90].map(n => `<a class="${n === USAGE_DAYS ? 'on' : ''}" data-d="${n}">${n} дней</a>`).join('')}</div><div id="ubox"><div class="rwempty">Загрузка…</div></div>`;
+  view.querySelectorAll('.utabs a').forEach(a => a.onclick = () => { USAGE_DAYS = +a.dataset.d; usagePage(); });
+  if (!url || !key) { $('#ubox').innerHTML = '<div class="rwempty">Нет адреса скрипта или ключа организатора — войдите организатором заново.</div>'; return; }
+  anFlush();
+  fetch(url + '?key=' + encodeURIComponent(key) + '&op=usage&days=' + USAGE_DAYS, { cache: 'no-store' }).then(r => r.json()).then(u => {
+    const box = $('#ubox'); if (!box) return;
+    if (u.ok && u.rows) { box.innerHTML = '<div class="rwempty">Скрипт ещё не умеет считать использование — обновите его код.</div>'; return; }
+    if (!u.ok) { box.innerHTML = `<div class="rwempty">${u.err === 'key' ? 'Скрипт не принял ключ организатора.' : 'Скрипт ещё не умеет считать использование — обновите его код.'}</div>`; return; }
+    if (!u.devices) { box.innerHTML = '<div class="rwempty">Данных пока нет. Телефоны начнут присылать статистику после обновления приложения — первые цифры появятся в течение дня.</div>'; return; }
+    const bars = (rows, lab) => { const mx = Math.max(1, ...rows.map(r => r[1])); return `<div class="ubars">${rows.map((r, i) => `<div class="ubar" title="${esc(r[0])}: ${r[1]}"><i style="height:${Math.round(r[1] / mx * 100)}%"></i><span>${esc(lab(r[0], i))}</span></div>`).join('')}</div>`; };
+    const list = (rows, f, empty) => rows.length ? `<div class="ulist">${rows.map(r => `<div class="urow"><span>${f(r)}</span><b>${r[1]}</b>${r[2] != null ? `<small>${r[2]} тел.</small>` : ''}</div>`).join('')}</div>` : `<div class="krnote">${empty}</div>`;
+    const sq = s => { const i = s.indexOf(':'); return `<i class="usc">${s.slice(0, i) === 'mkb' ? 'МКБ' : 'справ.'}</i> ${esc(s.slice(i + 1))}`; };
+    box.innerHTML = `<div class="ukpi">
+        <div><b>${u.devices}</b><span>телефонов за ${USAGE_DAYS} дн.</span></div>
+        <div><b>${u.today}</b><span>сегодня</span></div>
+        <div><b>${u.avgDay}</b><span>в среднем в день</span></div>
+        <div><b>${u.learnPct}%</b><span>вошли в обучение</span></div></div>
+      <div class="sec-h">Телефонов по дням</div>${bars(u.daily, (s, i) => { const st = Math.ceil(u.daily.length / 7), j = u.daily.length - 1 - i; return j % st === 0 ? s.slice(8, 10) + '.' + s.slice(5, 7) : ''; })}
+      <div class="sec-h">Что открывают</div>${list(u.views, r => esc(anTitle(r[0])), 'Пока нет данных.')}
+      <div class="sec-h">Что ищут</div>${list(u.searches, r => sq(r[0]), 'Пока никто ничего не искал.')}
+      <div class="sec-h">Искали, но не нашли</div><p class="krnote">Подсказка, чего не хватает в справочнике.</p>${list(u.empty, r => sq(r[0]), 'Таких поисков нет.')}
+      <div class="sec-h">Время суток (по Тюмени)</div>${bars(u.hours.map((n, h) => [String(h), n]), s => +s % 3 === 0 ? s : '')}
+      <div class="sec-h">Версии приложения</div>${list(u.versions, r => esc(r[0]), '—')}
+      <p class="disc">Статистика анонимная: у каждого телефона случайный номер, ФИО и логины не передаются. Телефоны отправляют данные раз в несколько часов, поэтому сегодняшние цифры неполные. <a href="${esc(u.sheet || '#')}" target="_blank" rel="noopener">Открыть таблицу</a></p>`;
+  }).catch(() => { const box = $('#ubox'); if (box) box.innerHTML = '<div class="rwempty">Нет связи со скриптом.</div>'; });
 }
