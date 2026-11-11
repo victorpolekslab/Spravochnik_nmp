@@ -30,7 +30,8 @@ BLOCKS = {'targets': ['h', 'items'], 'exam': ['h', 'items'], 'flags': ['h', 'ite
 LAYOUTS = {'title': ['h'], 'points': ['h', 'items'], 'big': ['value', 'text'], 'compare': ['h', 'left', 'right'],
            'table': ['h', 'cols', 'rows'], 'flags': ['h', 'items'], 'case': ['kicker', 'h', 'facts'],
            'answer': ['kicker', 'h', 'items', 'verdict'], 'meme': ['left', 'right'], 'end': ['h', 'items'], 'image': ['h', 'img']}
-IMG_EXT = ('.svg', '.png', '.jpg', '.jpeg', '.webp')
+IMG_EXT = ('.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif')
+imgs_of = lambda v: [v] if isinstance(v, str) else list(v or [])
 LIMITS = {'points': ('items', 6), 'big': ('items', 3), 'table': ('rows', 7), 'flags': ('items', 14), 'case': ('facts', 6),
           'answer': ('items', 5), 'end': ('items', 5)}
 
@@ -61,7 +62,8 @@ def check(c, base=None):
         if not re.fullmatch(r'img/[\w.-]+', rel) or not rel.lower().endswith(IMG_EXT): E.append(f'{where}: картинка «{rel}» — нужен путь img/<файл>.svg|png|jpg|webp'); return
         f = os.path.join(base, rel)
         if not os.path.exists(f): E.append(f'{where}: нет файла {rel} в папке курса'); return
-        if os.path.getsize(f) > 1_500_000: E.append(f'{where}: {rel} больше 1,5 МБ')
+        lim = 3_000_000 if rel.lower().endswith('.gif') else 1_500_000
+        if os.path.getsize(f) > lim: E.append(f'{where}: {rel} больше {lim / 1e6:g} МБ')
         if rel.lower().endswith('.svg'):
             t = open(f, encoding='utf-8', errors='replace').read()
             if re.search(r'<script|<foreignObject|\bon\w+\s*=|(xlink:)?href\s*=\s*["\'](https?:|//|data:text)', t, re.I): E.append(f'{where}: в {rel} скрипты или внешние ссылки — недопустимо')
@@ -129,7 +131,8 @@ def check(c, base=None):
             req(s, LAYOUTS[lay] + ['say'], f'{w} ({lay})')
             if not s.get('h'): W.append(f'{w}: нет h — в списке слайдов будет пусто')
             if s.get('img'):
-                img_ok(s['img'], w)
+                if len(imgs_of(s['img'])) > 2: E.append(f'{w}: не больше двух картинок на слайде')
+                for im in imgs_of(s['img']): img_ok(im, w)
                 if lay in ('title', 'meme'): E.append(f'{w}: на макете {lay} картинка не ставится')
                 if s.get('imgMode', 'side') not in ('side', 'full'): E.append(f'{w}: imgMode — side или full')
             if lay in LIMITS:
@@ -215,6 +218,9 @@ tr:nth-child(even) td{background:#f6f3ee}td:first-child{font-weight:700;width:28
 .pic img{max-width:100%;max-height:100%;border-radius:18px;box-shadow:0 6px 24px rgba(31,36,48,.18);background:#fff}
 .side .in{flex-direction:row;gap:44px;align-items:stretch}.side .txt{flex:0 0 38%;display:flex;flex-direction:column;min-width:0;min-height:0}
 .side .pic{flex:1}.side h2{font-size:1.75em}
+.pics{flex:1;display:flex;gap:24px;min-height:0}.pics.col{flex-direction:column}.pics .pic{flex:1}
+.side2 .lcol{flex:1;display:flex;flex-direction:column;gap:22px;min-width:0;min-height:0}.side2 .lcol .txt{flex:0 0 auto}
+.side2 .lcol .pic{flex:1 1 0;min-height:46%}.side .big{font-size:3.6em;white-space:nowrap}.side2 .pic.port{flex:0 0 auto;height:100%}
 .full .in{top:44px;bottom:58px;left:80px;right:80px}.full .pic{flex:1;margin:.35em 0 .35em}
 .fh{font-family:Rubik,sans-serif;font-size:42px;font-weight:800;line-height:1.1;display:flex;align-items:baseline;gap:.6em;flex-wrap:wrap}
 .fh .kick{font-size:20px;margin:0;color:#b83a35}.case .fh .kick,.title .fh .kick{color:#e8a33d}.full .cap{font-size:24px}.full .src{bottom:16px;left:80px;font-size:18px}
@@ -261,17 +267,21 @@ def slide_html(s):
     src = f'<div class="src">{md(s["src"])}</div>' if s.get('src') else ''
     if L == 'image':
         cls, body = 'image full', f'{k}<h2>{md(s["h"])}</h2>'
-    im = s.get('img')
-    if im:
-        uri = img_uri(im)
+    ims = imgs_of(s.get('img'))
+    if ims:
+        tag = lambda rel, extra='': f'<img src="{img_uri(rel)}"' + (f' data-anim="{rel}"' if rel.lower().endswith('.gif') else '') + f'{extra}>'
         mode = 'full' if L in ('image', 'compare') else s.get('imgMode', 'side')
         if mode == 'full':
             cap = s.get('caption') or s.get('verdict') or s.get('question') or s.get('note') or ''
             head = '<div class="fh">' + (f'<span class="kick">{md(s["kicker"])}</span>' if s.get('kicker') else '') + f'<b>{md(s.get("h", ""))}</b></div>'
-            body = f'{head}<div class="pic"><img src="{uri}"></div>' + (f'<div class="cap">{md(cap)}</div>' if cap else '')
+            body = f'{head}<div class="pics">' + ''.join(f'<div class="pic">{tag(r)}</div>' for r in ims) + '</div>' + (f'<div class="cap">{md(cap)}</div>' if cap else '')
             cls = cls.replace(' full', '') + ' full'
+        elif len(ims) == 2 and img_ratio(ims[1]) < 1 <= img_ratio(ims[0]):
+            # текст и горизонтальная схема — слева столбиком, вертикальная (анимация) — справа во всю высоту
+            body = f'<div class="lcol"><div class="txt">{body}</div><div class="pic">{tag(ims[0])}</div></div><div class="pic port">{tag(ims[1])}</div>'
+            cls += ' side side2'
         else:
-            body = f'<div class="txt">{body}</div><div class="pic"><img src="{uri}"></div>'
+            body = f'<div class="txt">{body}</div><div class="pics col">' + ''.join(f'<div class="pic">{tag(r)}</div>' for r in ims) + '</div>'
             cls += ' side'
     return f'<section class="{cls}"><div class="in">{body}</div>{src}</section>'
 
@@ -279,30 +289,50 @@ def slide_html(s):
 IMG_BASE = [None]   # папка курса, откуда брать img/…
 
 
-def img_uri(rel):
-    import base64, mimetypes
+def img_ratio(rel):
     f = os.path.join(IMG_BASE[0], rel)
+    if f.lower().endswith('.svg'):
+        t = open(f, encoding='utf-8', errors='replace').read(3000)
+        m = re.search(r'viewBox="[\d.\s-]+?\s([\d.]+)\s+([\d.]+)"', t) or re.search(r'width="([\d.]+)[^"]*"\s+height="([\d.]+)', t)
+        return float(m.group(1)) / float(m.group(2)) if m else 16 / 9
+    from PIL import Image
+    w, h = Image.open(f).size
+    return w / h
+
+
+def img_uri(rel):
+    import base64, mimetypes, io
+    f = os.path.join(IMG_BASE[0], rel)
+    if f.lower().endswith('.gif'):   # на слайд — статичный кадр (три четверти цикла), анимацию плеер накладывает сверху
+        from PIL import Image
+        im = Image.open(f); im.seek(int(getattr(im, 'n_frames', 1) * 0.75)); b = io.BytesIO(); im.convert('RGB').save(b, 'PNG')
+        return 'data:image/png;base64,' + base64.b64encode(b.getvalue()).decode()
     mt = 'image/svg+xml' if f.lower().endswith('.svg') else (mimetypes.guess_type(f)[0] or 'image/png')
     return f'data:{mt};base64,' + base64.b64encode(open(f, 'rb').read()).decode()
 
 
 FIT = """() => { const s = document.querySelector('section'), i = s.querySelector('.in');
-  let f = 40; i.style.setProperty('--f', f + 'px'); const over = () => i.scrollHeight > i.clientHeight + 2 || [...i.querySelectorAll('.card,.two,.txt')].some(e => e.scrollHeight > e.clientHeight + 2);
+  i.querySelectorAll('.pic.port').forEach(p => { const im = p.querySelector('img'); p.style.width = (p.clientHeight * im.naturalWidth / im.naturalHeight) + 'px'; });
+  let f = 40; i.style.setProperty('--f', f + 'px'); const over = () => i.scrollHeight > i.clientHeight + 2 || [...i.querySelectorAll('.card,.two,.txt,.lcol')].some(e => e.scrollHeight > e.clientHeight + 2);
   while (over() && f > 20) { f -= 1; i.style.setProperty('--f', f + 'px'); }
   i.querySelectorAll('.pic').forEach(p => { const im = p.querySelector('img'), b = p.getBoundingClientRect(), r = (im.naturalWidth || 16) / (im.naturalHeight || 9);
     const w = Math.min(b.width, b.height * r); im.style.width = w + 'px'; im.style.height = (w / r) + 'px'; im.style.maxWidth = 'none'; im.style.maxHeight = 'none'; });
-  return f; }"""
+  const S = s.getBoundingClientRect();
+  const anim = [...s.querySelectorAll('img[data-anim]')].map(im => { const b = im.getBoundingClientRect();
+    return { img: im.dataset.anim, box: [(b.left - S.left) / S.width, (b.top - S.top) / S.height, b.width / S.width, b.height / S.height].map(x => Math.round(x * 10000) / 10000) }; });
+  return [f, anim]; }"""
 
 
 def render(slides, out, prefix='s'):
     from playwright.sync_api import sync_playwright
     os.makedirs(out, exist_ok=True)
-    small = []
+    small, anims = [], {}
     with sync_playwright() as p:
         b = p.chromium.launch(); pg = b.new_page(viewport={'width': 1600, 'height': 900})
         for i, s in enumerate(slides, 1):
             pg.set_content(f'<!doctype html><html><head><meta charset="utf-8">{FONTS}<style>{CSS}</style></head><body>{slide_html(s)}</body></html>', wait_until='networkidle')
-            pg.evaluate('document.fonts.ready'); pg.wait_for_function('[...document.images].every(i => i.complete)'); f = pg.evaluate(FIT)
+            pg.evaluate('document.fonts.ready'); pg.wait_for_function('[...document.images].every(i => i.complete)'); f, an = pg.evaluate(FIT)
+            if an: anims[str(i)] = an
             if f <= 20: small.append(i)
             png = f'{out}/{prefix}{i:02d}.png'
             pg.locator('section').screenshot(path=png)
@@ -310,6 +340,7 @@ def render(slides, out, prefix='s'):
             os.remove(png)
         b.close()
     if small: print('  внимание: на слайдах', small, 'текст пришлось сильно уменьшить — сократите')
+    json.dump(anims, open(os.path.join(out, 'anim.json'), 'w'))
     return [f'{out}/{prefix}{i:02d}.jpg' for i in range(1, len(slides) + 1)]
 
 
@@ -394,12 +425,16 @@ def gen():
                         b['img'] = f'media/{cid}/img/{os.path.basename(b["img"])}?v={h}'
             co.update(min=c['course'].get('min', 7), cards=cards, quiz=c['course']['quiz'])
             out.append(f'COURSES[{json.dumps(cid)}] = {json.dumps(co, ensure_ascii=False, indent=1)};')
+        import hashlib
         meta_p = os.path.join(MEDIA, cid, 'meta.json')
         if c.get('lecture') and os.path.exists(meta_p):
             le, m = c['lecture'], json.load(open(meta_p, encoding='utf-8'))
             lo = {'title': lecture_title(c['title']), 'sub': le.get('sub') or c['sub'], 'dir': f'media/{cid}/', 'audio': m['audio'],
                   'dur': m['dur'], 'srcName': le.get('srcName') or c['srcName'],
                   'slides': [{'t': t, 'h': s.get('h') or s.get('kicker') or ''} for t, s in zip(m['t'], le['slides'])], 'quiz': le['quiz']}
+            if m.get('v', 1) > 1: lo['ver'] = m['v']
+            for si, an in (m.get('anim') or {}).items():   # GIF поверх статичного слайда: адрес и рамка в долях слайда
+                lo['slides'][int(si) - 1]['anim'] = [{'src': f'media/{cid}/img/{os.path.basename(a["img"])}?v=' + hashlib.sha256(open(os.path.join(COURSES, cid, a['img']), 'rb').read()).hexdigest()[:10], 'box': a['box']} for a in an]
             out.append(f'LECTURES[{json.dumps(cid)}] = {json.dumps(lo, ensure_ascii=False, indent=1)};')
     open(GEN, 'w', encoding='utf-8').write('\n'.join(out) + '\n')
     if shutil.which('node'): subprocess.run(['node', '--check', GEN], check=True)
@@ -434,7 +469,9 @@ def build(arg):
             shutil.rmtree(os.path.join(COURSES, cid, 'img'), ignore_errors=True)
             shutil.copytree(os.path.join(IMG_BASE[0], 'img'), os.path.join(COURSES, cid, 'img'))
     # картинки карточек — на сайт (media/<id>/img/), имена с версией содержимого против кэша
-    used = sorted({b['img'] for cd in (c.get('course') or {}).get('cards', []) for b in cd.get('blocks', []) if b.get('t') == 'img'})
+    used = {b['img'] for cd in (c.get('course') or {}).get('cards', []) for b in cd.get('blocks', []) if b.get('t') == 'img'}
+    used |= {r for sl in (c.get('lecture') or {}).get('slides', []) for r in imgs_of(sl.get('img')) if r.lower().endswith('.gif')}   # анимации для плеера
+    used = sorted(used)
     mimg = os.path.join(MEDIA, cid, 'img')
     shutil.rmtree(mimg, ignore_errors=True)
     if used:
@@ -448,11 +485,12 @@ def build(arg):
         for f in os.listdir(md_dir):
             if re.fullmatch(r's\d\d\.jpg', f): os.remove(os.path.join(md_dir, f))
         render(c['lecture']['slides'], md_dir)
+        ap = os.path.join(md_dir, 'anim.json'); anim = json.load(open(ap)); os.remove(ap)
         audio = f'lecture_v{v}.mp3'
         t, dur = voice(c['lecture']['slides'], os.path.join(md_dir, audio))
         for f in os.listdir(md_dir):   # старые озвучки удаляем: ссылки на них уже нет
             if f.endswith('.mp3') and f != audio: os.remove(os.path.join(md_dir, f))
-        json.dump({'v': v, 'voice': f'vosk-ru-0.9 speaker {SPEAKER}', 'dur': dur, 't': t, 'audio': audio}, open(meta_p, 'w'), ensure_ascii=False)
+        json.dump({'v': v, 'voice': f'vosk-ru-0.9 speaker {SPEAKER}', 'dur': dur, 't': t, 'audio': audio, 'anim': anim}, open(meta_p, 'w'), ensure_ascii=False)
         print(f'  лекция: {len(t)} слайдов, {dur} с, {audio}')
     gen(); feed(c)
     print('Готово. Проверьте в приложении (тест: python3 tests/... с мок-сервером), затем tools/release_content.sh')
@@ -474,6 +512,7 @@ def main():
             for n in names:
                 if n.lower().endswith(IMG_EXT):
                     b = subprocess.run(['git', '-C', ROOT, 'show', f'origin/courses:courses/{cid}/img/{n}'], check=True, capture_output=True).stdout
+                    if len(b) > 3_000_000 and f'img/{n}' not in data.decode('utf-8'): print(f'  пропущен {n}: {len(b) // 1_000_000} МБ, в курсе не используется'); continue
                     open(os.path.join(dst, 'img', n), 'wb').write(b)
             print('  картинок:', len([n for n in names if n.lower().endswith(IMG_EXT)]))
         c = load(cid); report(c, *check(c, IMG_BASE[0]))

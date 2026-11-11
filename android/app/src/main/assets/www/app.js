@@ -663,7 +663,7 @@ function lecturePage(key) {
   }
   const au = LECT.audio, idxAt = t => { let i = 0; L.slides.forEach((s, k) => { if (t >= s.t - 0.05) i = k; }); return i; };
   view.innerHTML = `<div class="lv">
-    <div class="lslide" id="lvBox"><img id="lvImg" alt=""><div class="lvmsg" id="lvMsg">Загрузка…</div><span class="lvfs">⤢</span></div>
+    <div class="lslide" id="lvBox"><div class="lvframe"><img id="lvImg" alt=""><div id="lvAnim"></div></div><div class="lvmsg" id="lvMsg">Загрузка…</div><span class="lvfs">⤢</span></div>
     <div class="lvmeta"><span id="lvNum"></span><b id="lvTitle"></b></div>
     <input type="range" id="lvSeek" min="0" max="${L.dur}" step="0.5" value="0">
     <div class="lvtime"><span id="lvCur">0:00</span><span>${fmtT(L.dur)}</span></div>
@@ -679,6 +679,9 @@ function lecturePage(key) {
     if (i === shown) return; shown = i;
     img.src = base + 's' + String(i + 1).padStart(2, '0') + '.jpg?v=' + (L.ver || 1);
     if (i + 1 < n) new Image().src = base + 's' + String(i + 2).padStart(2, '0') + '.jpg?v=' + (L.ver || 1);
+    // анимация (GIF) поверх статичного кадра слайда — рамка задана в долях слайда
+    $('#lvAnim').innerHTML = (L.slides[i].anim || []).map(a => `<img class="lvanim" alt="" src="${esc(SITE + a.src)}" onerror="this.remove()"
+      style="left:${a.box[0] * 100}%;top:${a.box[1] * 100}%;width:${a.box[2] * 100}%;height:${a.box[3] * 100}%">`).join('');
     $('#lvNum').textContent = `${i + 1} / ${n}`; $('#lvTitle').textContent = L.slides[i].h;
     view.querySelectorAll('.lvli').forEach(el => el.classList.toggle('on', +el.dataset.k === i));
     if (i === n - 1) unlock();
