@@ -1155,11 +1155,15 @@ function altList(a) {
   if (a.length === 1) return `<div class="ex">${md(a[0])}</div>`;
   return `<div class="alts"><div class="altsh">выберите один:</div>${a.map(t => `<div class="alt">${md(t)}</div>`).join('')}</div>`;
 }
+function moreList(m) {   // раскрывающиеся альтернативы внутри ступени лечения: [{h, items:[...]}]
+  if (!m || !m.length) return '';
+  return m.map(g => `<details class="more"><summary>${md(g.h)} <span>${g.items.length}</span></summary>${g.items.map(t => `<div class="alt">${md(t)}</div>`).join('')}</details>`).join('');
+}
 function stepTable(steps, defs, head) {
   const list = (steps || []).map(x => typeof x === 'string' ? (defs || {})[x] : x).filter(Boolean);
   if (!list.length) return '';
   return `<table class="tx"><thead><tr><th>${esc(head || 'Шаг')}</th><th>Что назначить</th></tr></thead><tbody>${list.map(x =>
-    `<tr><td>${md(x.s)}</td><td><div class="combo">${md(x.combo)}</div>${x.ex ? `<div class="ex">${md(x.ex)}</div>` : ''}${altList(x.alt)}${x.note ? `<div class="ex ${/(^не\s|нельзя|риск|не при)/i.test(x.note) ? 'warnline' : 'noteline'}">${md(x.note)}</div>` : ''}<div class="tsrc">${srcBadge(x.src)}</div></td></tr>`).join('')}</tbody></table>`;
+    `<tr><td>${md(x.s)}</td><td><div class="combo">${md(x.combo)}</div>${x.ex ? `<div class="ex">${md(x.ex)}</div>` : ''}${altList(x.alt)}${moreList(x.more)}${x.note ? `<div class="ex ${/(^не\s|нельзя|риск|не при)/i.test(x.note) ? 'warnline' : 'noteline'}">${md(x.note)}</div>` : ''}<div class="tsrc">${srcBadge(x.src)}</div></td></tr>`).join('')}</tbody></table>`;
 }
 function classifyBlock(b) {
   const id = 'c' + (BID++);
@@ -1279,7 +1283,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '3.9';
+const APP_VERSION = '4.0';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');

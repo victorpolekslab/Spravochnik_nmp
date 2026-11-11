@@ -774,3 +774,8 @@ details.susp .sfoot { margin-top: 6px; color: var(--muted); font-size: 12px; }
 .orgcard { display: flex; align-items: center; gap: 12px; margin: 0 12px 10px; padding: 12px 14px; background: var(--accent-soft); border-radius: 14px; text-decoration: none; color: var(--fg); }
 .orgcard svg { width: 26px; height: 26px; flex: none; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; }
 .orgcard span:not(.chev) { flex: 1; } .orgcard b { display: block; font-size: 15.5px; } .orgcard small { color: var(--muted); font-size: 12.5px; } .orgcard .chev { color: var(--muted); font-size: 22px; }
+details.more { margin-top: 6px; border-left: 2px dashed var(--line); padding-left: 8px; }
+details.more > summary { cursor: pointer; font-size: 12px; font-weight: 700; color: var(--blue); list-style: none; padding: 3px 0; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: "▸ "; } details.more[open] > summary::before { content: "▾ "; }
+details.more > summary span { font-weight: 600; color: var(--muted); font-size: 11px; background: var(--surface2); border-radius: 8px; padding: 0 6px; }
