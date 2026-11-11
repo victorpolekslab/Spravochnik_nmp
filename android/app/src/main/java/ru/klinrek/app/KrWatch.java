@@ -39,8 +39,8 @@ import java.util.Set;
  */
 public class KrWatch extends JobService {
     static final String[] URLS = {
-            "https://apicr.minzdrav.gov.ru/api.ashx?op=GetJsonClinrecs",
-            "https://apicr.minzdrav.gov.ru/api.ashx?op=GetJsonSpecialityClinrecs"};
+            "https://apicr.minzdrav.gov.ru/api.ashx?op=GetJsonSpecialityClinrecs",
+            "https://apicr.minzdrav.gov.ru/api.ashx?op=GetJsonClinrecs"};
     static final int JOB_ID = 7301;
     static final String CHANNEL = "kr_updates";
     private static volatile boolean busy = false;
@@ -89,22 +89,24 @@ public class KrWatch extends JobService {
     // ------------------------------------------------------------------ проверка
     static void check(Context c) {
         SharedPreferences p = sp(c);
-        String err = "";
+        StringBuilder err = new StringBuilder();
         Map<String, String[]> remote = null;
         for (String u : URLS) {
+            String op = u.replaceAll(".*op=", "");
             try {
                 String body = get(u);
+                saveList(c, body, op);   // сохраняем ответ в любом случае — его можно передать в чат разработки и разобрать
                 remote = parse(body);
-                if (remote.size() >= 300) { saveList(c, body, u.replaceAll(".*op=", "")); break; }
-                err = "в ответе " + u.replaceAll(".*op=", "") + " только " + remote.size() + " КР";
+                if (remote.size() >= 300) break;
+                err.append(op).append(": найдено ").append(remote.size()).append(" КР, начало ответа: ")
+                        .append(body.substring(0, Math.min(160, body.length())).replaceAll("\\s+", " ")).append("; ");
                 remote = null;
             } catch (Exception e) {
-                err = (e instanceof java.net.UnknownHostException || e instanceof java.net.ConnectException || e instanceof java.net.SocketTimeoutException)
-                        ? "нет связи с cr.minzdrav.gov.ru" : String.valueOf(e.getMessage());
+                err.append(op).append(": ").append(msg(e)).append("; ");
             }
         }
         p.edit().putLong("at", System.currentTimeMillis()).apply();
-        if (remote == null) { p.edit().putString("err", err).apply(); return; }
+        if (remote == null) { p.edit().putString("err", err.toString().replaceAll("; $", "")).apply(); return; }
         try {
             JSONObject res = diff(c, remote);
             p.edit().putString("err", "").putString("res", res.toString()).putLong("ok", System.currentTimeMillis()).apply();
@@ -137,8 +139,12 @@ public class KrWatch extends JobService {
             for (int i = 0; i < a.length(); i++) walk(a.opt(i), out, depth + 1);
         } else if (v instanceof JSONObject) {
             JSONObject o = (JSONObject) v;
-            String id = str(o, "id", "Id", "ID");
-            String name = str(o, "name", "Name");
+            String id = str(o, "id", "Id", "ID", "IdCr", "CrId", "ClinrecId");
+            if (!id.matches("\\d+_\\d+")) {
+                String code = str(o, "code", "Code", "CodeCr"), ver = str(o, "version", "Version", "ver", "Ver");
+                if (code.matches("\\d+") && ver.matches("\\d+")) id = code + "_" + ver;
+            }
+            String name = str(o, "name", "Name", "Title", "title");
             if (id.matches("\\d+_\\d+") && !name.isEmpty()) {
                 String st = str(o, "apply_status", "ApplyStatus");
                 String status = str(o, "status", "Status");
@@ -300,8 +306,10 @@ public class KrWatch extends JobService {
     private static String get(String url) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setConnectTimeout(20000); c.setReadTimeout(120000); c.setUseCaches(false);
+        c.setRequestProperty("Accept", "application/json, text/plain, */*");
+        c.setRequestProperty("Referer", "https://cr.minzdrav.gov.ru/");
         try {
-            if (c.getResponseCode() != 200) throw new Exception("сайт Минздрава ответил HTTP " + c.getResponseCode());
+            if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
             ByteArrayOutputStream o = new ByteArrayOutputStream();
             try (InputStream in = c.getInputStream()) { byte[] b = new byte[16384]; int n; while ((n = in.read(b)) > 0) o.write(b, 0, n); }
             return o.toString("UTF-8");
