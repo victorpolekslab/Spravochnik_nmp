@@ -54,6 +54,7 @@ function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
     if (d && d.op === 'kr') return krPut_(d);
+    if (d && d.op === 'ev') return evPut_(d);
     const list = (Array.isArray(d) ? d : [d]).slice(0, 50);
     const ok = validUids_(), sh = sheet_();
     const lock = LockService.getScriptLock(); lock.waitLock(10000);
@@ -75,6 +76,7 @@ function doPost(e) {
 function doGet(e) {
   if (((e && e.parameter && e.parameter.key) || '') !== READ_KEY) return out_({ ok: false, err: 'key' });
   const op = e.parameter.op || '';
+  if (op === 'usage') return out_(usage_(Math.max(1, Math.min(365, Number(e.parameter.days) || 30))));
   if (op === 'kr_list') {
     const res = [], it = krFolder_().getFiles();
     while (it.hasNext()) { const f = it.next(); res.push({ name: f.getName(), size: f.getSize(), at: f.getLastUpdated(), src: f.getDescription() }); }
@@ -88,6 +90,73 @@ function doGet(e) {
   }
   const v = sheet_().getDataRange().getValues(); v.shift();
   return out_({ ok: true, sheet: sheet_().getParent().getUrl(), rows: v.map(r => ({ at: r[0], ts: r[1], uid: r[2], item: r[3], ev: r[4], score: r[5], total: r[6], ans: r[7] })) });
+}
+
+// ---------------------------------------------------------------- аналитика использования (анонимно)
+const EV_HEAD = ['Получено', 'Время', 'Телефон', 'Версия', 'Платформа', 'Вошёл в обучение', 'Событие', 'Что', 'Число'];
+const TZ = 'Asia/Yekaterinburg';
+
+function evSheet_() {
+  const ss = book_();
+  let sh = ss.getSheetByName('Использование');
+  if (!sh) { sh = ss.insertSheet('Использование'); sh.appendRow(EV_HEAD); sh.setFrozenRows(1); sh.getRange(1, 1, 1, EV_HEAD.length).setFontWeight('bold'); }
+  return sh;
+}
+
+function evPut_(d) {
+  const dev = clean_(d.dev, /^[a-z0-9]{12}$/, 12);
+  if (!dev || !Array.isArray(d.ev)) return out_({ ok: false });
+  const v = clean_(d.v, /^[\d.]{1,10}$/, 10), p = clean_(d.p, /^[a-z]{1,10}$/, 10), lg = d.lg ? 1 : 0, now = new Date(), rows = [];
+  d.ev.slice(0, 500).forEach(x => {
+    if (!Array.isArray(x)) return;
+    const t = Number(x[0]), e = String(x[1] || '');
+    if (!(t > 1.7e9 && t < now.getTime() / 1000 + 86400) || ['open', 'view', 'search'].indexOf(e) < 0) return;
+    let k = String(x[2] == null ? '' : x[2]).replace(/[\u0000-\u001f<>=+@]/g, ' ').trim().slice(0, 60);
+    if (e !== 'search' && !/^[\w:.-]{0,60}$/.test(k)) return;
+    const n = x[3] === '' || x[3] == null ? '' : Math.max(0, Math.min(100000, Math.floor(Number(x[3]) || 0)));
+    rows.push([now, new Date(t * 1000), dev, v, p, lg, e, k, n]);
+  });
+  if (rows.length) {
+    const sh = evSheet_(), lock = LockService.getScriptLock(); lock.waitLock(10000);
+    sh.getRange(sh.getLastRow() + 1, 1, rows.length, EV_HEAD.length).setValues(rows);
+    lock.releaseLock();
+  }
+  return out_({ ok: true, n: rows.length });
+}
+
+function usage_(days) {
+  const sh = evSheet_(), n = sh.getLastRow() - 1;
+  const res = { ok: true, sheet: sh.getParent().getUrl(), days: days, devices: 0, today: 0, avgDay: 0, learnPct: 0, daily: [], views: [], searches: [], empty: [], hours: new Array(24).fill(0), versions: [] };
+  if (n < 1) return res;
+  const since = Date.now() - days * 86400000, fmt = d => Utilities.formatDate(d, TZ, 'yyyy-MM-dd');
+  const vals = sh.getRange(2, 2, n, 8).getValues();   // Время, Телефон, Версия, Платформа, Вошёл, Событие, Что, Число
+  const devs = {}, perDay = {}, views = {}, searches = {}, empty = {}, today = fmt(new Date());
+  vals.forEach(r => {
+    const t = r[0] instanceof Date ? r[0] : new Date(r[0]);
+    if (!(t.getTime() >= since)) return;
+    const dev = r[1], day = fmt(t), e = r[5], k = String(r[6]);
+    const D = devs[dev] = devs[dev] || { last: 0, v: '', lg: 0 };
+    if (t.getTime() >= D.last) { D.last = t.getTime(); D.v = String(r[2]); D.lg = Number(r[4]) || 0; }
+    (perDay[day] = perDay[day] || {})[dev] = 1;
+    if (e === 'open') res.hours[Number(Utilities.formatDate(t, TZ, 'H'))]++;
+    if (e === 'view') { const V = views[k] = views[k] || { n: 0, d: {} }; V.n++; V.d[dev] = 1; }
+    if (e === 'search') {
+      const S = searches[k] = searches[k] || { n: 0, d: {} }; S.n++; S.d[dev] = 1;
+      if (r[7] === 0 || r[7] === '0') { const E = empty[k] = empty[k] || { n: 0, d: {} }; E.n++; E.d[dev] = 1; }
+    }
+  });
+  const ids = Object.keys(devs);
+  res.devices = ids.length;
+  res.learnPct = ids.length ? Math.round(ids.filter(i => devs[i].lg).length / ids.length * 100) : 0;
+  for (let i = days - 1; i >= 0; i--) { const day = fmt(new Date(Date.now() - i * 86400000)); res.daily.push([day, Object.keys(perDay[day] || {}).length]); }
+  res.today = Object.keys(perDay[today] || {}).length;
+  const active = res.daily.filter(x => x[1] > 0);
+  res.avgDay = active.length ? Math.round(active.reduce((a, x) => a + x[1], 0) / active.length * 10) / 10 : 0;
+  const top = (o, m) => Object.keys(o).map(k => [k, o[k].n, Object.keys(o[k].d).length]).sort((a, b) => b[1] - a[1]).slice(0, m);
+  res.views = top(views, 40); res.searches = top(searches, 30); res.empty = top(empty, 30);
+  const vc = {}; ids.forEach(i => { vc[devs[i].v || '?'] = (vc[devs[i].v || '?'] || 0) + 1; });
+  res.versions = Object.keys(vc).map(k => [k, vc[k]]).sort((a, b) => b[1] - a[1]);
+  return res;
 }
 
 function krFolder_() {
