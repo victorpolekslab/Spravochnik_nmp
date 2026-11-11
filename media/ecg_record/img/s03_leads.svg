@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" font-family="DejaVu Sans, Arial, sans-serif">
+<title>Отведения ЭКГ: фронтальная и горизонтальная плоскости</title>
+<rect width="960" height="540" rx="18" fill="#ffffff"/>
+<text x="480.0" y="44.0" font-size="26" fill="#1f2430" text-anchor="middle" font-weight="bold">Как отведения «смотрят» на сердце</text>
+<text x="250.0" y="84.0" font-size="16" fill="#6b7280" text-anchor="middle" font-weight="normal">Фронтальная плоскость: отведения от конечностей</text>
+<circle cx="250" cy="290" r="165" fill="#fafafa" stroke="#d6d9de"/>
+<line x1="85.0" y1="290.0" x2="415.0" y2="290.0" stroke="#2f6fb5" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.55"/>
+<line x1="250" y1="290" x2="415.0" y2="290.0" stroke="#2f6fb5" stroke-width="3"/>
+<circle cx="415.0" cy="290.0" r="5" fill="#2f6fb5"/>
+<text x="449.0" y="296.0" font-size="19" fill="#2f6fb5" text-anchor="middle" font-weight="bold">I</text>
+<text x="449.0" y="314.0" font-size="13" fill="#6b7280" text-anchor="middle" font-weight="normal">0°</text>
+<line x1="167.5" y1="147.1" x2="332.5" y2="432.9" stroke="#d0342c" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.55"/>
+<line x1="250" y1="290" x2="332.5" y2="432.9" stroke="#d0342c" stroke-width="3"/>
+<circle cx="332.5" cy="432.9" r="5" fill="#d0342c"/>
+<text x="347.5" y="464.9" font-size="19" fill="#d0342c" text-anchor="middle" font-weight="bold">II</text>
+<text x="347.5" y="482.9" font-size="13" fill="#6b7280" text-anchor="middle" font-weight="normal">+60°</text>
+<line x1="332.5" y1="147.1" x2="167.5" y2="432.9" stroke="#d0342c" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.55"/>
+<line x1="250" y1="290" x2="167.5" y2="432.9" stroke="#d0342c" stroke-width="3"/>
+<circle cx="167.5" cy="432.9" r="5" fill="#d0342c"/>
+<text x="152.5" y="464.9" font-size="19" fill="#d0342c" text-anchor="middle" font-weight="bold">III</text>
+<text x="152.5" y="482.9" font-size="13" fill="#6b7280" text-anchor="middle" font-weight="normal">+120°</text>
+<line x1="250.0" y1="125.0" x2="250.0" y2="455.0" stroke="#d0342c" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.55"/>
+<line x1="250" y1="290" x2="250.0" y2="455.0" stroke="#d0342c" stroke-width="3"/>
+<circle cx="250.0" cy="455.0" r="5" fill="#d0342c"/>
+<text x="250.0" y="487.0" font-size="19" fill="#d0342c" text-anchor="middle" font-weight="bold">aVF</text>
+<text x="250.0" y="505.0" font-size="13" fill="#6b7280" text-anchor="middle" font-weight="normal">+90°</text>
+<line x1="107.1" y1="372.5" x2="392.9" y2="207.5" stroke="#2f6fb5" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.55"/>
+<line x1="250" y1="290" x2="392.9" y2="207.5" stroke="#2f6fb5" stroke-width="3"/>
+<circle cx="392.9" cy="207.5" r="5" fill="#2f6fb5"/>
+<text x="418.9" y="198.5" font-size="19" fill="#2f6fb5" text-anchor="middle" font-weight="bold">aVL</text>
+<text x="418.9" y="216.5" font-size="13" fill="#6b7280" text-anchor="middle" font-weight="normal">−30°</text>
+<line x1="392.9" y1="372.5" x2="107.1" y2="207.5" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.55"/>
+<line x1="250" y1="290" x2="107.1" y2="207.5" stroke="#6b7280" stroke-width="3"/>
+<circle cx="107.1" cy="207.5" r="5" fill="#6b7280"/>
+<text x="81.1" y="198.5" font-size="19" fill="#6b7280" text-anchor="middle" font-weight="bold">aVR</text>
+<text x="81.1" y="216.5" font-size="13" fill="#6b7280" text-anchor="middle" font-weight="normal">−150°</text>
+<ellipse cx="250" cy="290" rx="34" ry="26" fill="#f3c1bd" stroke="#d0342c" stroke-width="1.5" transform="rotate(35 250 290)"/>
+<text x="700.0" y="84.0" font-size="16" fill="#6b7280" text-anchor="middle" font-weight="normal">Горизонтальная плоскость: грудные отведения</text>
+<ellipse cx="690" cy="300" rx="190" ry="125" fill="#fafafa" stroke="#d6d9de" stroke-width="2"/>
+<text x="690.0" y="200.0" font-size="13" fill="#6b7280" text-anchor="middle" font-weight="normal">спереди</text>
+<text x="690.0" y="412.0" font-size="13" fill="#6b7280" text-anchor="middle" font-weight="normal">сзади</text>
+<text x="512.0" y="305.0" font-size="13" fill="#6b7280" text-anchor="start" font-weight="normal">справа</text>
+<text x="855.0" y="360.0" font-size="13" fill="#6b7280" text-anchor="end" font-weight="normal">слева</text>
+<ellipse cx="705" cy="295" rx="62" ry="46" fill="#f3c1bd" stroke="#d0342c" stroke-width="1.5" transform="rotate(-25 705 295)"/>
+<line x1="705" y1="295" x2="657.0" y2="176.9" stroke="#7b4bb7" stroke-width="2.4"/>
+<circle cx="657.0" cy="176.9" r="7" fill="#7b4bb7"/>
+<text x="652.1" y="158.3" font-size="17" fill="#7b4bb7" text-anchor="middle" font-weight="bold">V1</text>
+<line x1="705" y1="295" x2="723.0" y2="176.9" stroke="#7b4bb7" stroke-width="2.4"/>
+<circle cx="723.0" cy="176.9" r="7" fill="#7b4bb7"/>
+<text x="727.9" y="158.3" font-size="17" fill="#7b4bb7" text-anchor="middle" font-weight="bold">V2</text>
+<line x1="705" y1="295" x2="790.7" y2="194.0" stroke="#2e8b57" stroke-width="2.4"/>
+<circle cx="790.7" cy="194.0" r="7" fill="#2e8b57"/>
+<text x="805.5" y="178.8" font-size="17" fill="#2e8b57" text-anchor="middle" font-weight="bold">V3</text>
+<line x1="705" y1="295" x2="839.7" y2="223.0" stroke="#2e8b57" stroke-width="2.4"/>
+<circle cx="839.7" cy="223.0" r="7" fill="#2e8b57"/>
+<text x="861.8" y="213.7" font-size="17" fill="#2e8b57" text-anchor="middle" font-weight="bold">V4</text>
+<line x1="705" y1="295" x2="874.4" y2="269.8" stroke="#2f6fb5" stroke-width="2.4"/>
+<circle cx="874.4" cy="269.8" r="7" fill="#2f6fb5"/>
+<text x="901.5" y="269.7" font-size="17" fill="#2f6fb5" text-anchor="middle" font-weight="bold">V5</text>
+<line x1="705" y1="295" x2="878.2" y2="317.4" stroke="#2f6fb5" stroke-width="2.4"/>
+<circle cx="878.2" cy="317.4" r="7" fill="#2f6fb5"/>
+<text x="905.9" y="326.9" font-size="17" fill="#2f6fb5" text-anchor="middle" font-weight="bold">V6</text>
+<rect x="40" y="499" width="16" height="16" rx="3" fill="#d0342c"/>
+<text x="64.0" y="512.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">нижняя: II, III, aVF</text>
+<rect x="270.0" y="499" width="16" height="16" rx="3" fill="#2f6fb5"/>
+<text x="294.0" y="512.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">боковая: I, aVL, V5–V6</text>
+<rect x="517.6" y="499" width="16" height="16" rx="3" fill="#7b4bb7"/>
+<text x="541.6" y="512.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">перегородка: V1–V2</text>
+<rect x="730.0" y="499" width="16" height="16" rx="3" fill="#2e8b57"/>
+<text x="754.0" y="512.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="normal">передняя: V3–V4</text>
+</svg>
