@@ -661,8 +661,8 @@ function lecturePage(key) {
   const img = $('#lvImg'), msg = $('#lvMsg'); let shown = -1;
   const show = i => {
     if (i === shown) return; shown = i;
-    img.src = base + 's' + String(i + 1).padStart(2, '0') + '.jpg';
-    if (i + 1 < n) new Image().src = base + 's' + String(i + 2).padStart(2, '0') + '.jpg';
+    img.src = base + 's' + String(i + 1).padStart(2, '0') + '.jpg?v=' + (L.ver || 1);
+    if (i + 1 < n) new Image().src = base + 's' + String(i + 2).padStart(2, '0') + '.jpg?v=' + (L.ver || 1);
     $('#lvNum').textContent = `${i + 1} / ${n}`; $('#lvTitle').textContent = L.slides[i].h;
     view.querySelectorAll('.lvli').forEach(el => el.classList.toggle('on', +el.dataset.k === i));
     if (i === n - 1) unlock();
