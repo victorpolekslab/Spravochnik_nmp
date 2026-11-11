@@ -543,7 +543,7 @@ function learnPage(noFetch) {
   const items = (d && d.items || []).slice().sort((a, b) => learnPast(a) - learnPast(b));
   const fmt = s => s ? s.split('-').reverse().slice(0, 2).join('.') : '';
   view.innerHTML = `<div class="luser"><span>Вы вошли: <b>${esc(u)}</b>${isOrg() ? ' · организатор' : ''}</span><a id="lOut">Выйти</a></div>
-    ${isOrg() ? `<a class="orgcard" href="#report"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span><b>Отчёт по обучению</b><small>кто прослушал лекции и прошёл тесты</small></span><span class="chev">›</span></a>` : ''}
+    ${isOrg() ? `<a class="orgcard" href="#report"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span><b>Отчёт по обучению</b><small>кто прослушал лекции и прошёл тесты</small></span><span class="chev">›</span></a>${krCan() ? `<a class="orgcard" href="#krnew"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><span><b>Новое в КР</b><small>проверить рубрикатор Минздрава, передать новые КР в справочник</small></span><span class="chev">›</span></a>` : ''}` : ''}
     ${LEARN.err ? `<div class="lnote">${esc(LEARN.err)}</div>` : ''}
     ${!d ? '<div class="rwempty">Загрузка ленты…</div>' : !items.length ? '<div class="rwempty">Пока заданий нет. Новые появятся здесь.</div>' : ''}
     ${items.map(x => { const t = TY[x.type] || TY.material, past = learnPast(x), isNew = x.new && !seen.includes(x.id) && !past;
