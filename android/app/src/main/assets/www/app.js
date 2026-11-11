@@ -1566,7 +1566,8 @@ function krPage() {
   LS.set('krSeen', [...new Set([...seen, ...(r.new || []).map(x => x.id), ...(r.upd || []).map(x => x.id)])]);
   const sb = view.querySelector('.sseg .tnew'); if (sb) sb.remove(); statsTabSync();
   krUpWire(r);
-  $('#krNow').onclick = () => { const b = $('#krNow'); b.disabled = true; b.textContent = 'Проверяю…'; try { App.krCheck(); } catch (e) {} };
+  $('#krNow').onclick = () => { const b = $('#krNow'); b.disabled = true; b.textContent = 'Проверяю…'; try { App.krCheck(); } catch (e) {}
+    setTimeout(() => { if (cur === '#krnew') krPage(); }, 40000); };   // если проверка уже шла в фоне, ответа может не быть — обновим экран сами
 }
 window.onKrStatus = () => { statsTabSync(); if (cur === '#krnew') krPage(); };
 
