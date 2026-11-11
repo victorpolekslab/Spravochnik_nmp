@@ -796,3 +796,7 @@ details.more > summary span { font-weight: 600; color: var(--muted); font-size: 
 .kradd { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
 .kradd input { font: inherit; font-size: 15px; color: var(--fg); padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); }
 .kruplog { font-size: 13px; line-height: 1.45; } .kruplog .ok { color: #2e7d4f; } .kruplog .bad { color: var(--accent); } .kruplog .sum { margin-top: 6px; font-weight: 600; color: var(--fg); }
+/* таблицы в карточках курсов из 3+ колонок: длинные слова (названия препаратов) переносятся, таблица не шире карточки */
+.cvb .ttab:not(.c2) th, .cvb .ttab:not(.c2) td { overflow-wrap: anywhere; hyphens: auto; -webkit-hyphens: auto; }
+.cvb .ttab:not(.c2) table { font-size: 12.5px; }
+.cvb .ttab:not(.c2) th, .cvb .ttab:not(.c2) td { padding: 6px 5px; }
