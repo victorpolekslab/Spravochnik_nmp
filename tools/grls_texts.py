@@ -131,7 +131,13 @@ def work(r):
                 f'- Препарат: {r["tn"]} ({r["form"]})', f'- АТХ: {r["atc"]}',
                 f'- Источник: ГРЛС, {kind}, РУ {r["ru"]}, файл от {r["date"]} '
                 f'(https://grls.rosminzdrav.ru/Grls_View_v2.aspx?routingGuid={r["guid"]})',
-                f'- Распознано автоматически (OCR): {nocr} из {npages} стр.' if nocr else '- Текстовый слой PDF', '']
+                f'- Распознано автоматически (OCR): {nocr} из {npages} стр.' if nocr else '- Текстовый слой PDF']
+        if r.get('note'):
+            head.append('- ' + r['note'])
+        if kind.startswith('листок'):
+            head.append('- Листок-вкладыш написан для пациента: полной инструкции по медицинскому применению '
+                        'и ОХЛП для этого препарата в открытом доступе нет')
+        head.append('')
         body = []
         for i, (pos, num, title, bstart, rest) in enumerate(secs):
             end = secs[i + 1][0] if i + 1 < len(secs) else len(text)
