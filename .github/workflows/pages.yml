@@ -37,9 +37,13 @@ jobs:
           python3 build.py
           cp ../learn/learn.json dist/learn.json
           cp -r ../media dist/media
-          # пакет обновления содержимого для Android: подписанный манифест + файлы www (если хэши совпадают)
-          mkdir -p dist/ota/files && cp ../android/app/src/main/assets/www/* dist/ota/files/ && rm -f dist/ota/files/ota_version.txt
-          python3 -c "import json,hashlib,sys; m=json.load(open('../ota/manifest.json')); bad=[f for f,h,s in m['files'] if hashlib.sha256(open('dist/ota/files/'+f,'rb').read()).hexdigest()!=h]; print('ota', m['v'], 'mismatch', bad); sys.exit(1 if bad else 0)" && cp ../ota/manifest.json ../ota/manifest.sig dist/ota/ || echo "OTA manifest skipped"
+      - name: Обновление содержимого для Android (OTA)
+        env:
+          OTA_KEY_PEM: ${{ secrets.OTA_KEY_PEM }}
+        run: |
+          # файлы www + подписанный манифест; новая подпись — только если файлы изменились (ключ — секрет OTA_KEY_PEM)
+          pip install --quiet cryptography
+          python3 tools/ci_ota.py web/dist
       - name: Android-приложение (ветка apk)
         run: |
           if git fetch --depth=1 origin apk; then
