@@ -73,7 +73,7 @@ $('#infoBtn').onclick = () => go('#about');
 // Препараты: поиск по инструкциям и проверка взаимодействий (content_drugs.js, данные — ветка drugs)
 const DM = window.DrugsModule ? window.DrugsModule({
   view, go,
-  setTitle: (t, back) => setTitle(t, !back),
+  setTitle: t => setTitle(t, false),   // препараты открываются с главной — стрелка «назад» всегда
   fetchText: url => fetch(url).then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)))
 }) : null;
 if (DM) setTimeout(() => DM.preload(), 1500);
@@ -114,7 +114,7 @@ function route() {
     case 'krnew': setTab('stats'); LS.set('statsTab', 'krnew'); krPage(); break;
     case 'usage': setTab('stats'); LS.set('statsTab', 'usage'); usagePage(); break;
     case 'doc': doc(parts[1], parts[2], params.get('h') || ''); return;
-    case 'drugs': case 'drug': case 'ix': setTab('drugs'); if (DM) DM.route(parts, params); else go('#home'); break;
+    case 'drugs': case 'drug': case 'ix': setTab('home'); if (DM) DM.route(parts, params); else go('#home'); break;
     default: setTab('home'); home();
   }
   window.scrollTo(0, S.scroll[h] || 0);
@@ -191,6 +191,11 @@ function home() {
     </a>
     <a class="learncard" href="#learn"><svg viewBox="0 0 24 24"><path d="M3 9l9-5 9 5-9 5z"/><path d="M7 11.5V16c0 1.5 2.5 3 5 3s5-1.5 5-3v-4.5M21 9v6"/></svg>
       <span><b>Обучение и опросы</b><small>тесты, опросы, материалы</small></span>${learnNewCount() ? `<span class="lbadge">${learnNewCount()}</span>` : ''}<span class="chev">›</span></a>
+    ${DM ? `<div class="mkbcard drugcard">
+      <a class="mk-h" href="#drugs"><svg viewBox="0 0 24 24"><path d="M10.5 20.5l10-10a4.95 4.95 0 0 0-7-7l-10 10a4.95 4.95 0 0 0 7 7zM8.5 8.5l7 7"/></svg>
+        <div><div class="tt">Препараты</div><div class="ts">официальные инструкции: дозы, противопоказания, поиск по названию и МНН</div></div><span class="chev">›</span></a>
+      <div class="dgbtns"><a href="#drugs">Найти препарат</a><a href="#ix">Взаимодействия</a></div>
+    </div>` : ''}
     <a class="mkbcard" href="#mkb">
       <div class="mk-h"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h6M9 8h3"/></svg>
         <div><div class="tt">Классификатор МКБ-10</div><div class="ts">рубрики, поиск по коду и нозологии, клинические рекомендации по коду</div></div></div>

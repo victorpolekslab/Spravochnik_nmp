@@ -841,3 +841,10 @@ nav#tabs a[hidden] { display: none; }
 
 /* ссылка из схемы на инструкцию препарата (модуль «Препараты») */
 .dlink { font-size: 13px; margin-left: 6px; text-decoration: none; white-space: nowrap; }
+
+/* плитка «Препараты» на главной: две кнопки — поиск и взаимодействия */
+.drugcard .mk-h { color: inherit; text-decoration: none; }
+.drugcard .dgbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.drugcard .dgbtns a { text-align: center; padding: 10px 6px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.85); color: #fff; text-decoration: none; font-weight: 600; font-size: 14.5px; }
+.drugcard .dgbtns a:first-child { background: #fff; color: var(--accent); border-color: #fff; }
+.drugcard .mk-h { display: flex; }
