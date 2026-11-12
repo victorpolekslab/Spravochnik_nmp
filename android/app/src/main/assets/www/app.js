@@ -1321,7 +1321,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '4.5';
+const APP_VERSION = '4.6';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
