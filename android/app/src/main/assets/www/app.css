@@ -864,3 +864,18 @@ nav#tabs a[hidden] { display: none; }
 .qrow, .mkbmini { margin-top: 8px; } .tool { min-height: 88px; } .tools + .recbanner { margin-top: 8px; }
 .qtile { padding: 9px 9px; gap: 7px; } .qtile svg { width: 22px; height: 22px; } .qtile b { font-size: 14px; letter-spacing: -.1px; }
 @media (max-width: 380px) { .qtile b { font-size: 13px; } .qtile small { font-size: 11px; } .qtile { padding: 9px 7px; gap: 6px; } }
+
+/* главная без прокрутки: блок на всю высоту между шапкой и вкладками, плитки калькуляторов делят оставшееся место */
+.homefill { display: flex; flex-direction: column; height: calc(100vh - 124px - var(--sat) - var(--sab)); height: calc(100dvh - 124px - var(--sat) - var(--sab)); min-height: 470px; padding-bottom: 8px; box-sizing: border-box; }
+.homefill .sec-h { flex: none; }
+.homefill .tools { flex: 1; min-height: 0; grid-auto-rows: minmax(0, 1fr); align-content: stretch; }
+.homefill .tool { display: flex; align-items: center; gap: 11px; min-height: 0; padding: 8px 12px; overflow: hidden; }
+.homefill .tool:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.homefill .tool svg { flex: none; width: 28px; height: 28px; }
+.homefill .tool > span { min-width: 0; display: flex; flex-direction: column; }
+.homefill .tool .tt { margin-top: 0; font-size: 14.5px; }
+.homefill .tool .ts { margin-top: 2px; line-height: 1.25; }
+/* низкие плитки: подпись прячется, чтобы название не обрезалось */
+.homefill .tool { container-type: size; }
+@container (max-height: 86px) { .homefill .tool .ts { display: none; } }
+@media (max-width: 380px) { .homefill .tool { gap: 8px; padding: 6px 9px; } .homefill .tool .tt { font-size: 13.5px; } .homefill .tool svg { width: 24px; height: 24px; } }

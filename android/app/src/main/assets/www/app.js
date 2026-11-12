@@ -184,7 +184,7 @@ const TOOLS = [
 ];
 function home() {
   setTitle('Справочник фельдшера НМП', true);
-  view.innerHTML = `
+  view.innerHTML = `<div class="homefill">
     <a class="mkbcard routecard" href="#route">
       <div class="mk-h"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><path d="M12 7v6M9 10h6"/></svg>
         <div><div class="tt">Дежурные стационары</div><div class="ts">куда везти: повод, район или адрес</div></div><span class="chev">›</span></div>
@@ -199,9 +199,9 @@ function home() {
         <input id="hq" type="search" placeholder="Поиск по коду или нозологии" autocomplete="off" spellcheck="false" enterkeyhint="search"></div>
     </div>
     <div class="sec-h">Калькуляторы и шкалы</div>
-    <div class="tools">${TOOLS.map(x => `<a class="tool" href="${x.h}"><svg viewBox="0 0 24 24"><path d="${x.i}"/></svg><div class="tt">${esc(x.t)}</div><div class="ts">${esc(x.s)}</div></a>`).join('')}</div>
-    <a class="recbanner" href="#rec"><span>Справочник</span><small>${DIS.length} разделов по темам</small><span class="chev">›</span></a>
-    <a class="aboutlink" href="#about">О справочнике</a>`;
+    <div class="tools">${TOOLS.map(x => `<a class="tool" href="${x.h}"><svg viewBox="0 0 24 24"><path d="${x.i}"/></svg><span><span class="tt">${esc(x.t)}</span><span class="ts">${esc(x.s)}</span></span></a>`).join('')}</div>
+  </div>`;
+  homeFit();
   const inp = $('#hq');
   const goSearch = () => { const v = inp.value.trim(); if (v) { S.mkbQ = v; go('#mkb'); } };
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') goSearch(); });
@@ -1709,3 +1709,13 @@ function statsTabSync() {
   const n = org && krCan() ? krUnseen(krState()) : 0, b = document.getElementById('tabStatsN');
   if (b) { b.hidden = !n; b.textContent = n || ''; }
 }
+
+// главная без прокрутки: высота блока = от его верха до вкладок (точнее, чем расчёт в CSS — учитывает шапку и вырез экрана)
+function homeFit() {
+  const f = document.querySelector('.homefill'), nav = document.getElementById('tabs');
+  if (!f || !nav) return;
+  const top = f.getBoundingClientRect().top + window.scrollY, pb = parseFloat(getComputedStyle(document.body).paddingBottom) || 0;
+  const h = Math.min(nav.getBoundingClientRect().top - 6, window.innerHeight - pb) - top;
+  f.style.height = Math.max(470, Math.floor(h)) + 'px';
+}
+window.addEventListener('resize', () => { if (document.querySelector('.homefill')) homeFit(); });
