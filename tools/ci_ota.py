@@ -44,6 +44,24 @@ def publish(man, sig, why):
     open(os.path.join(out, 'manifest.sig'), 'wb').write(sig)
     print('OTA:', why, json.loads(man)['v'])
 
+def check_secret():
+    """Сразу сообщает, подходит ли ключ из секрета к приложению (сравнение открытых ключей)."""
+    pem = os.environ.get('OTA_KEY_PEM', '').strip()
+    if not pem:
+        return
+    import base64
+    from cryptography.hazmat.primitives import serialization
+    try:
+        mine = serialization.load_pem_private_key(pem.encode() + b'\n', None).public_key()
+        src = open(os.path.join(ROOT, 'android/app/src/main/java/ru/klinrek/app/Ota.java'), encoding='utf-8').read()
+        app = serialization.load_der_public_key(base64.b64decode(re.search(r'PUBKEY = "([^"]+)"', src).group(1)))
+        fmt = (serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
+        print('OTA: ключ в секрете подходит к приложению' if mine.public_bytes(*fmt) == app.public_bytes(*fmt)
+              else '::error::OTA: ключ в секрете OTA_KEY_PEM не подходит к приложению — замените секрет')
+    except Exception as e:
+        print('::error::OTA: секрет OTA_KEY_PEM не читается как закрытый ключ PEM:', type(e).__name__)
+
+check_secret()
 files = current()
 for f, _, _ in files:
     shutil.copy(os.path.join(WWW, f), os.path.join(out, 'files', f))
