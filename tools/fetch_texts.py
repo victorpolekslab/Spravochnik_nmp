@@ -64,6 +64,8 @@ def work(p):
         for i, (pos, num, title, _e, rest) in enumerate(secs):
             end = secs[i + 1][0] if i + 1 < len(secs) else len(text)
             body += [f'## {num}. {title}', '', (rest + '\n' + text[secs[i][3]:end]).strip(), '']
+        if secs and secs[0][0] > 40:   # текст до первого раздела (состав, форма) не теряем
+            body = ['## Общие сведения', '', text[:secs[0][0]].strip(), ''] + body
         if not secs:
             body = ['## Текст', '', text]
         name = md_name(p)

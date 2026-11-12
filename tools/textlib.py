@@ -13,12 +13,18 @@ def ocr_page(page):
     return r.stdout.decode('utf-8', 'replace')
 
 def extract(path):
+    """Текст PDF; страницы без текстового слоя распознаются (или берутся из кэша <pdf>.ocr.json)."""
+    import json, os
     doc = pymupdf.open(path)
+    cache = {}
+    if os.path.exists(path + '.ocr.json'):
+        cache = json.load(open(path + '.ocr.json', encoding='utf-8'))
     pages, ocr_pages = [], 0
-    for pg in doc:
+    for i, pg in enumerate(doc):
         t = pg.get_text()
         if len(t.strip()) < MIN_CHARS_PER_PAGE:
-            t = ocr_page(pg); ocr_pages += 1
+            t = cache.get(str(i)) if str(i) in cache else ocr_page(pg)
+            ocr_pages += 1
         pages.append(t)
     return '\n'.join(pages), len(doc), ocr_pages
 

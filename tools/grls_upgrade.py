@@ -17,6 +17,8 @@ B = 'https://grls.rosminzdrav.ru/'
 ap = argparse.ArgumentParser(); ap.add_argument('out')
 ap.add_argument('--workers', type=int, default=4); ap.add_argument('--limit', type=int, default=0)
 ap.add_argument('--max-cards', type=int, default=12)
+ap.add_argument('--extra', default='')
+ap.add_argument('--jl', default='upgrade.jsonl')
 a = ap.parse_args()
 
 local = threading.local()
@@ -57,14 +59,31 @@ def norm(s):
     # латинская буква, перепутанная с кириллической («Cульбактам»)
     return re.sub(r'[a-z](?=[а-я])|(?<=[а-я])[a-z]', lambda m: m.group(0).translate(LAT), s)
 
-def parts(inn):
-    """Компоненты МНН в виде основ: без солей и окончаний родительного падежа («амиодарона» → «амиодарон»)."""
+STOP = {'для', 'профилактики', 'лечения', 'типа', 'вида', 'группы', 'содержащая', 'содержащий', 'экстракт', 'сухой',
+        'густой', 'жидкий', 'раствор', 'в', 'и', 'с', 'на', 'из', 'по'}
+
+def stem(x):
+    x = re.sub(r'[^\w-]', '', x)
+    return x[:-1] if len(x) > 6 and x[-1] in 'аыиеяу' else x
+
+def comps(inn):
+    """Компоненты МНН: для каждого — все значимые слова в виде основ (соли и служебные слова отброшены)."""
     out = []
     for p in re.split(r'\s*\+\s*', norm(inn)):
-        w = [x for x in re.split(r'[\s,;]+', p) if x and not re.fullmatch(SALT, x)]
+        w = [stem(x) for x in re.split(r'[\s,;()\[\]]+', p) if x and not re.fullmatch(SALT, x) and x not in STOP]
+        w = [x for x in w if len(x) >= 3]
         if w:
-            out.append(re.sub(r'(а|ы|и)$', '', w[0]) if len(w[0]) > 6 else w[0])
-    return [x for x in out if len(x) >= 4]
+            out.append(w)
+    return out
+
+def parts(inn):   # первые слова компонентов — для запроса в ГРЛС
+    return [c[0] for c in comps(inn) if len(c[0]) >= 4]
+
+def same_composition(inn, grls_mnn):
+    """Состав совпадает, если каждое значимое слово каждого компонента есть в МНН из ГРЛС и число компонентов то же."""
+    m = norm(grls_mnn)
+    cs = comps(inn)
+    return bool(cs) and all(all(w in m for w in c) for c in cs) and len(re.split(r'\+', m)) == len(cs)
 
 def _grls_rows(field, q):
     f = dict(local.form, **{'ctl00$plate$isFS': '0', field: q[:60], 'ctl00$plate$hfRegType': '1,2,3,4,5,6,7,8',
@@ -86,8 +105,7 @@ def search_inn(inn, tn=''):
     rows = []
     if want:
         q = max(want, key=len)   # самый длинный компонент — самый избирательный
-        rows = [r for r in _grls_rows('ctl00$plate$txtMNN', q)
-                if all(w in norm(r['mnn']) for w in want) and len(re.split(r'\+', norm(r['mnn']))) == len(want)]
+        rows = [r for r in _grls_rows('ctl00$plate$txtMNN', q) if same_composition(inn, r['mnn'])]
     if not rows and tn:
         t = re.split(r'[®,(]', tn)[0].strip()
         if len(t) >= 3:
@@ -131,6 +149,8 @@ def kind_of(b):
                               capture_output=True, timeout=120).stdout.decode('utf-8', 'replace').lower()[:3000]
         if len(head.strip()) < 100:
             return 'скан'
+    if len(d) <= 3 and re.search(r'изменени[яе]|дата внесения', head):
+        return 'лист изменений'   # не полная инструкция
     if 'листок-вкладыш' in head or 'листок - вкладыш' in head or 'информация для пациента' in head:
         return 'листок-вкладыш (ЕАЭС)'
     if 'общая характеристика' in head:
@@ -156,7 +176,7 @@ def work(g):
             if r['guid'] in seen or cards >= a.max_cards:
                 continue
             seen.add(r['guid']); cards += 1
-            for f in card_files(r['guid'])[:3]:
+            for f in card_files(r['guid'])[:5]:
                 b = req('get', B + f['url'].lstrip('/')).content
                 if not b.startswith(b'%PDF'):
                     continue
@@ -188,7 +208,10 @@ if os.path.exists(_ix):
 targets += [{'inn': k[0], 'route': k[1], 'tn': tn_by_group.get(k, '')} for k, x in found.items() if not x.get('pdf')]
 if a.limit:
     targets = targets[:a.limit]
-jl = os.path.join(a.out, 'upgrade.jsonl')
+jl = os.path.join(a.out, a.jl)
+if a.extra:
+    have = {(t['inn'], t['route']) for t in targets}
+    targets += [t for t in json.load(open(a.extra, encoding='utf-8')) if (t['inn'], t['route']) not in have]
 done = set()
 if os.path.exists(jl):
     for l in open(jl, encoding='utf-8'):

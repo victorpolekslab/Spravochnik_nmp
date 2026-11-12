@@ -143,6 +143,8 @@ def work(r):
             end = secs[i + 1][0] if i + 1 < len(secs) else len(text)
             n = num.replace('a', '')
             body += [f'## {n}. {title}', '', (rest + '\n' + text[bstart:end]).strip(), '']
+        if secs and secs[0][0] > 40:   # текст до первого раздела (состав, форма) не теряем
+            body = ['## Общие сведения', '', text[:secs[0][0]].strip(), ''] + body
         if not secs:
             body = ['## Текст', '', text]
         name = slug(r['inn'] + '__' + r['route'])[:80] + '__grls_' + r['guid'][:8] + '.md'
