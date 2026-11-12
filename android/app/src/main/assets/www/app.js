@@ -70,6 +70,7 @@ window.appBack = function () {
 };
 $('#backBtn').onclick = () => window.appBack() || go('#home');
 $('#infoBtn').onclick = () => go('#about');
+$('#shareBtn').onclick = () => go('#share');
 // Препараты: поиск по инструкциям и проверка взаимодействий (content_drugs.js, данные — ветка drugs)
 const DM = window.DrugsModule ? window.DrugsModule({
   view, go,
@@ -111,6 +112,7 @@ function route() {
     case 'lecture': setTab('learn'); parts[2] === 'test' ? lectureTest(parts[1]) : lecturePage(parts[1]); break;
     case 'cr': setTab(''); crPage(parts[1]); break;
     case 'about': setTab(''); about(); break;
+    case 'share': setTab(''); sharePage(); break;
     case 'krnew': setTab('stats'); LS.set('statsTab', 'krnew'); krPage(); break;
     case 'usage': setTab('stats'); LS.set('statsTab', 'usage'); usagePage(); break;
     case 'doc': doc(parts[1], parts[2], params.get('h') || ''); return;
@@ -185,6 +187,9 @@ const TOOLS = [
 function home() {
   setTitle('Справочник фельдшера НМП', true);
   view.innerHTML = `<div class="homefill">
+    <div class="homebar"><span>Справочник НМП</span>
+      <a class="hb hbshare" href="#share" aria-label="Поделиться приложением"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg>Поделиться</a>
+      <a class="hb" href="#about" aria-label="О справочнике"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></a></div>
     <a class="mkbcard routecard" href="#route">
       <div class="mk-h"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><path d="M12 7v6M9 10h6"/></svg>
         <div><div class="tt">Дежурные стационары</div><div class="ts">куда везти: повод, район или адрес</div></div><span class="chev">›</span></div>
@@ -1343,14 +1348,14 @@ function about() {
     <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION}${contentLabel()} · клинические рекомендации от 03.11.2026</p>
       ${window.App ? '<button class="lnkbtn" id="updChk">Проверить обновления</button><span class="updres" id="updRes"></span>' : ''}</div>
     <div class="card"><b>Обучение</b><p><a href="#report">Отчёт по обучению</a> — для организатора: кто прослушал лекции и прошёл тесты.</p></div>
-    <div class="card"><b>Поделиться с коллегами</b><p>iPhone и любой браузер: <a href="${SITE}">${SITE.replace('https://', '')}</a> — открыть в Safari → «Поделиться» → «На экран Домой».</p>
-      <p>Android: <a href="${SITE}download/SpravochnikNMP.apk">скачать приложение (APK)</a>. Новые версии приложение предлагает само.</p></div>
+    ${shareCard()}
     <div class="card"><b>Что это</b><p>Справочник фельдшера неотложной медицинской помощи по действующим клиническим рекомендациям Минздрава России. Во вкладках «Неотложно» — помощь до приезда СМП: без кислородотерапии, тромболизиса, наркотических анальгетиков и инфузомата. <span class="onebadge" style="margin:0">ОДИН ИЗ</span> — взаимозаменяемые препараты, выбирается один.</p>
       <p><span class="src kr">КР</span> — доза или положение из текста рекомендации (сверено автоматически); <span class="src ins">инстр.</span> — доза из инструкции к препарату, в КР её нет.</p></div>
     <div class="card"><b>МКБ-10 и рекомендации</b><p>Классификатор МКБ-10 (НСИ Минздрава, версия 2.27) и перечень всех действующих рекомендаций (${Object.keys(names).length}). Полные тексты ${bundled.length} рекомендаций встроены в приложение; остальные можно загрузить на телефон из карточки рекомендации (нужен интернет), дальше они открываются без сети. Загружено: ${dlSet().size}.</p></div>
     <div class="card"><b>Важно</b><p>Справочник не заменяет инструкцию к препарату и решение врача. В КР «Бронхиальная астма» (359_3) для преднизолона у взрослых указано «20–30 мг/кг/сут» — это опечатка в единицах, в схеме приведено 20–30 мг/сут.</p></div>
     <div class="card"><b>Встроенные рекомендации</b>${bundled.sort((x, y) => x.name.localeCompare(y.name)).map(x => `<p><a href="#doc/${x.id}">КР${esc(x.id)}</a> — ${esc(x.name)}</p>`).join('')}</div>
   </div>`;
+  shareWire();
   const b = $('#updChk');
   if (b) b.onclick = () => { $('#updRes').textContent = 'Проверяю…'; try { window.App.checkUpdate(); if (window.App.checkContent) window.App.checkContent(); } catch (e) { onUpdateFail(); } };
 }
@@ -1719,3 +1724,33 @@ function homeFit() {
   f.style.height = Math.max(470, Math.floor(h)) + 'px';
 }
 window.addEventListener('resize', () => { if (document.querySelector('.homefill')) homeFit(); });
+
+// ---------------------------------------------------------------- поделиться приложением
+const SHARE_APK = SITE + 'download/SpravochnikNMP.apk';
+function shareText() {
+  return 'Справочник фельдшера НМП: клинические рекомендации Минздрава, дежурные стационары Тюмени, калькуляторы, препараты и взаимодействия.\n'
+    + 'Android: ' + SHARE_APK + '\niPhone и любой браузер: ' + SITE;
+}
+function shareCard() {
+  const t = encodeURIComponent(shareText()), u = encodeURIComponent(SITE), rest = encodeURIComponent(shareText().replace(SITE, '').trim());
+  const B = [
+    ['MAX', 'https://max.ru/:share?text=' + t, 'max'],
+    ['Telegram', 'https://t.me/share/url?url=' + encodeURIComponent(SHARE_APK) + '&text=' + encodeURIComponent(shareText().replace('\nAndroid: ' + SHARE_APK, '')), 'tg'],
+    ['WhatsApp', 'https://wa.me/?text=' + t, 'wa'],
+    ['ВКонтакте', 'https://vk.com/share.php?url=' + u + '&title=' + encodeURIComponent('Справочник фельдшера НМП') + '&comment=' + t, 'vk'],
+  ];
+  return `<div class="card sharecard"><b>Поделиться с коллегами</b><p class="shh">Отправьте ссылку на приложение в мессенджер — коллеге придёт сообщение со ссылками для Android и iPhone.</p>
+    <div class="shbtns">${B.map(([n, h, c]) => `<a class="shb ${c}" href="${h}" target="_blank" rel="noopener">${n}</a>`).join('')}
+      ${navigator.share ? '<button class="shb sys" id="shSys">Другое…</button>' : ''}<button class="shb cp" id="shCopy">Скопировать</button></div>
+    <p class="shh">Android: <a href="${SHARE_APK}">скачать приложение (APK)</a>, новые версии приложение предлагает само. iPhone: открыть <a href="${SITE}">${SITE.replace('https://', '')}</a> в Safari → «Поделиться» → «На экран Домой».</p></div>`;
+}
+function shareWire() {
+  const c = $('#shCopy'), s = $('#shSys');
+  if (c) c.onclick = () => {
+    const txt = shareText(), ok = () => { c.textContent = 'Скопировано ✓'; setTimeout(() => { c.textContent = 'Скопировать'; }, 2000); };
+    const fallback = () => { const a = document.createElement('textarea'); a.value = txt; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); ok(); } catch (e) {} a.remove(); };
+    try { navigator.clipboard.writeText(txt).then(ok, fallback); } catch (e) { fallback(); }
+  };
+  if (s) s.onclick = () => { try { navigator.share({ title: 'Справочник фельдшера НМП', text: shareText() }).catch(() => {}); } catch (e) {} };
+}
+function sharePage() { setTitle('Поделиться', false); view.innerHTML = `<div class="sharepg">${shareCard()}</div>`; shareWire(); }
