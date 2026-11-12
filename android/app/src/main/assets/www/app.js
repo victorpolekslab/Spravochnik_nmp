@@ -104,11 +104,11 @@ function route() {
     case 'mkb': setTab('home'); parts[1] ? mkbNode(+parts[1]) : mkbRoot(params.get('q')); break;
     case 'calc': setTab('home'); calcPage(parts[1]); break;
     case 'route': setTab('home'); routeWizard(); break;
-    case 'learn': setTab('home'); learnPage(); break;
-    case 'course': setTab('home'); coursePage(parts[1], parts[2]); break;
+    case 'learn': setTab('learn'); learnPage(); break;
+    case 'course': setTab('learn'); coursePage(parts[1], parts[2]); break;
     case 'report': setTab('stats'); LS.set('statsTab', 'report'); reportPage(); break;
     case 'stats': go('#' + (['usage', 'krnew', 'report'].includes(LS.get('statsTab', '')) ? LS.get('statsTab') : 'usage')); return;
-    case 'lecture': setTab('home'); parts[2] === 'test' ? lectureTest(parts[1]) : lecturePage(parts[1]); break;
+    case 'lecture': setTab('learn'); parts[2] === 'test' ? lectureTest(parts[1]) : lecturePage(parts[1]); break;
     case 'cr': setTab(''); crPage(parts[1]); break;
     case 'about': setTab(''); about(); break;
     case 'krnew': setTab('stats'); LS.set('statsTab', 'krnew'); krPage(); break;
@@ -187,23 +187,17 @@ function home() {
   view.innerHTML = `
     <a class="mkbcard routecard" href="#route">
       <div class="mk-h"><svg viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><path d="M12 7v6M9 10h6"/></svg>
-        <div><div class="tt">Дежурные стационары</div><div class="ts">куда везти: повод, район или адрес, день дежурства</div></div><span class="chev">›</span></div>
+        <div><div class="tt">Дежурные стационары</div><div class="ts">куда везти: повод, район или адрес</div></div><span class="chev">›</span></div>
     </a>
-    <a class="learncard" href="#learn"><svg viewBox="0 0 24 24"><path d="M3 9l9-5 9 5-9 5z"/><path d="M7 11.5V16c0 1.5 2.5 3 5 3s5-1.5 5-3v-4.5M21 9v6"/></svg>
-      <span><b>Обучение и опросы</b><small>тесты, опросы, материалы</small></span>${learnNewCount() ? `<span class="lbadge">${learnNewCount()}</span>` : ''}<span class="chev">›</span></a>
-    ${DM ? `<div class="mkbcard drugcard">
-      <a class="mk-h" href="#drugs"><svg viewBox="0 0 24 24"><path d="M10.5 20.5l10-10a4.95 4.95 0 0 0-7-7l-10 10a4.95 4.95 0 0 0 7 7zM8.5 8.5l7 7"/></svg>
-        <div><div class="tt">Препараты</div><div class="ts">официальные инструкции: дозы, противопоказания, поиск по названию и МНН</div></div><span class="chev">›</span></a>
-      <div class="dgbtns"><a href="#drugs">Найти препарат</a><a href="#ix">Взаимодействия</a></div>
+    ${DM ? `<div class="qrow">
+      <a class="qtile" href="#drugs"><svg viewBox="0 0 24 24"><path d="M10.5 20.5l10-10a4.95 4.95 0 0 0-7-7l-10 10a4.95 4.95 0 0 0 7 7zM8.5 8.5l7 7"/></svg><span><b>Препараты</b><small>инструкции, дозы</small></span></a>
+      <a class="qtile" href="#ix"><svg viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg><span><b>Взаимодействия</b><small>проверка пар</small></span></a>
     </div>` : ''}
-    <a class="mkbcard" href="#mkb">
-      <div class="mk-h"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h6M9 8h3"/></svg>
-        <div><div class="tt">Классификатор МКБ-10</div><div class="ts">рубрики, поиск по коду и нозологии, клинические рекомендации по коду</div></div></div>
-    </a>
-    <div class="searchbar inl"><div class="field">
-      <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
-      <input id="hq" type="search" placeholder="Поиск по коду или нозологии" autocomplete="off" spellcheck="false" enterkeyhint="search">
-    </div></div>
+    <div class="mkbmini">
+      <a class="mm-h" href="#mkb"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M9 12h6M9 16h6M9 8h3"/></svg><b>МКБ-10</b><small>рубрики и КР по коду</small><span class="chev">›</span></a>
+      <div class="field"><svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></svg>
+        <input id="hq" type="search" placeholder="Поиск по коду или нозологии" autocomplete="off" spellcheck="false" enterkeyhint="search"></div>
+    </div>
     <div class="sec-h">Калькуляторы и шкалы</div>
     <div class="tools">${TOOLS.map(x => `<a class="tool" href="${x.h}"><svg viewBox="0 0 24 24"><path d="${x.i}"/></svg><div class="tt">${esc(x.t)}</div><div class="ts">${esc(x.s)}</div></a>`).join('')}</div>
     <a class="recbanner" href="#rec"><span>Справочник</span><small>${DIS.length} разделов по темам</small><span class="chev">›</span></a>
@@ -1708,6 +1702,8 @@ function statsSeg(on) {
   return `<div class="seg n3 sseg">${T.map(([k, t]) => `<a class="${k === on ? 'on' : ''}" href="#${k}">${t}${k === 'krnew' && n ? ` <i class="tnew">${n}</i>` : ''}</a>`).join('')}</div>`;
 }
 function statsTabSync() {
+  const lb = document.getElementById('tabLearnN');   // новое в «Обучении» — цифра на вкладке
+  if (lb) { const n = learnNewCount(); lb.hidden = !n; lb.textContent = n || ''; }
   const t = document.getElementById('tabStats'); if (!t) return;
   const org = isOrg(); t.hidden = !org;
   const n = org && krCan() ? krUnseen(krState()) : 0, b = document.getElementById('tabStatsN');
