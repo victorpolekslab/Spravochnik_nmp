@@ -70,6 +70,13 @@ window.appBack = function () {
 };
 $('#backBtn').onclick = () => window.appBack() || go('#home');
 $('#infoBtn').onclick = () => go('#about');
+// Препараты: поиск по инструкциям и проверка взаимодействий (content_drugs.js, данные — ветка drugs)
+const DM = window.DrugsModule ? window.DrugsModule({
+  view, go,
+  setTitle: (t, back) => setTitle(t, !back),
+  fetchText: url => fetch(url).then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)))
+}) : null;
+if (DM) setTimeout(() => DM.preload(), 1500);
 // состояние аналитики и экрана «Использование» (объявлено до первого route())
 const AN = { last: '', lastAt: 0, sq: {} };
 let USAGE_DAYS = 30;
@@ -107,6 +114,7 @@ function route() {
     case 'krnew': setTab('stats'); LS.set('statsTab', 'krnew'); krPage(); break;
     case 'usage': setTab('stats'); LS.set('statsTab', 'usage'); usagePage(); break;
     case 'doc': doc(parts[1], parts[2], params.get('h') || ''); return;
+    case 'drugs': case 'drug': case 'ix': setTab('drugs'); if (DM) DM.route(parts, params); else go('#home'); break;
     default: setTab('home'); home();
   }
   window.scrollTo(0, S.scroll[h] || 0);
@@ -1127,7 +1135,7 @@ function drugRow(x, opt) {
     ${x.note ? `<div class="dnote">${esc(x.note)}</div>` : ''}
     ${x.kg ? '<div class="calc"></div>' : ''}
     ${suspBox(x.susp)}
-    <div class="dsrc">${srcBadge(x.src)}</div></div>`;
+    <div class="dsrc">${srcBadge(x.src)}${DM && DM.has(x.n) ? ` <a class="dlink" href="${DM.href(x.n)}">Инструкция ›</a>` : ''}</div></div>`;
 }
 const DOW = ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'];
 const DOW_S = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
