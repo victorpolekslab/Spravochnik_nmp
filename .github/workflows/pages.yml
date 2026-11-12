@@ -38,6 +38,7 @@ jobs:
           cp ../learn/learn.json dist/learn.json
           cp -r ../media dist/media
       - name: Обновление содержимого для Android (OTA)
+        continue-on-error: true   # ошибка подписи не должна мешать публикации веб-версии
         env:
           OTA_KEY_PEM: ${{ secrets.OTA_KEY_PEM }}
         run: |

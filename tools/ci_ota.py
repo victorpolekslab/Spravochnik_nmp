@@ -26,6 +26,19 @@ def current():
         files.append([f, hashlib.sha256(b).hexdigest(), len(b)])
     return files
 
+def verify(man, sig_b64):
+    """Подпись должна проверяться ключом, зашитым в приложение (Ota.java), иначе телефоны её отвергнут."""
+    import base64
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    src = open(os.path.join(ROOT, 'android/app/src/main/java/ru/klinrek/app/Ota.java'), encoding='utf-8').read()
+    pub = serialization.load_der_public_key(base64.b64decode(re.search(r'PUBKEY = "([^"]+)"', src).group(1)))
+    try:
+        pub.verify(base64.b64decode(sig_b64), man, ec.ECDSA(hashes.SHA256()))
+        return True
+    except Exception:
+        return False
+
 def publish(man, sig, why):
     open(os.path.join(out, 'manifest.json'), 'wb').write(man)
     open(os.path.join(out, 'manifest.sig'), 'wb').write(sig)
@@ -67,5 +80,9 @@ try:
     build_ota.main()
 finally:
     os.unlink(k.name)
-publish(open(os.path.join(ROOT, 'ota/manifest.json'), 'rb').read(), open(os.path.join(ROOT, 'ota/manifest.sig'), 'rb').read(),
-        'новая версия подписана')
+man, sig = open(os.path.join(ROOT, 'ota/manifest.json'), 'rb').read(), open(os.path.join(ROOT, 'ota/manifest.sig'), 'rb').read()
+if not verify(man, sig):
+    print('::error::Подпись не совпадает с ключом в приложении (Ota.java): в секрет OTA_KEY_PEM вставлен не тот ключ. '
+          'Обновление для Android не опубликовано, телефоны остаются на прежней версии.')
+    sys.exit(1)
+publish(man, sig, 'новая версия подписана и проверена ключом приложения')
