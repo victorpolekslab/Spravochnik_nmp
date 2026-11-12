@@ -838,3 +838,6 @@ nav#tabs .tbadge { position: absolute; top: 4px; left: calc(50% + 6px); min-widt
 .sseg .tnew { font-style: normal; display: inline-block; min-width: 16px; padding: 0 4px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 11px; line-height: 16px; }
 nav#tabs a[hidden] { display: none; }
 .krerr { white-space: pre-line; font-size: 13px; overflow-wrap: anywhere; }
+
+/* ссылка из схемы на инструкцию препарата (модуль «Препараты») */
+.dlink { font-size: 13px; margin-left: 6px; text-decoration: none; white-space: nowrap; }
