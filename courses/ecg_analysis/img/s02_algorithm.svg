@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" font-family="DejaVu Sans, Arial, sans-serif">
+<title>Алгоритм расшифровки ЭКГ</title>
+<rect width="960" height="540" rx="18" fill="#ffffff"/>
+<text x="480.0" y="42.0" font-size="26" fill="#1f2430" text-anchor="middle" font-weight="bold">Алгоритм расшифровки ЭКГ: 8 шагов</text>
+<rect x="40" y="100" width="200" height="160" rx="18" fill="#f8fafc" stroke="#6b7280" stroke-width="2.5"/>
+<circle cx="76" cy="138" r="22" fill="#6b7280"/>
+<text x="76.0" y="146.0" font-size="22" fill="#ffffff" text-anchor="middle" font-weight="bold">1</text>
+<text x="58.0" y="192.0" font-size="17" fill="#1f2430" text-anchor="start" font-weight="bold">Техника</text>
+<text x="58.0" y="218.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">скорость, калибровка,</text>
+<text x="58.0" y="238.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">помехи</text>
+<path d="M244,180 l14,0" stroke="#6b7280" stroke-width="3" marker-end="url(#ar)"/>
+<rect x="265" y="100" width="200" height="160" rx="18" fill="#f8fafc" stroke="#2f6fb5" stroke-width="2.5"/>
+<circle cx="301" cy="138" r="22" fill="#2f6fb5"/>
+<text x="301.0" y="146.0" font-size="22" fill="#ffffff" text-anchor="middle" font-weight="bold">2</text>
+<text x="283.0" y="192.0" font-size="17" fill="#1f2430" text-anchor="start" font-weight="bold">Регулярность</text>
+<text x="283.0" y="218.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">RR одинаковые? ±10 %</text>
+<path d="M469,180 l14,0" stroke="#6b7280" stroke-width="3" marker-end="url(#ar)"/>
+<rect x="490" y="100" width="200" height="160" rx="18" fill="#f8fafc" stroke="#2f6fb5" stroke-width="2.5"/>
+<circle cx="526" cy="138" r="22" fill="#2f6fb5"/>
+<text x="526.0" y="146.0" font-size="22" fill="#ffffff" text-anchor="middle" font-weight="bold">3</text>
+<text x="508.0" y="192.0" font-size="17" fill="#1f2430" text-anchor="start" font-weight="bold">ЧСС</text>
+<text x="508.0" y="218.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">60 / RR или комплексы</text>
+<text x="508.0" y="238.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">за 3 с × 20</text>
+<path d="M694,180 l14,0" stroke="#6b7280" stroke-width="3" marker-end="url(#ar)"/>
+<rect x="715" y="100" width="200" height="160" rx="18" fill="#f8fafc" stroke="#2e8b57" stroke-width="2.5"/>
+<circle cx="751" cy="138" r="22" fill="#2e8b57"/>
+<text x="751.0" y="146.0" font-size="22" fill="#ffffff" text-anchor="middle" font-weight="bold">4</text>
+<text x="733.0" y="192.0" font-size="17" fill="#1f2430" text-anchor="start" font-weight="bold">Источник ритма</text>
+<text x="733.0" y="218.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">P+ во II перед каждым</text>
+<text x="733.0" y="238.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">QRS?</text>
+<rect x="40" y="300" width="200" height="160" rx="18" fill="#f8fafc" stroke="#2e8b57" stroke-width="2.5"/>
+<circle cx="76" cy="338" r="22" fill="#2e8b57"/>
+<text x="76.0" y="346.0" font-size="22" fill="#ffffff" text-anchor="middle" font-weight="bold">5</text>
+<text x="58.0" y="392.0" font-size="17" fill="#1f2430" text-anchor="start" font-weight="bold">Проводимость</text>
+<text x="58.0" y="418.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">P, PQ, QRS —</text>
+<text x="58.0" y="438.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">длительность</text>
+<path d="M244,380 l14,0" stroke="#6b7280" stroke-width="3" marker-end="url(#ar)"/>
+<rect x="265" y="300" width="200" height="160" rx="18" fill="#f8fafc" stroke="#e08a00" stroke-width="2.5"/>
+<circle cx="301" cy="338" r="22" fill="#e08a00"/>
+<text x="301.0" y="346.0" font-size="22" fill="#ffffff" text-anchor="middle" font-weight="bold">6</text>
+<text x="283.0" y="392.0" font-size="17" fill="#1f2430" text-anchor="start" font-weight="bold">ЭОС</text>
+<text x="283.0" y="418.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">I и aVF, угол α</text>
+<path d="M469,380 l14,0" stroke="#6b7280" stroke-width="3" marker-end="url(#ar)"/>
+<rect x="490" y="300" width="200" height="160" rx="18" fill="#f8fafc" stroke="#d0342c" stroke-width="2.5"/>
+<circle cx="526" cy="338" r="22" fill="#d0342c"/>
+<text x="526.0" y="346.0" font-size="22" fill="#ffffff" text-anchor="middle" font-weight="bold">7</text>
+<text x="508.0" y="392.0" font-size="17" fill="#1f2430" text-anchor="start" font-weight="bold">P, QRS, ST, T, QT</text>
+<text x="508.0" y="418.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">форма, смещение ST,</text>
+<text x="508.0" y="438.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">QTc</text>
+<path d="M694,380 l14,0" stroke="#6b7280" stroke-width="3" marker-end="url(#ar)"/>
+<rect x="715" y="300" width="200" height="160" rx="18" fill="#f8fafc" stroke="#7b4bb7" stroke-width="2.5"/>
+<circle cx="751" cy="338" r="22" fill="#7b4bb7"/>
+<text x="751.0" y="346.0" font-size="22" fill="#ffffff" text-anchor="middle" font-weight="bold">8</text>
+<text x="733.0" y="392.0" font-size="17" fill="#1f2430" text-anchor="start" font-weight="bold">Заключение</text>
+<text x="733.0" y="418.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">ритм · ЧСС · ЭОС ·</text>
+<text x="733.0" y="438.0" font-size="13.5" fill="#6b7280" text-anchor="start" font-weight="normal">синдромы</text>
+<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#6b7280"/></marker></defs>
+<path d="M815,262 C900,285 140,275 140,298" fill="none" stroke="#6b7280" stroke-width="2.5" stroke-dasharray="6 5" marker-end="url(#ar)"/>
+<text x="480.0" y="520.0" font-size="14" fill="#6b7280" text-anchor="middle" font-weight="normal">План по пособию Мурашко и Струтынского: ритм и проводимость → ЭОС → P → QRST → заключение</text>
+</svg>

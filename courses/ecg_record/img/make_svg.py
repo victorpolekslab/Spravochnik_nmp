@@ -362,8 +362,7 @@ def inferior():
     x = 545
     b.append(f'<rect x="{x}" y="372" width="{w}" height="120" rx="14" fill="#f8fafc" stroke="#e2e8f0"/>')
     b.append(text(x + 16, 402, "«Зеркало» в I и aVL подтверждает ИМпST", 15, INK))
-    b.append(text(x + 16, 432, "Дальше снять: V3R–V4R (ПЖ),", 15, INK, "start", "bold"))
-    b.append(text(x + 16, 456, "V7–V9 (задняя стенка)", 15, INK, "start", "bold"))
+    b.append(text(x + 16, 438, "АД 95/60, шейные вены набухли", 15, INK, "start", "bold"))
     b.append(text(x + 16, 480, "схема учебная, амплитуды условные", 12.5, MUTED))
     return svg("\n".join(b), "Нижний ИМпST: подъём ST в II, III, aVF")
 

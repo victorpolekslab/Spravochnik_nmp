@@ -280,6 +280,13 @@ for i, ((a_, b_, *_), n) in enumerate(zip(PHASES, FRAMES)):
         frames.append(frame(a_ + (b_ - a_) * k / n, i)); durs.append(70)
 frames.append(frame(0.799, 6, True)); durs.append(2600)
 picks = [frames[i] for i in range(0, len(frames), max(1, len(frames) // 12))]
+sw = Image.new("RGB", (FW, FH))
+swd = ImageDraw.Draw(sw)
+for k, c in enumerate([GREEN, BLUE, RED, ORANGE, VIOLET, GOLD, MUTED, WHITE, (225, 230, 238)]):
+    for j in range(6):                                   # оттенки на тёмном и светлом фоне
+        mix = tuple(int(c[i] * (1 - j / 8) + (BG[i] if j % 2 else 253) * (j / 8)) for i in range(3))
+        swd.rectangle([k * 60, j * 160, k * 60 + 59, j * 160 + 159], fill=mix)
+picks = picks + [sw, sw]
 mont = Image.new("RGB", (FW, FH * len(picks)))
 for k, f in enumerate(picks): mont.paste(f, (0, k * FH))
 pal = mont.quantize(colors=255, method=Image.Quantize.MEDIANCUT)
