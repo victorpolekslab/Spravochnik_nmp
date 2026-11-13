@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" font-family="DejaVu Sans, Arial, sans-serif">
+<title>Алгоритм при ФП и ТП</title>
+<rect width="960" height="540" rx="18" fill="#ffffff"/>
+<text x="480.0" y="36.0" font-size="22" fill="#1f2430" text-anchor="middle" font-weight="bold">ФП или ТП на вызове (КР382_2)</text>
+<defs><marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#6b7280"/></marker></defs>
+<rect x="330" y="54" width="300" height="62" rx="14" fill="#f8fafc" stroke="#1f2430" stroke-width="2.5"/>
+<text x="344.0" y="80.0" font-size="16" fill="#1f2430" text-anchor="start" font-weight="bold">ЭКГ в 12 отведениях</text>
+<text x="344.0" y="102.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">ФП / ТП, оценить ЧСС и гемодинамику</text>
+<line x1="400" y1="116" x2="200" y2="156" stroke="#6b7280" stroke-width="2.5" marker-end="url(#ar)"/>
+<text x="262.0" y="130.0" font-size="13" fill="#6b7280" text-anchor="end" font-weight="bold">нестабильна</text>
+<line x1="560" y1="116" x2="720" y2="156" stroke="#6b7280" stroke-width="2.5" marker-end="url(#ar)"/>
+<text x="690.0" y="130.0" font-size="13" fill="#6b7280" text-anchor="start" font-weight="bold">стабильна</text>
+<rect x="30" y="160" width="360" height="120" rx="14" fill="#fdf2f2" stroke="#d0342c" stroke-width="2.5"/>
+<text x="44.0" y="186.0" font-size="16" fill="#d0342c" text-anchor="start" font-weight="bold">Экстренная кардиоверсия</text>
+<text x="44.0" y="208.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">гипотония, обморок или предобморок,</text>
+<text x="44.0" y="227.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">ишемия миокарда, отёк лёгких</text>
+<text x="44.0" y="246.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">нет ЭИТ на месте — бригада СМП,</text>
+<text x="44.0" y="265.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">экстренная госпитализация</text>
+<rect x="540" y="160" width="390" height="120" rx="14" fill="#f8fafc" stroke="#2f6fb5" stroke-width="2.5"/>
+<text x="554.0" y="186.0" font-size="16" fill="#2f6fb5" text-anchor="start" font-weight="bold">1. Контроль ЧСС — всем</text>
+<text x="554.0" y="208.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">метопролол 5 мг в/в за 5 мин, повтор</text>
+<text x="554.0" y="227.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">через 5 мин, максимум 20 мг</text>
+<text x="554.0" y="246.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">или верапамил 5–10 мг в/в за 5 мин</text>
+<text x="554.0" y="265.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">СН — дигоксин 0,25 мг в/в</text>
+<line x1="735" y1="280" x2="735" y2="300" stroke="#6b7280" stroke-width="2.5" marker-end="url(#ar)"/>
+<rect x="540" y="302" width="390" height="82" rx="14" fill="#f8fafc" stroke="#2f6fb5" stroke-width="2.5"/>
+<text x="554.0" y="328.0" font-size="16" fill="#2f6fb5" text-anchor="start" font-weight="bold">2. Сколько длится эпизод?</text>
+<text x="554.0" y="350.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">пароксизм часто проходит сам</text>
+<text x="554.0" y="369.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">через несколько часов</text>
+<line x1="640" y1="384" x2="600" y2="404" stroke="#6b7280" stroke-width="2.5" marker-end="url(#ar)"/>
+<line x1="830" y1="384" x2="850" y2="404" stroke="#6b7280" stroke-width="2.5" marker-end="url(#ar)"/>
+<rect x="440" y="406" width="244" height="116" rx="14" fill="#f8fafc" stroke="#2e8b57" stroke-width="2.5"/>
+<text x="454.0" y="432.0" font-size="16" fill="#2e8b57" text-anchor="start" font-weight="bold">&lt; 48 часов</text>
+<text x="454.0" y="454.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">ритм можно восстановить:</text>
+<text x="454.0" y="473.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">#гепарин 80 МЕ/кг, ≤ 5000 МЕ;</text>
+<text x="454.0" y="492.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">прокаинамид или амиодарон</text>
+<rect x="692" y="406" width="238" height="116" rx="14" fill="#f8fafc" stroke="#e08a00" stroke-width="2.5"/>
+<text x="706.0" y="432.0" font-size="16" fill="#e08a00" text-anchor="start" font-weight="bold">≥ 48 ч или неизвестно</text>
+<text x="706.0" y="454.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">ритм не восстанавливать,</text>
+<text x="706.0" y="473.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">только контроль ЧСС;</text>
+<text x="706.0" y="492.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">антикоагуляция — план</text>
+<rect x="30" y="300" width="380" height="150" rx="14" fill="#f6f1fd" stroke="#7b4bb7" stroke-width="2.5"/>
+<text x="44.0" y="326.0" font-size="16" fill="#7b4bb7" text-anchor="start" font-weight="bold">ФП + WPW (широкий, нерегулярный)</text>
+<text x="44.0" y="348.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">не вводить: верапамил, дигоксин,</text>
+<text x="44.0" y="367.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">β-блокаторы, амиодарон в/в</text>
+<text x="44.0" y="386.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">нестабилен — кардиоверсия</text>
+<text x="44.0" y="405.0" font-size="13.3" fill="#1f2430" text-anchor="start" font-weight="normal">стабилен — прокаинамид</text>
+<text x="220.0" y="490.0" font-size="13" fill="#6b7280" text-anchor="middle" font-weight="normal">Дозы — КР382_2, табл. П3, П11, П12</text>
+<text x="220.0" y="510.0" font-size="13" fill="#6b7280" text-anchor="middle" font-weight="normal">препараты — если есть в укладке</text>
+</svg>

@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" font-family="DejaVu Sans, Arial, sans-serif">
+<title>Схема СЛР при ФЖ</title>
+<rect width="960" height="540" rx="18" fill="#ffffff"/>
+<text x="480.0" y="36.0" font-size="22" fill="#1f2430" text-anchor="middle" font-weight="bold">ФЖ или ЖТ без пульса: когда что вводить (КР569_2)</text>
+<line x1="70" y1="210" x2="920" y2="210" stroke="#1f2430" stroke-width="3"/>
+<path d="M76.0,152 L64.0,180 L72.0,180 L62.0,206 L82.0,174 L73.0,174 L82.0,152 z" fill="#e08a00"/>
+<text x="72.0" y="144.0" font-size="13.5" fill="#e08a00" text-anchor="middle" font-weight="bold">разряд 1</text>
+<rect x="88.0" y="196" width="108.3" height="28" rx="8" fill="#dbe7f5"/>
+<text x="142.2" y="215.0" font-size="13" fill="#2f6fb5" text-anchor="middle" font-weight="bold">СЛР</text>
+<path d="M214.33333333333334,152 L202.33333333333334,180 L210.33333333333334,180 L200.33333333333334,206 L220.33333333333334,174 L211.33333333333334,174 L220.33333333333334,152 z" fill="#e08a00"/>
+<text x="210.3" y="144.0" font-size="13.5" fill="#e08a00" text-anchor="middle" font-weight="bold">разряд 2</text>
+<rect x="226.33333333333334" y="196" width="108.3" height="28" rx="8" fill="#dbe7f5"/>
+<text x="280.5" y="215.0" font-size="13" fill="#2f6fb5" text-anchor="middle" font-weight="bold">СЛР</text>
+<path d="M352.6666666666667,152 L340.6666666666667,180 L348.6666666666667,180 L338.6666666666667,206 L358.6666666666667,174 L349.6666666666667,174 L358.6666666666667,152 z" fill="#e08a00"/>
+<text x="348.7" y="144.0" font-size="13.5" fill="#e08a00" text-anchor="middle" font-weight="bold">разряд 3</text>
+<rect x="364.6666666666667" y="196" width="108.3" height="28" rx="8" fill="#dbe7f5"/>
+<text x="418.8" y="215.0" font-size="13" fill="#2f6fb5" text-anchor="middle" font-weight="bold">СЛР</text>
+<path d="M491.0,152 L479.0,180 L487.0,180 L477.0,206 L497.0,174 L488.0,174 L497.0,152 z" fill="#e08a00"/>
+<text x="487.0" y="144.0" font-size="13.5" fill="#e08a00" text-anchor="middle" font-weight="bold">разряд 4</text>
+<rect x="503.0" y="196" width="108.3" height="28" rx="8" fill="#dbe7f5"/>
+<text x="557.2" y="215.0" font-size="13" fill="#2f6fb5" text-anchor="middle" font-weight="bold">СЛР</text>
+<path d="M629.3333333333334,152 L617.3333333333334,180 L625.3333333333334,180 L615.3333333333334,206 L635.3333333333334,174 L626.3333333333334,174 L635.3333333333334,152 z" fill="#e08a00"/>
+<text x="625.3" y="144.0" font-size="13.5" fill="#e08a00" text-anchor="middle" font-weight="bold">разряд 5</text>
+<rect x="641.3333333333334" y="196" width="108.3" height="28" rx="8" fill="#dbe7f5"/>
+<text x="695.5" y="215.0" font-size="13" fill="#2f6fb5" text-anchor="middle" font-weight="bold">СЛР</text>
+<path d="M767.6666666666667,152 L755.6666666666667,180 L763.6666666666667,180 L753.6666666666667,206 L773.6666666666667,174 L764.6666666666667,174 L773.6666666666667,152 z" fill="#e08a00"/>
+<text x="763.7" y="144.0" font-size="13.5" fill="#e08a00" text-anchor="middle" font-weight="bold">…</text>
+<rect x="779.6666666666667" y="196" width="108.3" height="28" rx="8" fill="#dbe7f5"/>
+<text x="833.8" y="215.0" font-size="13" fill="#2f6fb5" text-anchor="middle" font-weight="bold">СЛР</text>
+<line x1="406.6666666666667" y1="226" x2="406.6666666666667" y2="266" stroke="#d0342c" stroke-width="2.5"/>
+<text x="406.7" y="286.0" font-size="15" fill="#d0342c" text-anchor="middle" font-weight="bold">амиодарон 300 мг</text>
+<text x="406.7" y="306.0" font-size="15" fill="#7b4bb7" text-anchor="middle" font-weight="bold">+ #эпинефрин 1 мг</text>
+<line x1="683.3333333333334" y1="226" x2="683.3333333333334" y2="266" stroke="#d0342c" stroke-width="2.5"/>
+<text x="683.3" y="286.0" font-size="15" fill="#d0342c" text-anchor="middle" font-weight="bold">амиодарон 150 мг</text>
+<text x="683.3" y="306.0" font-size="15" fill="#7b4bb7" text-anchor="middle" font-weight="bold">#эпинефрин — каждые 3–5 мин</text>
+<rect x="40" y="340" width="430" height="150" rx="14" fill="#fdf2f2" stroke="#d0342c" stroke-width="2.5"/>
+<text x="54.0" y="366.0" font-size="16" fill="#d0342c" text-anchor="start" font-weight="bold">Главное</text>
+<text x="54.0" y="388.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">дефибрилляция — ключевой элемент СЛР</text>
+<text x="54.0" y="407.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">лекарства не прерывают СЛР</text>
+<text x="54.0" y="426.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">и не задерживают разряд</text>
+<text x="54.0" y="445.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">нет амиодарона — лидокаин 1 мг/кг</text>
+<text x="54.0" y="464.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">дефибриллятора нет — СЛР и вызов СМП</text>
+<rect x="490" y="340" width="430" height="150" rx="14" fill="#f3f7fc" stroke="#2f6fb5" stroke-width="2.5"/>
+<text x="504.0" y="366.0" font-size="16" fill="#2f6fb5" text-anchor="start" font-weight="bold">Асистолия и ЭМД</text>
+<text x="504.0" y="388.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">ритм не для разряда</text>
+<text x="504.0" y="407.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">#эпинефрин 1 мг — сразу</text>
+<text x="504.0" y="426.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">после установки доступа,</text>
+<text x="504.0" y="445.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">далее каждые 3–5 мин</text>
+<text x="504.0" y="464.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">препараты — если есть в укладке</text>
+</svg>
