@@ -404,6 +404,9 @@ def clean(t):
     return re.sub(r'\s*,\s*,', ',', re.sub(r'\s+', ' ', t)).strip()
 
 
+TTS_CACHE = os.environ.get('TTS_CACHE', os.path.join(os.path.dirname(VOSK), 'cache'))
+
+
 def voice(slides, mp3):
     import wave, numpy as np
     from vosk_tts import Model, Synth
@@ -417,7 +420,13 @@ def voice(slides, mp3):
     gap = lambda s: np.zeros(int(SR * s), dtype=np.float32)
     full, starts, pos = [gap(0.4)], [], 0.4
     for i, s in enumerate(slides):
-        synth.synth(clean(s['say']), tmp, speaker_id=SPEAKER); a = rd(tmp); os.remove(tmp)
+        # кэш по тексту слайда: при правке лекции переозвучиваются только изменённые слайды
+        key = hashlib.sha256(f'{os.path.basename(VOSK)}|{SPEAKER}|{clean(s["say"])}'.encode()).hexdigest()[:24]
+        cp = os.path.join(TTS_CACHE, key + '.npy')
+        if os.path.exists(cp): a = np.load(cp)
+        else:
+            synth.synth(clean(s['say']), tmp, speaker_id=SPEAKER); a = rd(tmp); os.remove(tmp)
+            os.makedirs(TTS_CACHE, exist_ok=True); np.save(cp, a)
         if i:
             full += [gap(0.7), chime, gap(0.8)]; starts.append(round(pos + 0.7, 2)); pos += 0.7 + len(chime) / SR + 0.8
         else:

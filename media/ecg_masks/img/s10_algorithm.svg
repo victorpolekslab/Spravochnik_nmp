@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" font-family="DejaVu Sans, Arial, sans-serif">
+<title>Инфаркт или маска</title>
+<rect width="960" height="540" rx="18" fill="#ffffff"/>
+<text x="480.0" y="34.0" font-size="21" fill="#1f2430" text-anchor="middle" font-weight="bold">Подъём ST: инфаркт или маска? Вопросы на вызове</text>
+<rect x="30" y="56" width="900" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+<text x="48.0" y="85.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="bold">1. Есть ли типичная боль или эквиваленты?</text>
+<text x="512.0" y="85.0" font-size="13.8" fill="#2f6fb5" text-anchor="start" font-weight="normal">есть — сначала думаем об ОКС</text>
+<rect x="30" y="110" width="900" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+<text x="48.0" y="139.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="bold">2. Подъём в зоне одной артерии?</text>
+<text x="512.0" y="139.0" font-size="13.8" fill="#2f6fb5" text-anchor="start" font-weight="normal">диффузный — перикардит</text>
+<rect x="30" y="164" width="900" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+<text x="48.0" y="193.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="bold">3. Есть зеркальная депрессия?</text>
+<text x="512.0" y="193.0" font-size="13.8" fill="#2f6fb5" text-anchor="start" font-weight="normal">есть — за ИМ (при перикардите — только aVR, V1)</text>
+<rect x="30" y="218" width="900" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+<text x="48.0" y="247.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="bold">4. Форма ST?</text>
+<text x="512.0" y="247.0" font-size="13.8" fill="#2f6fb5" text-anchor="start" font-weight="normal">выпуклый — ИМ; вогнутый — перикардит, СРР</text>
+<rect x="30" y="272" width="900" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+<text x="48.0" y="301.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="bold">5. Есть Q? Депрессия PR?</text>
+<text x="512.0" y="301.0" font-size="13.8" fill="#2f6fb5" text-anchor="start" font-weight="normal">Q — ИМ или аневризма; PR ↓ — перикардит</text>
+<rect x="30" y="326" width="900" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+<text x="48.0" y="355.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="bold">6. Что на старой ЭКГ?</text>
+<text x="512.0" y="355.0" font-size="13.8" fill="#2f6fb5" text-anchor="start" font-weight="normal">то же — СРР, аневризма, ГЛЖ; новое — острое</text>
+<rect x="30" y="380" width="900" height="46" rx="10" fill="#f8fafc" stroke="#e2e8f0"/>
+<text x="48.0" y="409.0" font-size="15" fill="#1f2430" text-anchor="start" font-weight="bold">7. Клиника не сердечная?</text>
+<text x="512.0" y="409.0" font-size="13.8" fill="#2f6fb5" text-anchor="start" font-weight="normal">внезапная одышка — ТЭЛА; лихорадка + V1 — Бругада</text>
+<rect x="30" y="440" width="900" height="82" rx="14" fill="#fdf2f2" stroke="#d0342c" stroke-width="2"/>
+<text x="48.0" y="470.0" font-size="17" fill="#d0342c" text-anchor="start" font-weight="bold">Сомневаетесь — тактика ОКС и телемедицина.</text>
+<text x="48.0" y="498.0" font-size="14.5" fill="#1f2430" text-anchor="start" font-weight="normal">Пропущенный инфаркт опаснее лишней доставки в стационар.</text>
+</svg>

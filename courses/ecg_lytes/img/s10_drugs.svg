@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" font-family="DejaVu Sans, Arial, sans-serif">
+<title>Лекарства и ЭКГ</title>
+<rect width="960" height="540" rx="18" fill="#ffffff"/>
+<text x="480.0" y="34.0" font-size="22" fill="#1f2430" text-anchor="middle" font-weight="bold">Лекарства и ЭКГ на вызове</text>
+<rect x="20" y="52" width="920" height="36" rx="8" fill="#eef2f7" stroke="#e2e8f0"/>
+<text x="36.0" y="75.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="bold">Препарат</text>
+<text x="300.0" y="75.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="bold">ЭКГ</text>
+<text x="580.0" y="75.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="bold">Что делать / что нельзя</text>
+<rect x="20" y="94" width="920" height="60" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="20" y="94" width="7" height="60" rx="3" fill="#2f6fb5"/>
+<text x="36.0" y="120.0" font-size="13.5" fill="#2f6fb5" text-anchor="start" font-weight="bold">β-блокаторы, верапамил,</text>
+<text x="36.0" y="138.0" font-size="13.5" fill="#2f6fb5" text-anchor="start" font-weight="bold">дилтиазем</text>
+<text x="300.0" y="129.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">брадикардия, АВ-блокада</text>
+<text x="580.0" y="129.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">атропин; затем #допамин (КР160_2)</text>
+<rect x="20" y="160" width="920" height="60" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="20" y="160" width="7" height="60" rx="3" fill="#e08a00"/>
+<text x="36.0" y="195.0" font-size="13.5" fill="#e08a00" text-anchor="start" font-weight="bold">Сердечные гликозиды</text>
+<text x="300.0" y="186.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">корыто ST, ЖЭ, бигеминия,</text>
+<text x="300.0" y="204.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">АВ-блокада</text>
+<text x="580.0" y="186.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">атропин, лидокаин; нельзя: соли Ca,</text>
+<text x="580.0" y="204.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">эпинефрин, прокаинамид (КР1025_1)</text>
+<rect x="20" y="226" width="920" height="60" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="20" y="226" width="7" height="60" rx="3" fill="#d0342c"/>
+<text x="36.0" y="252.0" font-size="13.5" fill="#d0342c" text-anchor="start" font-weight="bold">Трициклические</text>
+<text x="36.0" y="270.0" font-size="13.5" fill="#d0342c" text-anchor="start" font-weight="bold">антидепрессанты</text>
+<text x="300.0" y="261.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">QRS &gt; 0,10 с, тахикардия, ЖА</text>
+<text x="580.0" y="252.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">#натрия гидрокарбонат;</text>
+<text x="580.0" y="270.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">нельзя: IA, IC, III классы (КР880_1)</text>
+<rect x="20" y="292" width="920" height="60" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="20" y="292" width="7" height="60" rx="3" fill="#7b4bb7"/>
+<text x="36.0" y="327.0" font-size="13.5" fill="#7b4bb7" text-anchor="start" font-weight="bold">Удлиняющие QT</text>
+<text x="300.0" y="327.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">длинный QT, «пируэт»</text>
+<text x="580.0" y="327.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">#магния сульфат; отменить (КР569_2)</text>
+<rect x="20" y="358" width="920" height="60" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="20" y="358" width="7" height="60" rx="3" fill="#2e8b57"/>
+<text x="36.0" y="393.0" font-size="13.5" fill="#2e8b57" text-anchor="start" font-weight="bold">Диуретики</text>
+<text x="300.0" y="384.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">гипокалиемия: ST ↓, U,</text>
+<text x="300.0" y="402.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">длинный QT</text>
+<text x="580.0" y="393.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">коррекция калия и магния (КР569_2)</text>
+<rect x="20" y="424" width="920" height="60" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="20" y="424" width="7" height="60" rx="3" fill="#d0342c"/>
+<text x="36.0" y="450.0" font-size="13.5" fill="#d0342c" text-anchor="start" font-weight="bold">иАПФ, БРА, спиронолактон,</text>
+<text x="36.0" y="468.0" font-size="13.5" fill="#d0342c" text-anchor="start" font-weight="bold">препараты калия</text>
+<text x="300.0" y="450.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">гиперкалиемия: острый T,</text>
+<text x="300.0" y="468.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">широкий QRS</text>
+<text x="580.0" y="450.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">#кальция глюконат при изменениях</text>
+<text x="580.0" y="468.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">ЭКГ (КР469_3)</text>
+<text x="480.0" y="524.0" font-size="14" fill="#d0342c" text-anchor="middle" font-weight="bold">Первый вопрос при любой «странной» ЭКГ — какие лекарства и в какой дозе принимает пациент</text>
+</svg>
