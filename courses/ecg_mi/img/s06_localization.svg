@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" font-family="DejaVu Sans, Arial, sans-serif">
+<title>Локализация инфаркта</title>
+<rect width="960" height="540" rx="18" fill="#ffffff"/>
+<text x="480.0" y="36.0" font-size="21" fill="#1f2430" text-anchor="middle" font-weight="bold">Где инфаркт: стенка по отведениям (пособие, гл. 8.2.4)</text>
+<text x="40.0" y="58.0" font-size="13.5" fill="#d0342c" text-anchor="start" font-weight="bold">Пример: нижний инфаркт</text>
+<rect x="40" y="66" width="66" height="44" rx="8" fill="#e0ecfa" stroke="#2f6fb5" stroke-width="2"/>
+<text x="73.0" y="94.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">I</text>
+<rect x="112" y="66" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="145.0" y="94.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">aVR</text>
+<rect x="184" y="66" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="217.0" y="94.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">V1</text>
+<rect x="256" y="66" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="289.0" y="94.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">V4</text>
+<rect x="328" y="66" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="361.0" y="94.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">V7</text>
+<rect x="400" y="66" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="433.0" y="94.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">V3R</text>
+<rect x="40" y="116" width="66" height="44" rx="8" fill="#fde2e1" stroke="#d0342c" stroke-width="2"/>
+<text x="73.0" y="144.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">II</text>
+<rect x="112" y="116" width="66" height="44" rx="8" fill="#e0ecfa" stroke="#2f6fb5" stroke-width="2"/>
+<text x="145.0" y="144.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">aVL</text>
+<rect x="184" y="116" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="217.0" y="144.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">V2</text>
+<rect x="256" y="116" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="289.0" y="144.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">V5</text>
+<rect x="328" y="116" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="361.0" y="144.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">V8</text>
+<rect x="400" y="116" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="433.0" y="144.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">V4R</text>
+<rect x="40" y="166" width="66" height="44" rx="8" fill="#fde2e1" stroke="#d0342c" stroke-width="2"/>
+<text x="73.0" y="194.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">III</text>
+<rect x="112" y="166" width="66" height="44" rx="8" fill="#fde2e1" stroke="#d0342c" stroke-width="2"/>
+<text x="145.0" y="194.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">aVF</text>
+<rect x="184" y="166" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="217.0" y="194.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">V3</text>
+<rect x="256" y="166" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="289.0" y="194.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">V6</text>
+<rect x="328" y="166" width="66" height="44" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="2"/>
+<text x="361.0" y="194.0" font-size="15" fill="#1f2430" text-anchor="middle" font-weight="bold">V9</text>
+<text x="40.0" y="236.0" font-size="13" fill="#d0342c" text-anchor="start" font-weight="bold">■ подъём ST, Q — зона инфаркта</text>
+<text x="40.0" y="256.0" font-size="13" fill="#2f6fb5" text-anchor="start" font-weight="bold">■ зеркальная депрессия ST</text>
+<text x="40.0" y="286.0" font-size="12.5" fill="#6b7280" text-anchor="start" font-weight="normal">V7–V9 и V3R–V4R снимают</text>
+<text x="40.0" y="304.0" font-size="12.5" fill="#6b7280" text-anchor="start" font-weight="normal">дополнительно</text>
+<rect x="490" y="58" width="440" height="56" rx="10" fill="#ffffff" stroke="#2f6fb5" stroke-width="2"/>
+<rect x="490" y="58" width="8" height="56" rx="4" fill="#2f6fb5"/>
+<text x="510.0" y="81.0" font-size="14.5" fill="#2f6fb5" text-anchor="start" font-weight="bold">Переднеперегородочный</text>
+<text x="510.0" y="102.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">V1–V3</text>
+<rect x="490" y="122" width="440" height="56" rx="10" fill="#ffffff" stroke="#2e8b57" stroke-width="2"/>
+<rect x="490" y="122" width="8" height="56" rx="4" fill="#2e8b57"/>
+<text x="510.0" y="145.0" font-size="14.5" fill="#2e8b57" text-anchor="start" font-weight="bold">Передневерхушечный</text>
+<text x="510.0" y="166.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">V3–V4</text>
+<rect x="490" y="186" width="440" height="56" rx="10" fill="#ffffff" stroke="#e08a00" stroke-width="2"/>
+<rect x="490" y="186" width="8" height="56" rx="4" fill="#e08a00"/>
+<text x="510.0" y="209.0" font-size="14.5" fill="#e08a00" text-anchor="start" font-weight="bold">Переднебоковой</text>
+<text x="510.0" y="230.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">I, aVL, V5, V6</text>
+<rect x="490" y="250" width="440" height="56" rx="10" fill="#ffffff" stroke="#7b4bb7" stroke-width="2"/>
+<rect x="490" y="250" width="8" height="56" rx="4" fill="#7b4bb7"/>
+<text x="510.0" y="273.0" font-size="14.5" fill="#7b4bb7" text-anchor="start" font-weight="bold">Распространённый передний</text>
+<text x="510.0" y="294.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">I, aVL, V1–V6</text>
+<rect x="490" y="314" width="440" height="56" rx="10" fill="#ffffff" stroke="#d0342c" stroke-width="2"/>
+<rect x="490" y="314" width="8" height="56" rx="4" fill="#d0342c"/>
+<text x="510.0" y="337.0" font-size="14.5" fill="#d0342c" text-anchor="start" font-weight="bold">Нижний (заднедиафрагмальный)</text>
+<text x="510.0" y="358.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">II, III, aVF</text>
+<rect x="490" y="378" width="440" height="56" rx="10" fill="#ffffff" stroke="#8b5a2b" stroke-width="2"/>
+<rect x="490" y="378" width="8" height="56" rx="4" fill="#8b5a2b"/>
+<text x="510.0" y="401.0" font-size="14.5" fill="#8b5a2b" text-anchor="start" font-weight="bold">Заднебазальный</text>
+<text x="510.0" y="422.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">V7–V9; в V1–V2 высокий R, ST ↓</text>
+<rect x="490" y="442" width="440" height="56" rx="10" fill="#ffffff" stroke="#0e7490" stroke-width="2"/>
+<rect x="490" y="442" width="8" height="56" rx="4" fill="#0e7490"/>
+<text x="510.0" y="465.0" font-size="14.5" fill="#0e7490" text-anchor="start" font-weight="bold">Правый желудочек</text>
+<text x="510.0" y="486.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="normal">V3R–V4R: ST ↑ ≥ 1 мм (КР157_5)</text>
+<text x="40.0" y="350.0" font-size="13.5" fill="#1f2430" text-anchor="start" font-weight="bold">Зеркальные изменения (пособие):</text>
+<text x="40.0" y="372.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">• передний ИМ — депрессия ST, высокий T</text>
+<text x="40.0" y="391.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">  в III, aVF</text>
+<text x="40.0" y="412.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">• нижний ИМ — депрессия ST в I, aVL</text>
+<text x="40.0" y="433.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">• заднебазальный — высокий R, ST ↓,</text>
+<text x="40.0" y="452.0" font-size="13" fill="#1f2430" text-anchor="start" font-weight="normal">  высокий T в V1–V2</text>
+</svg>
