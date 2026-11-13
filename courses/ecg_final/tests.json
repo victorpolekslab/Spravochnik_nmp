@@ -1,0 +1,1256 @@
+[
+{
+"task": 1,
+"field": 0,
+"answer": "Перепутаны электроды рук",
+"expect": "ok"
+},
+{
+"task": 1,
+"field": 0,
+"answer": "поменяли местами красный и жёлтый",
+"expect": "ok"
+},
+{
+"task": 1,
+"field": 0,
+"answer": "Декстрокардия",
+"expect": "wrong"
+},
+{
+"task": 1,
+"field": 0,
+"answer": "не декстрокардия, электроды рук перепутаны",
+"expect": "ok"
+},
+{
+"task": 1,
+"field": 0,
+"answer": "неправильно наложены провода",
+"expect": "ok"
+},
+{
+"task": 1,
+"field": 1,
+"answer": "переснять ЭКГ",
+"expect": "ok"
+},
+{
+"task": 1,
+"field": 1,
+"answer": "поправить электроды и снять заново",
+"expect": "ok"
+},
+{
+"task": 1,
+"field": 1,
+"answer": "госпитализация",
+"expect": "wrong"
+},
+{
+"task": 2,
+"field": 0,
+"answer": "синусовая аритмия",
+"expect": "ok"
+},
+{
+"task": 2,
+"field": 0,
+"answer": "ритм синусовый, норма",
+"expect": "almost"
+},
+{
+"task": 2,
+"field": 0,
+"answer": "фибрилляция предсердий",
+"expect": "wrong"
+},
+{
+"task": 2,
+"field": 0,
+"answer": "синусовая аритмия, без ишемии",
+"expect": "ok"
+},
+{
+"task": 2,
+"field": 1,
+"answer": "72",
+"expect": "ok"
+},
+{
+"task": 2,
+"field": 1,
+"answer": "ЧСС около 70 в минуту",
+"expect": "ok"
+},
+{
+"task": 2,
+"field": 1,
+"answer": "35",
+"expect": "wrong"
+},
+{
+"task": 2,
+"field": 1,
+"answer": "норма",
+"expect": "wrong"
+},
+{
+"task": 3,
+"field": 0,
+"answer": "ПНЖТ",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 0,
+"answer": "пароксизмальная наджелудочковая тахикардия",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 0,
+"answer": "наджелудочковая тахикардия, АВУРТ",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 0,
+"answer": "ЖТ",
+"expect": "wrong"
+},
+{
+"task": 3,
+"field": 0,
+"answer": "фибрилляция предсердий",
+"expect": "wrong"
+},
+{
+"task": 3,
+"field": 0,
+"answer": "надъжелудочковая тахикардия",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 1,
+"answer": "проба Вальсальвы",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 1,
+"answer": "вагусные пробы",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 1,
+"answer": "ЭИТ",
+"expect": "wrong"
+},
+{
+"task": 3,
+"field": 1,
+"answer": "вагусные приемы, ЭИТ не нужна",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 2,
+"answer": "АТФ 10 мг в/в",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 2,
+"answer": "трифосаденин 10-20 мг болюсом",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 2,
+"answer": "верапамил",
+"expect": "wrong"
+},
+{
+"task": 4,
+"field": 0,
+"answer": "ФП",
+"expect": "ok"
+},
+{
+"task": 4,
+"field": 0,
+"answer": "фибрилляция предсердий, тахисистолия",
+"expect": "ok"
+},
+{
+"task": 4,
+"field": 0,
+"answer": "мерцательная аритмия",
+"expect": "ok"
+},
+{
+"task": 4,
+"field": 0,
+"answer": "трепетание предсердий",
+"expect": "wrong"
+},
+{
+"task": 4,
+"field": 1,
+"answer": "48",
+"expect": "ok"
+},
+{
+"task": 4,
+"field": 1,
+"answer": "48 часов",
+"expect": "ok"
+},
+{
+"task": 4,
+"field": 1,
+"answer": "24 часа",
+"expect": "wrong"
+},
+{
+"task": 4,
+"field": 1,
+"answer": "двое суток",
+"expect": "ok"
+},
+{
+"task": 4,
+"field": 2,
+"answer": "ЭИТ",
+"expect": "ok"
+},
+{
+"task": 4,
+"field": 2,
+"answer": "электрическая кардиоверсия",
+"expect": "ok"
+},
+{
+"task": 4,
+"field": 2,
+"answer": "амиодарон",
+"expect": "wrong"
+},
+{
+"task": 5,
+"field": 0,
+"answer": "трепетание предсердий 2:1",
+"expect": "ok"
+},
+{
+"task": 5,
+"field": 0,
+"answer": "ТП",
+"expect": "almost"
+},
+{
+"task": 5,
+"field": 0,
+"answer": "фибрилляция предсердий",
+"expect": "wrong"
+},
+{
+"task": 5,
+"field": 1,
+"answer": "II, III, aVF",
+"expect": "ok"
+},
+{
+"task": 5,
+"field": 1,
+"answer": "в нижних отведениях",
+"expect": "ok"
+},
+{
+"task": 5,
+"field": 1,
+"answer": "V6",
+"expect": "wrong"
+},
+{
+"task": 6,
+"field": 0,
+"answer": "ЖТ",
+"expect": "ok"
+},
+{
+"task": 6,
+"field": 0,
+"answer": "желудочковая тахикардия",
+"expect": "ok"
+},
+{
+"task": 6,
+"field": 0,
+"answer": "тахикардия с широкими QRS",
+"expect": "almost"
+},
+{
+"task": 6,
+"field": 0,
+"answer": "синусовая тахикардия",
+"expect": "wrong"
+},
+{
+"task": 6,
+"field": 1,
+"answer": "верапамил",
+"expect": "ok"
+},
+{
+"task": 6,
+"field": 1,
+"answer": "амиодарон",
+"expect": "wrong"
+},
+{
+"task": 6,
+"field": 2,
+"answer": "синхронизированная ЭИТ",
+"expect": "ok"
+},
+{
+"task": 6,
+"field": 2,
+"answer": "кардиоверсия",
+"expect": "ok"
+},
+{
+"task": 7,
+"field": 0,
+"answer": "полная АВ-блокада",
+"expect": "ok"
+},
+{
+"task": 7,
+"field": 0,
+"answer": "АВ блокада 3 степени",
+"expect": "ok"
+},
+{
+"task": 7,
+"field": 0,
+"answer": "АВ-блокада III ст",
+"expect": "ok"
+},
+{
+"task": 7,
+"field": 0,
+"answer": "АВ блокада 2 степени",
+"expect": "wrong"
+},
+{
+"task": 7,
+"field": 0,
+"answer": "полная поперечная блокада",
+"expect": "ok"
+},
+{
+"task": 7,
+"field": 1,
+"answer": "Морганьи-Адамса-Стокса",
+"expect": "ok"
+},
+{
+"task": 7,
+"field": 1,
+"answer": "приступ МЭС",
+"expect": "ok"
+},
+{
+"task": 7,
+"field": 1,
+"answer": "вазовагальный",
+"expect": "wrong"
+},
+{
+"task": 7,
+"field": 2,
+"answer": "атропин 0,5 мг в/в",
+"expect": "ok"
+},
+{
+"task": 7,
+"field": 2,
+"answer": "адреналин",
+"expect": "wrong"
+},
+{
+"task": 8,
+"field": 0,
+"answer": "WPW",
+"expect": "ok"
+},
+{
+"task": 8,
+"field": 0,
+"answer": "синдром Вольфа-Паркинсона-Уайта",
+"expect": "ok"
+},
+{
+"task": 8,
+"field": 0,
+"answer": "дельта-волна, короткий PQ",
+"expect": "ok"
+},
+{
+"task": 8,
+"field": 0,
+"answer": "блокада левой ножки",
+"expect": "wrong"
+},
+{
+"task": 8,
+"field": 1,
+"answer": "амиодарон",
+"expect": "ok"
+},
+{
+"task": 8,
+"field": 1,
+"answer": "верапамил",
+"expect": "ok"
+},
+{
+"task": 8,
+"field": 1,
+"answer": "прокаинамид",
+"expect": "wrong"
+},
+{
+"task": 9,
+"field": 0,
+"answer": "полная блокада левой ножки пучка Гиса",
+"expect": "ok"
+},
+{
+"task": 9,
+"field": 0,
+"answer": "БЛНПГ",
+"expect": "ok"
+},
+{
+"task": 9,
+"field": 0,
+"answer": "блокада правой ножки",
+"expect": "wrong"
+},
+{
+"task": 9,
+"field": 1,
+"answer": "как ОКС с подъемом ST",
+"expect": "ok"
+},
+{
+"task": 9,
+"field": 1,
+"answer": "как ИМпST, в ЧКВ-центр",
+"expect": "ok"
+},
+{
+"task": 9,
+"field": 1,
+"answer": "ОКС без подъема ST",
+"expect": "error"
+},
+{
+"task": 10,
+"field": 0,
+"answer": "ИМпST на фоне БПНПГ",
+"expect": "ok"
+},
+{
+"task": 10,
+"field": 0,
+"answer": "блокада правой ножки, инфаркт с подъёмом ST",
+"expect": "ok"
+},
+{
+"task": 10,
+"field": 0,
+"answer": "БПНПГ, инфаркт",
+"expect": "almost"
+},
+{
+"task": 10,
+"field": 0,
+"answer": "БЛНПГ, инфаркт",
+"expect": "wrong"
+},
+{
+"task": 10,
+"field": 0,
+"answer": "полная блокада правой ножки",
+"expect": "wrong"
+},
+{
+"task": 10,
+"field": 1,
+"answer": "нет",
+"expect": "ok"
+},
+{
+"task": 10,
+"field": 1,
+"answer": "не мешает",
+"expect": "ok"
+},
+{
+"task": 10,
+"field": 1,
+"answer": "да, мешает",
+"expect": "wrong"
+},
+{
+"task": 11,
+"field": 0,
+"answer": "ОКС без подъема ST",
+"expect": "ok"
+},
+{
+"task": 11,
+"field": 0,
+"answer": "ОКСбпST",
+"expect": "ok"
+},
+{
+"task": 11,
+"field": 0,
+"answer": "NSTEMI",
+"expect": "ok"
+},
+{
+"task": 11,
+"field": 0,
+"answer": "ИМпST",
+"expect": "error"
+},
+{
+"task": 11,
+"field": 0,
+"answer": "ишемия",
+"expect": "almost"
+},
+{
+"task": 11,
+"field": 1,
+"answer": "АСК 250 мг разжевать",
+"expect": "ok"
+},
+{
+"task": 11,
+"field": 1,
+"answer": "аспирин, клопидогрел не даём",
+"expect": "ok"
+},
+{
+"task": 11,
+"field": 1,
+"answer": "аспирин и гепарин",
+"expect": "error"
+},
+{
+"task": 11,
+"field": 1,
+"answer": "клопидогрел",
+"expect": "wrong"
+},
+{
+"task": 12,
+"field": 0,
+"answer": "синдром Велленса",
+"expect": "ok"
+},
+{
+"task": 12,
+"field": 0,
+"answer": "ишемия передней стенки",
+"expect": "almost"
+},
+{
+"task": 12,
+"field": 0,
+"answer": "вариант нормы",
+"expect": "wrong"
+},
+{
+"task": 12,
+"field": 0,
+"answer": "Велленс",
+"expect": "ok"
+},
+{
+"task": 12,
+"field": 1,
+"answer": "госпитализация в стационар с ЧКВ",
+"expect": "ok"
+},
+{
+"task": 12,
+"field": 1,
+"answer": "актив в поликлинику",
+"expect": "wrong"
+},
+{
+"task": 12,
+"field": 1,
+"answer": "не оставлять дома, госпитализировать",
+"expect": "ok"
+},
+{
+"task": 13,
+"field": 0,
+"answer": "нижний ИМпST",
+"expect": "ok"
+},
+{
+"task": 13,
+"field": 0,
+"answer": "нижний инфаркт",
+"expect": "almost"
+},
+{
+"task": 13,
+"field": 0,
+"answer": "нижний ИМпST с вовлечением ПЖ",
+"expect": "ok"
+},
+{
+"task": 13,
+"field": 0,
+"answer": "передний инфаркт",
+"expect": "wrong"
+},
+{
+"task": 13,
+"field": 0,
+"answer": "нижний ОКСбпST",
+"expect": "error"
+},
+{
+"task": 13,
+"field": 0,
+"answer": "нижнй инфаркт с подъёмом СТ",
+"expect": "ok"
+},
+{
+"task": 13,
+"field": 1,
+"answer": "V3R-V4R",
+"expect": "ok"
+},
+{
+"task": 13,
+"field": 1,
+"answer": "правые грудные",
+"expect": "ok"
+},
+{
+"task": 13,
+"field": 1,
+"answer": "V7-V9",
+"expect": "wrong"
+},
+{
+"task": 13,
+"field": 2,
+"answer": "нитроглицерин",
+"expect": "ok"
+},
+{
+"task": 13,
+"field": 2,
+"answer": "нитраты",
+"expect": "ok"
+},
+{
+"task": 13,
+"field": 2,
+"answer": "аспирин",
+"expect": "wrong"
+},
+{
+"task": 14,
+"field": 0,
+"answer": "передний ИМпST",
+"expect": "ok"
+},
+{
+"task": 14,
+"field": 0,
+"answer": "передний инфаркт",
+"expect": "almost"
+},
+{
+"task": 14,
+"field": 0,
+"answer": "нижний инфаркт",
+"expect": "wrong"
+},
+{
+"task": 14,
+"field": 1,
+"answer": "120",
+"expect": "ok"
+},
+{
+"task": 14,
+"field": 1,
+"answer": "120 минут",
+"expect": "ok"
+},
+{
+"task": 14,
+"field": 1,
+"answer": "90",
+"expect": "wrong"
+},
+{
+"task": 14,
+"field": 1,
+"answer": "2 часа",
+"expect": "ok"
+},
+{
+"task": 15,
+"field": 0,
+"answer": "задний инфаркт",
+"expect": "ok"
+},
+{
+"task": 15,
+"field": 0,
+"answer": "задний ИМ, эквивалент ИМпST",
+"expect": "ok"
+},
+{
+"task": 15,
+"field": 0,
+"answer": "ОКС без подъема ST",
+"expect": "wrong"
+},
+{
+"task": 15,
+"field": 1,
+"answer": "V7-V9",
+"expect": "ok"
+},
+{
+"task": 15,
+"field": 1,
+"answer": "задние отведения",
+"expect": "ok"
+},
+{
+"task": 15,
+"field": 1,
+"answer": "V3R",
+"expect": "wrong"
+},
+{
+"task": 16,
+"field": 0,
+"answer": "ОКС, поражение ствола ЛКА",
+"expect": "ok"
+},
+{
+"task": 16,
+"field": 0,
+"answer": "ОКС без подъёма ST",
+"expect": "almost"
+},
+{
+"task": 16,
+"field": 0,
+"answer": "многососудистое поражение, ишемия",
+"expect": "ok"
+},
+{
+"task": 16,
+"field": 1,
+"answer": "немедленно в ЧКВ-центр",
+"expect": "ok"
+},
+{
+"task": 16,
+"field": 1,
+"answer": "в РСЦ",
+"expect": "ok"
+},
+{
+"task": 16,
+"field": 1,
+"answer": "в поликлинику",
+"expect": "wrong"
+},
+{
+"task": 17,
+"field": 0,
+"answer": "ГЛЖ с перегрузкой",
+"expect": "ok"
+},
+{
+"task": 17,
+"field": 0,
+"answer": "гипертрофия левого желудочка",
+"expect": "almost"
+},
+{
+"task": 17,
+"field": 0,
+"answer": "ИМпST",
+"expect": "wrong"
+},
+{
+"task": 17,
+"field": 0,
+"answer": "ГЛЖ, перегрузка, не ОКС",
+"expect": "ok"
+},
+{
+"task": 17,
+"field": 1,
+"answer": "5",
+"expect": "ok"
+},
+{
+"task": 17,
+"field": 1,
+"answer": "5 мм/мВ",
+"expect": "ok"
+},
+{
+"task": 17,
+"field": 1,
+"answer": "10",
+"expect": "wrong"
+},
+{
+"task": 18,
+"field": 0,
+"answer": "ТЭЛА",
+"expect": "ok"
+},
+{
+"task": 18,
+"field": 0,
+"answer": "SIQIIITIII, подозрение на ТЭЛА",
+"expect": "ok"
+},
+{
+"task": 18,
+"field": 0,
+"answer": "перегрузка правого желудочка",
+"expect": "almost"
+},
+{
+"task": 18,
+"field": 0,
+"answer": "инфаркт",
+"expect": "wrong"
+},
+{
+"task": 18,
+"field": 1,
+"answer": "КТ-ангиография",
+"expect": "ok"
+},
+{
+"task": 18,
+"field": 1,
+"answer": "МСКТ",
+"expect": "ok"
+},
+{
+"task": 18,
+"field": 1,
+"answer": "рентген",
+"expect": "wrong"
+},
+{
+"task": 19,
+"field": 0,
+"answer": "ранняя реполяризация",
+"expect": "ok"
+},
+{
+"task": 19,
+"field": 0,
+"answer": "синдром ранней реполяризации желудочков",
+"expect": "ok"
+},
+{
+"task": 19,
+"field": 0,
+"answer": "норма",
+"expect": "almost"
+},
+{
+"task": 19,
+"field": 0,
+"answer": "ИМпST",
+"expect": "wrong"
+},
+{
+"task": 19,
+"field": 0,
+"answer": "ранняя реполяризация, не ОКС",
+"expect": "ok"
+},
+{
+"task": 19,
+"field": 1,
+"answer": "2,5",
+"expect": "ok"
+},
+{
+"task": 19,
+"field": 1,
+"answer": "2.5 мм",
+"expect": "ok"
+},
+{
+"task": 19,
+"field": 1,
+"answer": "2",
+"expect": "wrong"
+},
+{
+"task": 20,
+"field": 0,
+"answer": "гиперкалиемия",
+"expect": "ok"
+},
+{
+"task": 20,
+"field": 0,
+"answer": "высокий калий",
+"expect": "ok"
+},
+{
+"task": 20,
+"field": 0,
+"answer": "ишемия",
+"expect": "wrong"
+},
+{
+"task": 20,
+"field": 1,
+"answer": "стационар с гемодиализом",
+"expect": "ok"
+},
+{
+"task": 20,
+"field": 1,
+"answer": "в нефрологию",
+"expect": "ok"
+},
+{
+"task": 20,
+"field": 1,
+"answer": "в кардиологию",
+"expect": "wrong"
+},
+{
+"task": 20,
+"field": 2,
+"answer": "кальция глюконат",
+"expect": "ok"
+},
+{
+"task": 20,
+"field": 2,
+"answer": "хлорид кальция",
+"expect": "ok"
+},
+{
+"task": 20,
+"field": 2,
+"answer": "калия хлорид",
+"expect": "wrong"
+},
+{
+"task": 1,
+"field": 0,
+"answer": "Перепутаны электроды рук (красный и жёлтый)",
+"expect": "ok"
+},
+{
+"task": 1,
+"field": 1,
+"answer": "Поправить электроды и переснять ЭКГ",
+"expect": "ok"
+},
+{
+"task": 2,
+"field": 0,
+"answer": "Синусовая аритмия, вариант нормы",
+"expect": "ok"
+},
+{
+"task": 2,
+"field": 1,
+"answer": "Около 70 (60–80, меняется с дыханием)",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 0,
+"answer": "Пароксизмальная наджелудочковая тахикардия с узкими QRS, ЧСС около 200",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 1,
+"answer": "Вагусные приёмы (проба Вальсальвы, лёжа с поднятыми ногами)",
+"expect": "ok"
+},
+{
+"task": 3,
+"field": 2,
+"answer": "#Трифосаденин (АТФ) 10–20 мг в/в болюсом",
+"expect": "ok"
+},
+{
+"task": 4,
+"field": 0,
+"answer": "Фибрилляция предсердий, ЧСС около 130",
+"expect": "ok"
+},
+{
+"task": 4,
+"field": 1,
+"answer": "48 часов",
+"expect": "ok"
+},
+{
+"task": 4,
+"field": 2,
+"answer": "Экстренная электрическая кардиоверсия (ЭИТ)",
+"expect": "ok"
+},
+{
+"task": 5,
+"field": 0,
+"answer": "Трепетание предсердий с проведением 2:1",
+"expect": "ok"
+},
+{
+"task": 5,
+"field": 1,
+"answer": "II, III, aVF (нижние) и V1",
+"expect": "ok"
+},
+{
+"task": 6,
+"field": 0,
+"answer": "Регулярная тахикардия с широкими QRS (около 0,14 с), ЧСС около 155 — тактика как при ЖТ",
+"expect": "ok"
+},
+{
+"task": 6,
+"field": 1,
+"answer": "Верапамил",
+"expect": "ok"
+},
+{
+"task": 6,
+"field": 2,
+"answer": "Синхронизированная ЭИТ",
+"expect": "ok"
+},
+{
+"task": 7,
+"field": 0,
+"answer": "Полная АВ-блокада (III степени), частота желудочков около 40",
+"expect": "ok"
+},
+{
+"task": 7,
+"field": 1,
+"answer": "Приступы Морганьи — Адамса — Стокса",
+"expect": "ok"
+},
+{
+"task": 7,
+"field": 2,
+"answer": "Атропин 0,5–1 мг в/в, повтор каждые 3–5 мин до 3 мг",
+"expect": "ok"
+},
+{
+"task": 8,
+"field": 0,
+"answer": "Синдром WPW: короткий PQ, дельта-волна, расширенный QRS",
+"expect": "ok"
+},
+{
+"task": 8,
+"field": 1,
+"answer": "Амиодарон в/в (а также верапамил и дигоксин)",
+"expect": "ok"
+},
+{
+"task": 9,
+"field": 0,
+"answer": "Полная блокада левой ножки пучка Гиса",
+"expect": "ok"
+},
+{
+"task": 9,
+"field": 1,
+"answer": "Как ОКС с подъёмом ST: АСК, передать ЭКГ, ЧКВ-центр",
+"expect": "ok"
+},
+{
+"task": 10,
+"field": 0,
+"answer": "ИМпST (нижне-боковой) на фоне полной блокады правой ножки",
+"expect": "ok"
+},
+{
+"task": 10,
+"field": 1,
+"answer": "Нет: подъём ST оценивают как обычно, в отличие от БЛНПГ",
+"expect": "ok"
+},
+{
+"task": 11,
+"field": 0,
+"answer": "ОКС без подъёма ST: депрессия ST и отрицательные T в I, aVL, V3–V6",
+"expect": "ok"
+},
+{
+"task": 11,
+"field": 1,
+"answer": "Только АСК 150–300 мг разжевать",
+"expect": "ok"
+},
+{
+"task": 12,
+"field": 0,
+"answer": "Паттерн Велленса: глубокие симметричные отрицательные T в V2–V5 — критический стеноз ПМЖА",
+"expect": "ok"
+},
+{
+"task": 12,
+"field": 1,
+"answer": "Госпитализация в стационар с ЧКВ как ОКС без подъёма ST",
+"expect": "ok"
+},
+{
+"task": 13,
+"field": 0,
+"answer": "Нижний ИМпST, вероятно с вовлечением правого желудочка",
+"expect": "ok"
+},
+{
+"task": 13,
+"field": 1,
+"answer": "V3R–V4R (правые грудные)",
+"expect": "ok"
+},
+{
+"task": 13,
+"field": 2,
+"answer": "Нитроглицерин: гипотония и ИМ правого желудочка",
+"expect": "ok"
+},
+{
+"task": 14,
+"field": 0,
+"answer": "Передний ИМпST",
+"expect": "ok"
+},
+{
+"task": 14,
+"field": 1,
+"answer": "120 минут",
+"expect": "ok"
+},
+{
+"task": 15,
+"field": 0,
+"answer": "Задний ИМ — эквивалент ИМпST",
+"expect": "ok"
+},
+{
+"task": 15,
+"field": 1,
+"answer": "V7–V9",
+"expect": "ok"
+},
+{
+"task": 16,
+"field": 0,
+"answer": "Распространённая депрессия ST + подъём ST в aVR и V1 — многососудистое поражение или ствол ЛКА",
+"expect": "ok"
+},
+{
+"task": 16,
+"field": 1,
+"answer": "Немедленно в стационар с ЧКВ, предупредить",
+"expect": "ok"
+},
+{
+"task": 17,
+"field": 0,
+"answer": "Гипертрофия ЛЖ с вторичными изменениями ST-T («перегрузка»)",
+"expect": "ok"
+},
+{
+"task": 17,
+"field": 1,
+"answer": "5 мм/мВ — зубцы вдвое ниже настоящих",
+"expect": "ok"
+},
+{
+"task": 18,
+"field": 0,
+"answer": "Синусовая тахикардия, SI-QIII-TIII — перегрузка ПЖ, подозрение на ТЭЛА",
+"expect": "ok"
+},
+{
+"task": 18,
+"field": 1,
+"answer": "КТ-ангиография лёгочных артерий",
+"expect": "ok"
+},
+{
+"task": 19,
+"field": 0,
+"answer": "Ранняя реполяризация — вариант нормы",
+"expect": "ok"
+},
+{
+"task": 19,
+"field": 1,
+"answer": "2,5 мм",
+"expect": "ok"
+},
+{
+"task": 20,
+"field": 0,
+"answer": "Высокие заострённые T в V2–V4 — признак гиперкалиемии",
+"expect": "ok"
+},
+{
+"task": 20,
+"field": 1,
+"answer": "В стационар с гемодиализом",
+"expect": "ok"
+},
+{
+"task": 20,
+"field": 2,
+"answer": "Кальция глюконат или кальция хлорид в/в",
+"expect": "ok"
+}
+]

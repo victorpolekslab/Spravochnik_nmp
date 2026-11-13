@@ -106,6 +106,7 @@ function route() {
     case 'calc': setTab('home'); calcPage(parts[1]); break;
     case 'route': setTab('home'); routeWizard(); break;
     case 'learn': setTab('learn'); learnPage(); break;
+    case 'exam': setTab('learn'); examPage(parts[1], parts[2]); break;
     case 'course': setTab('learn'); coursePage(parts[1], parts[2]); break;
     case 'report': setTab('stats'); LS.set('statsTab', 'report'); reportPage(); break;
     case 'stats': go('#' + (['usage', 'krnew', 'report'].includes(LS.get('statsTab', '')) ? LS.get('statsTab') : 'usage')); return;
@@ -583,6 +584,15 @@ function learnPage(noFetch) {
           ${st.done ? `<div class="ldone">✓ Тест: ${st.score}/${LC.quiz.length}</div>` : ''}
           <div class="lbtns"><a class="bigbtn lgo" data-id="${esc(x.id)}" href="#lecture/${x.lecture}">${btn}</a>${st.heard || st.done ? `<a class="lread" href="#lecture/${x.lecture}/test">${st.done ? 'Пройти тест ещё раз' : 'К тесту'} ›</a>` : ''}</div></div>`;
       }
+      const EX = x.type === 'exam' && window.EXAMS && EXAMS[x.exam];
+      if (EX) {
+        const st = examState(x.exam), done = Object.keys(st.a).length, n = EX.tasks.length, tot = st.fin ? examTotal(x.exam) : null;
+        const btn = st.fin ? 'Посмотреть разбор' : done ? `Продолжить · задача ${Math.min(done + 1, n)}/${n}` : 'Начать занятие';
+        return `<div class="litem"><div class="lhead"><span class="lty exam">Итоговое занятие</span>${isNew ? '<span class="lnew">новое</span>' : ''}<span class="luntil">${n} задач · ~${EX.min} мин</span></div>
+          <h3>${esc(x.title || EX.title)}</h3><p>${esc(x.text || EX.sub)}</p>
+          ${tot ? `<div class="ldone">${tot.passed ? '✓ Зачтено' : 'Не зачтено'} · ${examFmt(tot.score)}/${tot.of} (${Math.round(tot.share * 100)} %)</div>` : ''}
+          <div class="lbtns"><a class="bigbtn lgo" data-id="${esc(x.id)}" href="#exam/${x.exam}${st.fin ? '/result' : done ? '/' + Math.min(done + 1, n) : ''}">${btn}</a>${st.fin ? `<a class="lread" href="#exam/${x.exam}/again">Пройти заново ›</a>` : ''}</div></div>`;
+      }
       if (C) {
         const st = LS.get(pk('course_' + x.course), {}), n = C.cards.length, pos = Math.min(st.pos || 0, n);
         const btn = st.done ? `Повторить` : pos ? `Продолжить · ${pos + 1}/${n + 1}` : t[1];
@@ -776,7 +786,7 @@ function reportPage(edit) {
     const people = names.split(/\n+/).map(s => s.trim()).filter(Boolean).map(s => ({ name: learnPretty(s), k: learnKey(s) }));
     const byK = new Map(people.map(p => [p.k, p]));
     const items = [];
-    const title = it => { const [t, k] = it.split(':'); return t === 'lecture' ? 'Лекция: ' + ((window.LECTURES && LECTURES[k] || {}).title || k).replace(/^Лекция:\s*/, '').replace(/^./, c => c.toUpperCase()) : t === 'course' ? 'Курс: ' + ((window.COURSES && COURSES[k] || {}).title || k) : it; };
+    const title = it => { const [t, k] = it.split(':'); if (t === 'exam') return 'Итоговое: ' + ((window.EXAMS && EXAMS[k] || {}).title || k); return t === 'lecture' ? 'Лекция: ' + ((window.LECTURES && LECTURES[k] || {}).title || k).replace(/^Лекция:\s*/, '').replace(/^./, c => c.toUpperCase()) : t === 'course' ? 'Курс: ' + ((window.COURSES && COURSES[k] || {}).title || k) : it; };
     const R = {}; let unknown = 0;
     (res.rows || []).forEach(r => {
       if (!byK.has(r.uid)) { unknown++; return; }
@@ -1321,7 +1331,7 @@ function updateCalc() {
 }
 
 // ---------------------------------------------------------------- updates (Android: MainActivity.checkUpdate)
-const APP_VERSION = '4.6';
+const APP_VERSION = '4.7';
 const SITE = 'https://victorpolekslab.github.io/Spravochnik_nmp/';
 const updRes = t => { const el = $('#updRes'); if (el) el.textContent = t; };
 window.onUpdateNone = () => updRes('У вас последняя версия');
@@ -1345,7 +1355,7 @@ function about() {
   const names = crNames();
   const bundled = Object.values(crData()).filter(x => x.off);
   view.innerHTML = `<div class="about">
-    <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION}${contentLabel()} · клинические рекомендации от 03.11.2026</p>
+    <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION}${contentLabel()} · клинические рекомендации от 13.11.2026</p>
       ${window.App ? '<button class="lnkbtn" id="updChk">Проверить обновления</button><span class="updres" id="updRes"></span>' : ''}</div>
     <div class="card"><b>Обучение</b><p><a href="#report">Отчёт по обучению</a> — для организатора: кто прослушал лекции и прошёл тесты.</p></div>
     ${shareCard()}
@@ -1754,3 +1764,78 @@ function shareWire() {
   if (s) s.onclick = () => { try { navigator.share({ title: 'Справочник фельдшера НМП', text: shareText() }).catch(() => {}); } catch (e) {} };
 }
 function sharePage() { setTitle('Поделиться', false); view.innerHTML = `<div class="sharepg">${shareCard()}</div>`; shareWire(); }
+
+// ---------------------------------------------------------------- итоговое занятие: задачи со свободным ответом (EXAMS, проверка — exam_checker.js)
+const EXV = { ok: ['Верно', 'ok'], almost: ['Почти', 'mid'], error: ['Есть ошибка', 'low'], wrong: ['Неверно', 'low'] };
+function examState(id) { const s = LS.get(pk('exam_' + id), null) || {}; s.a = s.a || {}; return s; }
+function examSave(id, s) { LS.set(pk('exam_' + id), s); }
+const examFmt = x => String(Math.round(x * 10) / 10).replace('.', ',');
+function examTotal(id) {
+  const E = EXAMS[id], s = examState(id), res = [];
+  E.tasks.forEach((t, i) => t.fields.forEach((f, j) => { const r = (s.a[i] || {})[j]; res.push(r ? { score: r.score, self: r.self } : { score: 0 }); }));
+  return ExamChecker.total(res, E.pass);
+}
+function examPage(id, part) {
+  const E = window.EXAMS && EXAMS[id];
+  if (!E || !window.ExamChecker) { setTitle('Итоговое занятие', false); view.innerHTML = '<div class="rwempty">Занятие не найдено — обновите приложение.</div>'; return; }
+  const n = E.tasks.length, s = examState(id);
+  setTitle(E.title, false);
+  if (part === 'again') { examSave(id, { a: {} }); go('#exam/' + id + '/1'); return; }
+  if (part === 'result') return examResult(id);
+  const i = +part ? Math.min(Math.max(+part, 1), n) - 1 : -1;
+  if (i < 0) {
+    const done = Object.keys(s.a).length;
+    view.innerHTML = `<div class="expage"><div class="exintro"><div class="kick">Итоговое занятие</div><h2>${esc(E.title)}</h2><p>${esc(E.intro)}</p>
+      <ul class="exmeta"><li>${n} задач, ~${E.min} мин</li><li>зачёт — ${Math.round(E.pass * 100)} % баллов</li><li>ответы хранятся только на телефоне, организатор видит итоговый балл</li></ul>
+      <a class="bigbtn" href="#exam/${id}/${done ? Math.min(done + 1, n) : 1}">${done ? 'Продолжить' : 'Начать'}</a></div>
+      ${E.srcName ? `<p class="disc">${esc(E.srcName)}</p>` : ''}</div>`;
+    return;
+  }
+  const t = E.tasks[i], A = s.a[i];
+  const field = (f, j) => {
+    const r = A && A[j], res = r && EXV[r.self ? 'ok' : r.v];
+    return `<div class="exf"><label>${esc(f.l)}</label>
+      <input class="exin" data-j="${j}" value="${esc(r ? r.ans : (s.draft && s.draft[i] && s.draft[i][j]) || '')}" ${r ? 'disabled' : ''} autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
+      ${r ? `<div class="exres ${res[1]}"><b>${r.self ? 'Засчитано вами' : res[0]}</b>${r.msg && !r.self ? ' — ' + esc(r.msg) : ''}</div>
+        <div class="exref">Эталон: ${esc(f.ref)}</div>${r.v !== 'ok' && !r.self ? `<button class="exself" data-j="${j}">Мой ответ верный</button>` : ''}` : ''}</div>`;
+  };
+  const prog = Math.round(Object.keys(s.a).length / n * 100);
+  view.innerHTML = `<div class="expage"><div class="exbar"><i style="width:${prog}%"></i></div>
+    <div class="extask"><div class="kick">${esc(t.k)} из ${n}</div><h2>${esc(t.h)}</h2>
+      <ul class="exfacts">${t.facts.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      ${t.img ? `<a class="eximg" href="${esc(SITE + t.img)}" target="_blank" rel="noopener"><img src="${esc(SITE + t.img)}" alt="ЭКГ" onerror="this.closest('a').classList.add('noimg')"><span>Нажмите, чтобы открыть крупно</span><em>ЭКГ не загрузилась — нужен интернет</em></a>` : ''}
+      ${t.fields.map(field).join('')}
+      ${!A ? '<button class="bigbtn" id="exCheck">Проверить</button><div id="exMsg" class="exmsg"></div>' : `<div class="exsol"><b>Разбор</b><ul>${t.e.map(x => `<li>${esc(x)}</li>`).join('')}</ul>${t.src ? srcBadge(t.src) : ''}</div>`}
+      <div class="cvnav">${i ? `<a class="cvbtn sec" href="#exam/${id}/${i}">‹ Назад</a>` : '<span></span>'}
+        ${A ? (i + 1 < n ? `<a class="cvbtn" href="#exam/${id}/${i + 2}">Следующая ›</a>` : `<a class="cvbtn" href="#exam/${id}/result">Итог ›</a>`) : `<a class="cvbtn sec" href="#exam/${id}/${i + 2 <= n ? i + 2 : 'result'}">Пропустить ›</a>`}</div></div></div>`;
+  view.querySelectorAll('.exin').forEach(el => el.addEventListener('input', () => { const d = examState(id); d.draft = d.draft || {}; (d.draft[i] = d.draft[i] || {})[el.dataset.j] = el.value; examSave(id, d); }));
+  const b = $('#exCheck');
+  if (b) b.onclick = () => {
+    const vals = [...view.querySelectorAll('.exin')].map(el => el.value);
+    if (vals.some(v => !v.trim())) { $('#exMsg').textContent = 'Введите ответ в каждое поле'; return; }
+    const d = examState(id);
+    d.a[i] = {}; t.fields.forEach((f, j) => { const r = ExamChecker.grade(f, vals[j]); d.a[i][j] = { ans: vals[j], v: r.v, score: r.score, msg: r.msg }; });
+    if (d.draft) delete d.draft[i];
+    examSave(id, d); examPage(id, String(i + 1)); window.scrollTo(0, view.querySelector('.exf').offsetTop - 70);
+  };
+  view.querySelectorAll('.exself').forEach(el => el.onclick = () => {
+    const d = examState(id), r = d.a[i][el.dataset.j]; r.self = true; examSave(id, d);
+    const sq = LS.get('examSelf', []); sq.push({ e: id, t: i + 1, f: +el.dataset.j, a: r.ans, at: Date.now() }); LS.set('examSelf', sq.slice(-300));   // для пополнения синонимов
+    examPage(id, String(i + 1));
+  });
+}
+function examResult(id) {
+  const E = EXAMS[id], s = examState(id), n = E.tasks.length, tot = examTotal(id);
+  const answered = Object.keys(s.a).length;
+  if (answered === n && !s.fin) {
+    s.fin = true; examSave(id, s);
+    learnSend({ item: 'exam:' + id, ev: 'quiz', score: Math.round(tot.score * 10) / 10, total: tot.of });
+  }
+  const bad = E.tasks.map((t, i) => ({ t, i, r: s.a[i] })).filter(x => !x.r || Object.values(x.r).some(r => !r.self && r.v !== 'ok'));
+  view.innerHTML = `<div class="expage"><div class="exintro exfin ${tot.passed ? 'pass' : 'fail'}"><div class="kick">Итог</div>
+    <h2>${answered < n ? 'Решено ' + answered + ' из ' + n : tot.passed ? 'Зачтено' : 'Не зачтено'}</h2>
+    <div class="exscore">${examFmt(tot.score)} из ${tot.of} баллов · ${Math.round(tot.share * 100)} %</div>
+    <p>${answered < n ? 'Вернитесь к пропущенным задачам — итог отправится организатору, когда будут решены все.' : 'Результат отправлен организатору обучения.'}</p></div>
+    ${bad.length ? `<div class="sec-h">${answered < n ? 'Не решены или с ошибками' : 'Задачи с ошибками — посмотрите разбор'}</div><div class="krlist">${bad.map(x => `<a class="kritem" href="#exam/${id}/${x.i + 1}"><span class="krn">${esc(x.t.k)}. ${esc(x.t.h)}</span><span class="krm">${x.r ? Object.values(x.r).map(r => r.self ? 'засчитано вами' : EXV[r.v][0].toLowerCase()).join(' · ') : 'не решена'}</span></a>`).join('')}</div>` : ''}
+    <div class="cvnav"><a class="cvbtn sec" href="#exam/${id}/again">Пройти заново</a><a class="cvbtn" href="#learn">К обучению</a></div></div>`;
+}

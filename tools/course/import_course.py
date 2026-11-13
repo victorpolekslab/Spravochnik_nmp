@@ -12,7 +12,7 @@
 Файлы озвучки версионируются (lecture_v<N>.mp3), картинки слайдов грузятся с ?v=<N>, поэтому повторный
 импорт не смешивается с кэшем WebView/CDN.
 """
-import html, json, os, re, shutil, subprocess, sys
+import hashlib, html, json, os, re, shutil, subprocess, sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 WWW = os.path.join(ROOT, 'android/app/src/main/assets/www')
@@ -75,7 +75,7 @@ def check(c, base=None):
     if c.get('status') not in ('draft', 'ready'): E.append('status: draft или ready')
     req(c, ['title', 'sub', 'srcName', 'feed'], 'курс')
     if c.get('src') and not re.fullmatch(r'КР\d+_\d+', c['src']): W.append(f'src «{c["src"]}» не похож на КР<ID>, например КР162_3')
-    if not c.get('course') and not c.get('lecture'): E.append('нужна хотя бы одна часть: course или lecture')
+    if not c.get('course') and not c.get('lecture') and not c.get('exam'): E.append('нужна хотя бы одна часть: course, lecture или exam')
     feed = c.get('feed') or {}
 
     def quiz(qs, where, lo, hi):
@@ -118,6 +118,33 @@ def check(c, base=None):
                             src_ok(x, w)
         quiz(co.get('quiz'), 'course.quiz', 3, 10)
 
+    if c.get('exam'):   # задачи со свободным ответом — EXAM_FORMAT.md
+        ex = c['exam']
+        if not feed.get('exam'): E.append('feed.exam: нет текста для ленты')
+        if not isinstance(ex.get('min'), (int, float)): E.append('exam.min: число минут')
+        if not (0 < float(ex.get('pass') or 0) <= 1): E.append('exam.pass: доля от 0 до 1, например 0.75')
+        if not ex.get('intro'): E.append('exam.intro: нет текста перед началом')
+        tasks = ex.get('tasks') or []
+        if not (1 <= len(tasks) <= 40): E.append('exam.tasks: нужно 1–40 задач')
+        for i, t in enumerate(tasks, 1):
+            w = f'задача {i}'
+            req(t, ['k', 'h', 'facts', 'fields', 'e'], w)
+            if not (1 <= len(t.get('facts') or []) <= 6): E.append(f'{w}: facts — 1–6 строк')
+            if t.get('img'): img_ok(t['img'], w)
+            src_ok(t, w)
+            fl = t.get('fields') or []
+            if not (1 <= len(fl) <= 4): E.append(f'{w}: fields — 1–4 поля')
+            for j, f in enumerate(fl, 1):
+                if not f.get('l') or not f.get('ref'): E.append(f'{w}, поле {j}: нужны l и ref')
+                if not f.get('need') and not f.get('num'): E.append(f'{w}, поле {j}: нужен need или num')
+                for b in f.get('ban') or []:
+                    try: re.compile(b.get('r', ''))
+                    except re.error as er: E.append(f'{w}, поле {j}: ban «{b.get("r")}» — неверное выражение ({er})')
+        ck = os.path.join(base, 'checker.js')
+        if os.path.exists(ck) and shutil.which('node') and os.path.exists(os.path.join(base, 'run_tests.js')):
+            r = subprocess.run(['node', 'run_tests.js'], cwd=base, capture_output=True, text=True)
+            (W if r.returncode == 0 else E).append(f'тесты проверки ответов: {(r.stdout.strip().splitlines() or ["нет вывода"])[-1]}')
+
     if c.get('lecture'):
         le = c['lecture']
         if not feed.get('lecture'): E.append('feed.lecture: нет текста для ленты')
@@ -157,6 +184,9 @@ def report(c, E, W):
         sl = c['lecture'].get('slides') or []
         n = sum(words(s.get('say')) for s in sl)
         print(f'  слайдов: {len(sl)}, слов озвучки: {n} (≈ {n / 125:.1f} мин), вопросов: {len(c["lecture"].get("quiz") or [])}')
+    if c.get('exam'):
+        ts = c['exam'].get('tasks') or []
+        print(f'  итоговое занятие: задач {len(ts)}, полей ответа {sum(len(t.get("fields") or []) for t in ts)}, зачёт {c["exam"].get("pass")}')
     for e in E: print('  ОШИБКА:', e)
     for w in W: print('  внимание:', w)
     if not E: print('  формат в порядке')
@@ -258,7 +288,7 @@ def slide_html(s):
         cls = 'ans'; body = f'{k}<h2>{md(s["h"])}</h2>{ul(s["items"])}<div class="verdict">{md(s["verdict"])}</div>'
     elif L == 'meme':
         a, b = s['left'], s['right']
-        k = f'<div class="kick">{md(s.get("kicker") or "Мем, чтобы запомнить")}</div>'
+        k = f'<div class="kick">{md(s.get("kicker") or "Чтобы запомнить")}</div>'
         body = (f'{k}<div class="two"><div class="card dark"><h3>{md(a.get("h"))}</h3><div class="quote">{md(a.get("quote"))}</div>'
                 + (f'<div class="foot">{md(a["foot"])}</div>' if a.get('foot') else '')
                 + f'</div><div class="card lite"><h3>{md(b.get("h"))}</h3>{ul(b.get("items"))}<div class="punch">{md(b.get("punch"))}</div></div></div>')
@@ -270,7 +300,7 @@ def slide_html(s):
     ims = imgs_of(s.get('img'))
     if ims:
         tag = lambda rel, extra='': f'<img src="{img_uri(rel)}"' + (f' data-anim="{rel}"' if rel.lower().endswith('.gif') else '') + f'{extra}>'
-        mode = 'full' if L in ('image', 'compare') else s.get('imgMode', 'side')
+        mode = 'full' if L in ('image', 'compare') else s.get('imgMode') or ('full' if L in ('table', 'flags') else 'side')   # таблице и флагам рядом со схемой тесно
         if mode == 'full':
             cap = s.get('caption') or s.get('verdict') or s.get('question') or s.get('note') or ''
             head = '<div class="fh">' + (f'<span class="kick">{md(s["kicker"])}</span>' if s.get('kicker') else '') + f'<b>{md(s.get("h", ""))}</b></div>'
@@ -407,7 +437,7 @@ def lecture_title(t):
 
 def gen():
     out = ['// Сгенерировано tools/course/import_course.py из courses/<id>/course.json — не править вручную.',
-           'window.COURSES = window.COURSES || {};', 'window.LECTURES = window.LECTURES || {};']
+           'window.COURSES = window.COURSES || {};', 'window.LECTURES = window.LECTURES || {};', 'window.EXAMS = window.EXAMS || {};']
     for cid in sorted(os.listdir(COURSES)) if os.path.isdir(COURSES) else []:
         p = os.path.join(COURSES, cid, 'course.json')
         if not os.path.exists(p) or cid in RESERVED: continue
@@ -426,6 +456,14 @@ def gen():
             co.update(min=c['course'].get('min', 7), cards=cards, quiz=c['course']['quiz'])
             out.append(f'COURSES[{json.dumps(cid)}] = {json.dumps(co, ensure_ascii=False, indent=1)};')
         import hashlib
+        if c.get('exam'):
+            ex = json.loads(json.dumps(c['exam']))
+            for t in ex['tasks']:
+                if t.get('img'):
+                    f = os.path.join(COURSES, cid, t['img'])
+                    t['img'] = f'media/{cid}/img/{os.path.basename(t["img"])}?v=' + (hashlib.sha256(open(f, 'rb').read()).hexdigest()[:10] if os.path.exists(f) else '0')
+            eo = {k: c[k] for k in ('title', 'sub', 'src', 'srcName') if c.get(k)}; eo.update(ex)
+            out.append(f'EXAMS[{json.dumps(cid)}] = {json.dumps(eo, ensure_ascii=False, indent=1)};')
         meta_p = os.path.join(MEDIA, cid, 'meta.json')
         if c.get('lecture') and os.path.exists(meta_p):
             le, m = c['lecture'], json.load(open(meta_p, encoding='utf-8'))
@@ -452,10 +490,15 @@ def feed(c):
         new.append({'id': f'lecture-{cid}', 'type': 'lecture', 'lecture': cid, 'title': lecture_title(c['title']), 'text': c['feed']['lecture'], 'new': True})
     if c.get('course'):
         new.append({'id': f'course-{cid}', 'type': 'course', 'course': cid, 'title': 'Курс: ' + c['title'][:1].lower() + c['title'][1:] if not re.match(r'^[А-ЯЁA-Z]{2}', c['title']) else 'Курс: ' + c['title'], 'text': c['feed']['course'], 'new': True})
-    ids = {x['id'] for x in new}
-    d['items'] = new + [x for x in items if x['id'] not in ids]
+    if c.get('exam'):
+        new.append({'id': f'exam-{cid}', 'type': 'exam', 'exam': cid, 'title': c['title'], 'text': c['feed']['exam'], 'new': True})
+    have = {x['id']: x for x in items}
+    for x in new:   # уже выпущенный курс (переозвучка, правка) — остаётся на своём месте и не помечается новым
+        if x['id'] in have: have[x['id']].update(title=x['title'], text=x['text'])
+    fresh = [x for x in new if x['id'] not in have]
+    d['items'] = fresh + items
     open(LEARN, 'w', encoding='utf-8').write(json.dumps(d, ensure_ascii=False, indent=1) + '\n')
-    print('  лента learn.json:', ', '.join(ids))
+    print('  лента learn.json:', ', '.join(x['id'] for x in new), '(новые: ' + (', '.join(x['id'] for x in fresh) or 'нет') + ')')
 
 
 def build(arg):
@@ -465,12 +508,19 @@ def build(arg):
     cid = c['id']; dst = os.path.join(COURSES, cid, 'course.json')
     if os.path.abspath(path_of(arg)) != os.path.abspath(dst):
         os.makedirs(os.path.dirname(dst), exist_ok=True); shutil.copy(path_of(arg), dst)
+        for extra in ('checker.js', 'run_tests.js', 'tests.json', 'EXAM_FORMAT.md'):
+            if os.path.exists(os.path.join(IMG_BASE[0], extra)): shutil.copy(os.path.join(IMG_BASE[0], extra), os.path.join(COURSES, cid, extra))
         if os.path.isdir(os.path.join(IMG_BASE[0], 'img')):
             shutil.rmtree(os.path.join(COURSES, cid, 'img'), ignore_errors=True)
             shutil.copytree(os.path.join(IMG_BASE[0], 'img'), os.path.join(COURSES, cid, 'img'))
     # картинки карточек — на сайт (media/<id>/img/), имена с версией содержимого против кэша
     used = {b['img'] for cd in (c.get('course') or {}).get('cards', []) for b in cd.get('blocks', []) if b.get('t') == 'img'}
     used |= {r for sl in (c.get('lecture') or {}).get('slides', []) for r in imgs_of(sl.get('img')) if r.lower().endswith('.gif')}   # анимации для плеера
+    used |= {t['img'] for t in (c.get('exam') or {}).get('tasks', []) if t.get('img')}   # ленты ЭКГ задач
+    ck = os.path.join(COURSES, cid, 'checker.js')
+    if c.get('exam') and os.path.exists(ck):   # общий модуль проверки свободных ответов
+        dst_ck = os.path.join(WWW, 'content_examcheck.js')
+        if not os.path.exists(dst_ck) or open(ck, 'rb').read() != open(dst_ck, 'rb').read(): shutil.copy(ck, dst_ck); print('  обновлён content_examcheck.js')
     used = sorted(used)
     mimg = os.path.join(MEDIA, cid, 'img')
     shutil.rmtree(mimg, ignore_errors=True)

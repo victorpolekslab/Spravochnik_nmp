@@ -11,7 +11,7 @@ import gzip, json, os, re, sqlite3, sys
 from bs4 import BeautifulSoup, NavigableString, Comment
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-DB = os.path.join(ROOT, 'android/app/src/main/assets/cr.db')
+DB = os.environ.get('KR_DB') or ('/home/claude/cr/build/cr.db' if os.path.exists('/home/claude/cr/build/cr.db') else os.path.join(ROOT, 'android/app/src/main/assets/cr.db'))
 SKIP = {'doc_whole', 'doc_title', 'doc_a1', 'doc_bible'}
 AGE = {1: 'взрослые', 2: 'дети', 3: 'взрослые и дети'}
 

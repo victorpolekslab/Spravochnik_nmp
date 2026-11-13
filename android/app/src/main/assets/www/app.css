@@ -897,3 +897,26 @@ nav#tabs a[hidden] { display: none; }
 .homebar + .routecard { margin-top: 6px; }
 .sharepg .sharecard { margin: 12px; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
 .sharepg .sharecard > b { font-size: 17px; }
+
+/* итоговое занятие */
+.expage { padding: 6px 12px 24px; }
+.exbar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; margin: 6px 0 10px; } .exbar i { display: block; height: 100%; background: var(--accent); }
+.exintro, .extask { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+.expage .kick { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.expage h2 { font-size: 20px; margin: 4px 0 8px; line-height: 1.25; }
+.exmeta { margin: 8px 0 14px; padding-left: 18px; color: var(--muted); font-size: 14px; }
+.exfacts { margin: 0 0 10px; padding-left: 18px; font-size: 15px; line-height: 1.4; }
+.eximg { display: block; background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin: 8px 0 12px; text-decoration: none; }
+.eximg img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; }
+.eximg span { display: block; text-align: center; font-size: 12px; color: #6b7280; padding: 4px 0 6px; } .eximg em { display: none; }
+.eximg.noimg img, .eximg.noimg span { display: none; } .eximg.noimg em { display: block; padding: 18px; text-align: center; font-style: normal; color: #6b7280; }
+.exf { margin: 12px 0; } .exf label { display: block; font-weight: 600; font-size: 14.5px; margin-bottom: 5px; }
+.exin { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); }
+.exin:disabled { opacity: .85; }
+.exres { margin-top: 6px; font-size: 14px; line-height: 1.35; } .exres.ok b { color: #2e7d4f; } .exres.mid b { color: #b7791f; } .exres.low b { color: var(--accent); }
+.exref { font-size: 13.5px; color: var(--muted); margin-top: 3px; }
+.exself { margin-top: 6px; font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--fg); }
+.exsol { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); font-size: 14.5px; } .exsol ul { margin: 6px 0; padding-left: 18px; }
+.exmsg { color: var(--accent); font-size: 14px; margin-top: 6px; }
+.exscore { font-size: 17px; font-weight: 700; margin: 4px 0 6px; } .exfin.pass h2 { color: #2e7d4f; } .exfin.fail h2 { color: var(--accent); }
+.lty.exam { background: #6b4fbb; }

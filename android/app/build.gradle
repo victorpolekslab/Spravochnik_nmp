@@ -8,8 +8,8 @@ android {
         applicationId 'ru.klinrek.feldsher'
         minSdk 26
         targetSdk 34
-        versionCode 37
-        versionName "4.6 (КР от 03.11.2026)"
+        versionCode 38
+        versionName "4.7 (КР от 13.11.2026)"
     }
 
     signingConfigs {
