@@ -512,6 +512,7 @@ function learnFlush() {
     .then(() => { const ids = new Set(batch.map(x => x.id)); LS.set('learnQueue', LS.get('learnQueue', []).filter(x => !ids.has(x.id))); })
     .catch(() => {}).finally(() => { LEARN.flushing = false; });
 }
+function learnSaved() { const v = LS.get('learnSaved', null); return v && v.lg && v.pw ? v : null; }
 let LEARN_TAB = 'course';   // вкладка ленты обучения: по умолчанию «Курсы»
 function learnPage(noFetch) {
   setTitle('Обучение и опросы', false);
@@ -524,7 +525,11 @@ function learnPage(noFetch) {
       <label class="lf"><span>Пароль</span><span class="lpw"><input id="lPw" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false"><button type="button" class="lpeye" id="lEye">показать</button></span></label>
       <div class="lerr" id="lErr"></div>
       <button class="bigbtn" id="lGo">Войти</button></div>
-      <p class="disc">Приложение запоминает вход на этом устройстве. Пароль не хранится и никуда не передаётся — проверяется на телефоне.</p>`;
+      ${learnSaved() ? '<a class="lforget" id="lForget">Забыть сохранённый пароль</a>' : ''}
+      <p class="disc">Приложение запоминает вход на этом устройстве. Пароль никуда не передаётся — проверяется на телефоне. Сохранить его можно при выходе: он останется только на этом телефоне.</p>`;
+    const sv = learnSaved();
+    if (sv) { $('#lLogin').value = sv.lg; $('#lPw').value = sv.pw; }
+    if ($('#lForget')) $('#lForget').onclick = () => { LS.set('learnSaved', null); learnPage(true); };
     let LAST_PW = '';
     const check = (dd, lg, pw) => {
       const k = learnKey(lg), rec = (dd.users || {})[k], p2 = pw.replace(/\s+/g, '').toLowerCase();
@@ -535,6 +540,7 @@ function learnPage(noFetch) {
     };
     const ok = (k, lg, pw) => {
       LS.set('learnUser', { k, name: learnPretty(lg) });
+      LS.set('learnSaved', { lg: learnPretty(lg), pw, keep: !!(learnSaved() || {}).keep });   // при выходе спросим, оставить ли
       const dd = learnData();
       if (dd && dd.org && dd.org.k === k) { const K = orgDerive(dd.org.salt, pw); if (orgOpen(dd.org, K)) { LS.set('orgK', K); orgApply(dd); krEnable(true); } }
       learnPage(true);
@@ -606,7 +612,20 @@ function learnPage(noFetch) {
         <div class="lbtns">${url && !past ? `<a class="bigbtn lgo" data-id="${esc(x.id)}" href="${esc(url)}" target="_blank" rel="noopener">${t[1]}</a>` : (!past && x.type !== 'material' ? '<span class="lsoon">ссылка появится позже</span>' : '')}
           ${x.read ? `<a class="lread" data-id="${esc(x.id)}" href="${esc(x.read)}">${x.type === 'material' ? 'Открыть в справочнике' : 'Повторить раздел'} ›</a>` : ''}</div></div>`; }).join('')}
     <p class="disc">Результаты тестов и опросов видит организатор обучения. Логин подставляется в форму автоматически.</p>`;
-  $('#lOut').onclick = () => { if (isOrg()) { LS.set('orgK', ''); LS.set('orgKey', ''); LS.set('orgNames', ''); krEnable(false); } LS.set('learnUser', null); learnPage(true); statsTabSync(); };
+  const out = keep => {
+    if (isOrg()) { LS.set('orgK', ''); LS.set('orgKey', ''); LS.set('orgNames', ''); krEnable(false); }
+    const sv = learnSaved(); LS.set('learnSaved', keep && sv ? Object.assign(sv, { keep: true }) : null);
+    LS.set('learnUser', null); learnPage(true); statsTabSync();
+  };
+  $('#lOut').onclick = () => {
+    if (!learnSaved()) return out(false);   // вошли до этого обновления — пароля нет, выходим как раньше
+    const box = document.createElement('div'); box.className = 'loutask';
+    box.innerHTML = `<b>Сохранить пароль на этом телефоне?</b><p>Тогда при следующем входе логин и пароль будут уже заполнены.</p>
+      <button class="bigbtn" data-k="1">Сохранить и выйти</button><button class="bigbtn lsec" data-k="0">Выйти без сохранения</button><a class="lcancel">Отмена</a>`;
+    $('.luser').after(box); $('#lOut').style.visibility = 'hidden';
+    box.querySelectorAll('button').forEach(b => b.onclick = () => out(b.dataset.k === '1'));
+    box.querySelector('.lcancel').onclick = () => { box.remove(); $('#lOut').style.visibility = ''; };
+  };
   statsTabSync();
   view.querySelectorAll('.ltabs a').forEach(a => a.onclick = () => { LEARN_TAB = a.dataset.tab; learnPage(true); scrollTo(0, 0); });
   view.querySelectorAll('[data-id]').forEach(el => el.addEventListener('click', () => { const s = LS.get('learnSeen', []); if (!s.includes(el.dataset.id)) { s.push(el.dataset.id); LS.set('learnSeen', s); } }));
