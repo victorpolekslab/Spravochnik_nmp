@@ -483,6 +483,30 @@ def gen():
     print('  content_courses.js обновлён')
 
 
+SERIES_RE = re.compile(r'^(?:Курс: |Лекция: )?(.+?)\. (?:Часть (\d+)|(Итоговое))', re.I)
+
+
+def order_series(items):
+    """Циклы («ЭКГ. Часть 1…N» + «ЭКГ. Итоговое занятие») идут в ленте подряд, сверху вниз от первого занятия
+    к последнему, итоговое — в конце цикла. Блок цикла стоит там, где был самый верхний его элемент."""
+    key = {}
+    for i, x in enumerate(items):
+        m = SERIES_RE.match(x.get('title', ''))
+        if m: key[i] = (m.group(1).lower(), int(m.group(2)) if m.group(2) else 10_000)
+    for ser in dict.fromkeys(k[0] for k in key.values()):
+        idx = [i for i, k in key.items() if k[0] == ser]
+        if len(idx) < 2: continue
+        block = sorted((items[i] for i in idx), key=lambda x: (key[items.index(x)][1], x['type'] != 'course'))
+        rest = [x for i, x in enumerate(items) if i not in idx]
+        at = sum(1 for i in range(min(idx)) if i not in idx)
+        items = rest[:at] + block + rest[at:]
+        key = {}
+        for i, x in enumerate(items):
+            m = SERIES_RE.match(x.get('title', ''))
+            if m: key[i] = (m.group(1).lower(), int(m.group(2)) if m.group(2) else 10_000)
+    return items
+
+
 def feed(c):
     d = json.load(open(LEARN, encoding='utf-8'))
     items = d['items']; cid = c['id']; new = []
@@ -496,7 +520,7 @@ def feed(c):
     for x in new:   # уже выпущенный курс (переозвучка, правка) — остаётся на своём месте и не помечается новым
         if x['id'] in have: have[x['id']].update(title=x['title'], text=x['text'])
     fresh = [x for x in new if x['id'] not in have]
-    d['items'] = fresh + items
+    d['items'] = order_series(fresh + items)
     open(LEARN, 'w', encoding='utf-8').write(json.dumps(d, ensure_ascii=False, indent=1) + '\n')
     print('  лента learn.json:', ', '.join(x['id'] for x in new), '(новые: ' + (', '.join(x['id'] for x in fresh) or 'нет') + ')')
 
