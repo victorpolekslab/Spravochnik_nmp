@@ -8,6 +8,8 @@ python3 apply_reviews.py md_dir reviews_1.json [reviews_2.json ...]
 Запускать после apply_checks.py: решения хранятся в ocr/reviews_*.json и переносятся при пересборке.
 """
 import json, os, re, sys, collections
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from ocr_rules import rules   # строки из старых файлов проверки — до исправления правилами
 md_dir, files = sys.argv[1], sys.argv[2:]
 by_md = collections.defaultdict(lambda: {'ok': set(), 'bad': [], 'auto': set()})
 for f in files:
@@ -29,8 +31,9 @@ for md, rv in by_md.items():
     body, sep, check = text.partition('\n## Проверка распознавания\n')
     done = set(rv['ok'])
     for b in rv['bad']:
-        if b['line'] in body:
-            body = body.replace(b['line'], b['fix'], 1); stat['исправлено'] += 1
+        line = b['line'] if b['line'] in body else rules(b['line'])
+        if line in body:
+            body = body.replace(line, b['fix'], 1); stat['исправлено'] += 1
         else:
             stat['исправление не найдено в тексте'] += 1
             print('не найдено:', md, '|', b['line'][:60])
