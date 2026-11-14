@@ -78,6 +78,12 @@ const DM = window.DrugsModule ? window.DrugsModule({
   fetchText: url => fetch(url).then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)))
 }) : null;
 if (DM) setTimeout(() => DM.preload(), 1500);
+// Помощник выписки рецептов (content_rx.js, перенесён из «Справочника терапевта»): #rx — поиск, #rx/<строка> — бланк и образец
+const RXM = DM && window.RxModule ? window.RxModule({
+  view, go, esc, dm: DM,
+  icon: () => '<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
+  setTitle: t => setTitle(t, false)
+}) : null;
 // состояние аналитики и экрана «Использование» (объявлено до первого route())
 const AN = { last: '', lastAt: 0, sq: {} };
 let USAGE_DAYS = 30;
@@ -118,6 +124,7 @@ function route() {
     case 'usage': setTab('stats'); LS.set('statsTab', 'usage'); usagePage(); break;
     case 'doc': doc(parts[1], parts[2], params.get('h') || ''); return;
     case 'drugs': case 'drug': case 'ix': setTab('home'); if (DM) DM.route(parts, params); else go('#home'); break;
+    case 'rx': setTab('home'); if (RXM) RXM.route(parts[1]); else go('#home'); break;
     default: setTab('home'); home();
   }
   window.scrollTo(0, S.scroll[h] || 0);
@@ -184,7 +191,8 @@ const TOOLS = [
   { h: '#calc/shock', t: 'Индекс Альговера', s: 'шоковый индекс, кровопотеря', i: 'M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11zM9 14h6' },
   { h: '#calc/vas', t: 'Шкала боли (ВАШ)', s: '0–10, интенсивность боли', i: 'M4 12h16M4 12l3-3M4 12l3 3M20 12l-3-3M20 12l-3 3' },
   { h: '#calc/nvp', t: 'Боль без сознания', s: 'CPOT, FLACC — по поведению', i: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8 10h2.5M13.5 10H16M8.5 15.5c2-1.5 5-1.5 7 0' },
-  { h: '#calc/skin', t: 'Кожные элементы', s: 'определитель морфологии сыпи', i: 'M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4.5-4.5M8 9h.01M12 8.5h.01M10.5 12.5h.01' }
+  { h: '#calc/skin', t: 'Кожные элементы', s: 'определитель морфологии сыпи', i: 'M10.5 4a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM20 20l-4.5-4.5M8 9h.01M12 8.5h.01M10.5 12.5h.01' },
+  { h: '#rx', t: 'Выписка рецептов', s: 'бланк, количество, печати, образец', i: 'M7 3h7l5 5v13H7zM14 3v5h5M10 12h3a2 2 0 0 1 0 4h-3v-4zM10 16v3M13 16l3 3' }
 ];
 function home() {
   setTitle('Справочник фельдшера НМП', true);
@@ -1723,7 +1731,7 @@ function anOpen() {
 function anView(parts) {
   const p0 = parts[0] || 'home', id = parts[1] || '';
   const M = { rec: id ? 'topic:' + id : 'rec', d: 'scheme:' + id, mkb: id ? 'mkb:node' : 'mkb', calc: 'calc:' + id, course: 'course:' + id,
-    lecture: (parts[2] === 'test' ? 'lecture-test:' : 'lecture:') + id, cr: 'cr:' + id, doc: 'doc:' + id };
+    lecture: (parts[2] === 'test' ? 'lecture-test:' : 'lecture:') + id, cr: 'cr:' + id, doc: 'doc:' + id, rx: id ? 'rx:drug' : 'rx' };
   const k = (M[p0] || p0).replace(/[^\w:.-]/g, '').slice(0, 60);
   if (k === AN.last && Date.now() - AN.lastAt < 30 * 60e3) return;
   AN.last = k; AN.lastAt = Date.now(); anPush('view', k);
@@ -1748,7 +1756,7 @@ function anFlush() {
 function anTitle(k) {
   const [a, b] = k.split(':');
   const plain = { home: 'Главная', rec: 'Справочник (темы)', mkb: 'Поиск по МКБ', route: 'Дежурные стационары', learn: 'Обучение и опросы', about: 'О справочнике',
-    report: 'Отчёт по обучению', krnew: 'Новое в КР', usage: 'Использование', 'mkb:node': 'МКБ: просмотр раздела' };
+    report: 'Отчёт по обучению', krnew: 'Новое в КР', usage: 'Использование', 'mkb:node': 'МКБ: просмотр раздела', rx: 'Выписка рецептов', 'rx:drug': 'Выписка рецептов: препарат' };
   if (plain[k]) return plain[k];
   if (a === 'scheme') return (byId[b] && byId[b].title) || 'Схема ' + b;
   if (a === 'topic') { const t = TOPICS.find(x => x.k === b); return 'Тема: ' + (t ? t.t : b); }
@@ -1773,7 +1781,7 @@ function usagePage() {
     if (!u.devices) { box.innerHTML = '<div class="rwempty">Данных пока нет. Телефоны начнут присылать статистику после обновления приложения — первые цифры появятся в течение дня.</div>'; return; }
     const bars = (rows, lab) => { const mx = Math.max(1, ...rows.map(r => r[1])); return `<div class="ubars">${rows.map((r, i) => `<div class="ubar" title="${esc(r[0])}: ${r[1]}"><i style="height:${Math.round(r[1] / mx * 100)}%"></i><span>${esc(lab(r[0], i))}</span></div>`).join('')}</div>`; };
     const list = (rows, f, empty) => rows.length ? `<div class="ulist">${rows.map(r => `<div class="urow"><span>${f(r)}</span><b>${r[1]}</b>${r[2] != null ? `<small>${r[2]} тел.</small>` : ''}</div>`).join('')}</div>` : `<div class="krnote">${empty}</div>`;
-    const sq = s => { const i = s.indexOf(':'); return `<i class="usc">${s.slice(0, i) === 'mkb' ? 'МКБ' : 'справ.'}</i> ${esc(s.slice(i + 1))}`; };
+    const sq = s => { const i = s.indexOf(':'); return `<i class="usc">${s.slice(0, i) === 'mkb' ? 'МКБ' : s.slice(0, i) === 'rx' ? 'рецепт' : 'справ.'}</i> ${esc(s.slice(i + 1))}`; };
     box.innerHTML = `<div class="ukpi">
         <div><b>${u.devices}</b><span>телефонов за ${USAGE_DAYS} дн.</span></div>
         <div><b>${u.today}</b><span>сегодня</span></div>
