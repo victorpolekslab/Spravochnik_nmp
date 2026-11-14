@@ -4,7 +4,8 @@ python3 ocr_rules.py md_dir flags.json --done reviews_*.json --out ocr/reviews_a
 Правила (применяются только к документам, где были страницы-сканы; единица СКФ — ко всем):
   • «мл/мин/1,73 м2 | м? | …» → «мл/мин/1,73 м²» (единица СКФ);
   • «|» или «]» перед единицей или счётным словом → «1»: «| г» → «1 г», «по | таблетке», «5 мг | раз в сутки»;
-  • «1]» перед словом → «1».
+  • «1]» перед словом → «1»;
+  • «mr», «Mr», «мr», «mг» после числа → «мг», «mkr», «мкr» → «мкг».
 Пометка снимается, если после правил все её сомнения объяснены: неуверенно был распознан только символ,
 который правило заменило на «1», или числа повторного чтения совпали с числами строки.
 """
@@ -15,12 +16,20 @@ WORD = (r'(?:раз|г\b|мг|мкг|мл|таблет|капсул|ампул|�
         r'недел|месяц|год|лет|час|ч\b|мин|кг|шт|пастил|драже|свеч|пластыр|аппликатор|мерн|ложк|стакан)')
 PIPE = re.compile(r'(?:(?<=\s)|(?<=^)|(?<=\())[|\]](?=\s?' + WORD + ')', re.M)
 BRACKET = re.compile(r'(?<=\b1)\](?=\s+[а-яё])')
+# «mr», «Mr», «мr», «mг», «mkr», «мкr» после числа — это «мг» / «мкг» (латинские буквы вместо кириллицы)
+MG = re.compile(r'(?<=\d)(\s?)([mMм][kKк]?\s?[rг])(?![A-Za-zА-Яа-яЁё0-9])', re.M)
+def _mg(m):
+    u = m.group(2).replace(' ', '')
+    if u in ('мг', 'мкг'):
+        return m.group(0)
+    return m.group(1) + ('мкг' if u[1:2] in ('k', 'K', 'к') else 'мг')
 
 def rules(t, ocr=True):
     t = EGFR.sub('мл/мин/1,73 м²', t)
     if ocr:
         t = PIPE.sub('1', t)
         t = BRACKET.sub('', t)
+        t = MG.sub(_mg, t)
     return t
 
 def nums(s):
@@ -39,9 +48,9 @@ if __name__ == '__main__':
         ocr = 'Распознано автоматически (OCR)' in t
         new = rules(t, ocr)
         if new != t:
-            n_rep += len(PIPE.findall(t)) + len(BRACKET.findall(t)) if ocr else 0
+            n_rep += (len(PIPE.findall(t)) + len(BRACKET.findall(t)) + sum(1 for m in MG.finditer(t) if _mg(m) != m.group(0))) if ocr else 0
             open(p, 'w', encoding='utf-8').write(new); n_docs += 1
-    print('правила применены: «|»/«]» → «1» в %d местах; изменено документов: %d' % (n_rep, n_docs))
+    print('правила применены (|→1, mr→мг) в %d местах; изменено документов: %d' % (n_rep, n_docs))
 
     done = set()
     for d in a.done:
@@ -60,7 +69,7 @@ if __name__ == '__main__':
                 if why.startswith('низкая уверенность'):
                     for tok, conf in re.findall(r'«([^»]*)» \((\d+)\)', why):
                         t = tok.strip('()[];:,.')
-                        if t in ('|', ']', '1]') or EGFR.fullmatch(t) or re.fullmatch(r'(?:мл/мин(?:/1[,.]?73)?|1[,.]?73|[мm][2²?”"’]?)', t):
+                        if t in ('|', ']', '1]') or re.fullmatch(r'[mMм][kKк]?[rг]', t) or EGFR.fullmatch(t) or re.fullmatch(r'(?:мл/мин(?:/1[,.]?73)?|1[,.]?73|[мm][2²?”"’]?)', t):
                             continue
                         ok = False
                 elif why.startswith('повторное чтение'):
@@ -72,7 +81,7 @@ if __name__ == '__main__':
             if ok:
                 auto.append([f['md'], f['id']])
         f['line'] = new_line
-    json.dump({'source': 'auto: правила OCR (ocr_rules.py): «|» → «1», единица СКФ', 'bad': [], 'ok': auto, 'skip': []},
+    json.dump({'source': 'auto: правила OCR (ocr_rules.py): «|» → «1», mr → мг, единица СКФ', 'bad': [], 'ok': auto, 'skip': []},
               open(a.out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     if a.flags_out:
         json.dump(flags, open(a.flags_out, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))

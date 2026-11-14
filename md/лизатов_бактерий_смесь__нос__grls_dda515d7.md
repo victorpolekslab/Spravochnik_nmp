@@ -155,7 +155,7 @@ COO 000 000 0
   ![стр. 1](../ocr/dda515d7-a9a2-4d32-8391-a55d76818844_c791bc53-4444-4de7-bb2b-5a29f0661a44_p1_3.png)
 - стр. 1: «Streptococcus group G _sccsucscsssussuasesanuccssuesssuesenecessesssscsssecesecssacecsieecseesseessecssssessecesecsereeseee 506 МЛ» — низкая уверенность: «506» (67); повторное чтение: «Streptococcus group Соленые 1366 М»  
   ![стр. 1](../ocr/dda515d7-a9a2-4d32-8391-a55d76818844_c791bc53-4444-4de7-bb2b-5a29f0661a44_p1_4.png)
-- стр. 2: «Ароматизатор на основе нерола**................... еее инете 12,50 мг» — повторное чтение: «Ароматизатор на основе нерола** seseessennseesnsnessnrnsnsensacetesnerernsentsssnceresssecsssssers 12,50 Mr»  
+- стр. 2: «Ароматизатор на основе нерола**................... еее инете 12,50 мг» — повторное чтение: «Ароматизатор на основе нерола** seseessennseesnsnessnrnsnsensacetesnerernsentsssnceresssecsssssers 12,50 мг»  
   ![стр. 2](../ocr/dda515d7-a9a2-4d32-8391-a55d76818844_c791bc53-4444-4de7-bb2b-5a29f0661a44_p2_5.png)
 - стр. 3: «(1 доза=1 короткое нажатие пульверизатора).» — повторное чтение: «a доза=1 короткое нажатие пульверизатора).»  
   ![стр. 3](../ocr/dda515d7-a9a2-4d32-8391-a55d76818844_c791bc53-4444-4de7-bb2b-5a29f0661a44_p3_6.png)
