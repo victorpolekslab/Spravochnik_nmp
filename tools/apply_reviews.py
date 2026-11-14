@@ -7,7 +7,7 @@ python3 apply_reviews.py md_dir reviews_1.json [reviews_2.json ...]
   и добавляется «Проверено вручную: N строк».
 Запускать после apply_checks.py: решения хранятся в ocr/reviews_*.json и переносятся при пересборке.
 """
-import json, os, re, sys, collections
+import difflib, json, os, re, sys, collections
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from ocr_rules import rules   # строки из старых файлов проверки — до исправления правилами
 md_dir, files = sys.argv[1], sys.argv[2:]
@@ -32,6 +32,9 @@ for md, rv in by_md.items():
     done = set(rv['ok'])
     for b in rv['bad']:
         line = b['line'] if b['line'] in body else rules(b['line'])
+        if line not in body:                                     # строку могла поправить проверка орфографии
+            near = difflib.get_close_matches(line, body.split('\n'), n=1, cutoff=0.85)
+            line = near[0] if near else line
         if line in body:
             body = body.replace(line, b['fix'], 1); stat['исправлено'] += 1
         else:

@@ -8,7 +8,7 @@
 
 ## Общие сведения
 
-МИНИСТЕРСТВО ЗДРАВООХРАНЕНИЯ РОССИИСКОЙ ФЕДЕРАЦИИ
+МИНИСТЕРСТВО ЗДРАВООХРАНЕНИЯ РОССИЙСКОЙ ФЕДЕРАЦИИ
 ИНСТРУКЦИЯ ПО МЕДИЦИНСКОМУ ПРИМЕНЕНИЮ-ЛЕКАРСТВЕННОГО
 | ——_ ны | ПРЕПАРАТА | т — | МИНЗДРАВ Бил |
 | "ПР РОССИИ | | ЛП - пла "T- 00623 1-02 обо |
@@ -34,7 +34,7 @@ Peptococcus spp., Peptostreptococcus spp., Clostridium spp.)
 © пептидной цепи. Эффективен в отношении штаммов бактерий, устойчивых к пенициллину, тетрациклинам, сульфаниламидам. Активен в отношении многих грамположительных и грамотрицательных бактерий, возбудителей гнойных инфекций, брюшного тифа, дизентерии, менингококковой инфекции: Escherichia coli, Shigella dysenteria, Shigella flexneri spp., Shigella boydii spp., Shigella sonnei spp., Salmonella spp. (в т.ч. Salmonella typhi, Salmonella paratyphi), Staphylococcus spp., Streptococcus spp. (в т.ч.
 Streptococcus pneumoniae), Neisseria meningitidis, Neisseria gonorrhoeae, ряда штаммов
 Proteus spp., Burkholderia pseudomallei; Rickettsia spp., Treponema spp., Leptospira spp.,
-Chlamydia spp. (в т.ч. Chlamydia trachomatis), Coxiella burnetii, Ehrlichia canis, Bacteroides fragilis, Klebsiella pneumoniae, Haemophilus influenzae. Не действует Ha кислотоустойчивые бактерии (в т.ч. Mycobacterium tuberculosis), синегнойную палочку, клостридии,
+Chlamydia spp. (в т.ч. Chlamydia trachomatis), Coxiella burnetii, Ehrlichia canis, Bacteroides fragilis, Klebsiella pneumoniae, Haemophilus influenzae. Не действует На кислотоустойчивые бактерии (в т.ч. Mycobacterium tuberculosis), синегнойную палочку, клостридии,
 © устойчивые к метициллину штаммы стафилококков, Acinetobacter, Enterobacter, Seirratia marcescens, индолположительные штаммы Proteus spp., Pseudomonas aeruginosa 5рр., простейших и грибы. Устойчивость микроорганизмов развивается медленно.
 Натамицин - полиеновый антибиотик из группы макролидов, имеющий широкий спектр действия. Оказывает фунгицидное действие. Натамицин связывает стеролы клеточных мембран микроорганизмов, нарушая их целостность и функции, что приводит к изменению проницаемости клетки и ее гибели. Активен в отношении большинства патогенных дрожжеподобных грибов (особенно рода Candida), дерматофитов
 (Trichophyton, Microsporum, Epidermophyton), дрожжей (Torulopsis, Rhodotorula), других патогенных грибов (Aspergillus, Penicillium, Fusarium, Cephalosporium). Резистентность к натамицину в клинической практике не встречается.
@@ -127,7 +127,7 @@ Chlamydia spp. (в т.ч. Chlamydia trachomatis), Coxiella burnetii, Ehrlichia c
 
 ## 4.5. Взаимодействие с другими лекарственными средствами
 
-При одновременном применении с иероральными антикоагулянтами (например, варфарин)
+При одновременном применении с пероральными антикоагулянтами (например, варфарин)
 
 возможно повышение концентрации антикоагулянтов в плазме, усиление эффекта и,
 
@@ -247,7 +247,7 @@ Chlamydia spp. (в т.ч. Chlamydia trachomatis), Coxiella burnetii, Ehrlichia c
 
 125284, Россия, г. Москва, Ленинградский проспект, д. З1А, стр. 1.
 
-Производитель готовой лекарственной формы/лервичная упаковка
+Производитель готовой лекарственной формы/первичная упаковка
 
 ООО «ФАРМАПРИМ»
 
