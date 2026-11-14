@@ -9,11 +9,14 @@ python3 apply_reviews.py md_dir reviews_1.json [reviews_2.json ...]
 """
 import json, os, re, sys, collections
 md_dir, files = sys.argv[1], sys.argv[2:]
-by_md = collections.defaultdict(lambda: {'ok': set(), 'bad': []})
+by_md = collections.defaultdict(lambda: {'ok': set(), 'bad': [], 'auto': set()})
 for f in files:
     r = json.load(open(f, encoding='utf-8'))
+    is_auto = str(r.get('source', '')).startswith('auto')   # снято автоматически — не считается «проверено вручную»
     for md, cid in r.get('ok', []):
         by_md[md]['ok'].add(cid)
+        if is_auto:
+            by_md[md]['auto'].add(cid)
     for b in r.get('bad', []):
         by_md[b['md']]['bad'].append(b)
 
@@ -48,8 +51,11 @@ for md, rv in by_md.items():
                       f'- Сомнительных строк после OCR: {n} (см. раздел «Проверка распознавания»)' if n else
                       '- Сомнительных строк после OCR не осталось', body, count=1)
     m = re.search(r'- Проверено вручную строк: (\d+)', body)
-    total = len(done) + (int(m.group(1)) if m else 0)
-    if m:
+    manual = len(done - rv['auto'])
+    total = manual + (int(m.group(1)) if m else 0)
+    if not manual:
+        pass
+    elif m:
         body = body.replace(m.group(0), f'- Проверено вручную строк: {total}', 1)
     else:
         body = re.sub(r'(- (?:Сомнительных строк после OCR[^\n]*))', r'\1' + f'\n- Проверено вручную строк: {total}', body, count=1)
