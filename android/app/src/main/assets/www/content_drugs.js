@@ -22,6 +22,8 @@
 .dg-tag.lv{background:#FDF0D9;color:#7A4A00}.dg-tag.ocr{background:#E3EEFB;color:#1F5FA8}\
 .dg-add{flex:none;width:36px;height:36px;border-radius:18px;border:1px solid var(--line);background:var(--surface);color:var(--accent);font-size:22px;line-height:1;cursor:pointer}\
 .dg-add.on{background:var(--accent);border-color:var(--accent);color:#fff}\
+.dg-rx{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--surface2);color:inherit;text-decoration:none;font-size:14.5px}\
+.dg-rx span:last-child{color:var(--accent);font-weight:600;white-space:nowrap}\
 .dg-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}\
 .dg-card h2{font-size:19px;margin:0;line-height:1.25}\
 .dg-meta{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:2px}\
@@ -228,6 +230,13 @@
     function textH(t) {
       return t.split('\n').filter(function (l) { return l.trim(); }).map(function (l) { return '<p>' + esc(l) + '</p>'; }).join('');
     }
+    function rxLine(i, r) {   // форма рецептурного бланка — из помощника выписки рецептов (content_rx.js)
+      if (!window.RxClassify || !window.RX) return '';
+      try {
+        var c = window.RxClassify(r), t = { '107': 'бланк 107-1/у', '148': 'бланк 148-1/у-88', np: 'бланк 107/у-НП', otc: 'рецепт не нужен', hosp: 'для стационаров' }[c.form];
+        return '<a class="dg-rx" href="#rx/' + i + '"><span>Рецепт: <b>' + esc(t) + '</b></span><span>образец ›</span></a>';
+      } catch (e) { return ''; }
+    }
     function cardPage(i) {
       var r = D.rows[i];
       if (!r) { host.go('#drugs'); return; }
@@ -237,7 +246,7 @@
       var head = '<div class="dg-card"><h2>' + esc(r[0]) + '</h2><div class="dg-sub">' + esc(r[1] || '—') + '<br>' + esc(r[2]) + '</div><div>' +
         '<span class="dg-tag">' + esc(r[3]) + '</span>' + (r[4] ? '<span class="dg-tag">АТХ ' + esc(r[4]) + '</span>' : '') + (r[5] ? '<span class="dg-tag">' + esc(r[5]) + '</span>' : '') + '</div>' +
         '<div class="dg-btns"><button class="dg-btn' + (inList(i) ? ' p' : '') + '" id="dgadd">' + (inList(i) ? '✓ В списке взаимодействий' : '+ К проверке взаимодействий') + '</button>' +
-        (list().length ? '<a class="dg-btn" href="#ix">Проверить список</a>' : '') + '</div></div>';
+        (list().length ? '<a class="dg-btn" href="#ix">Проверить список</a>' : '') + '</div>' + rxLine(i, r) + '</div>';
       if (!d) {
         view.innerHTML = '<div class="dg-wrap">' + head + '<div class="dg-note">Для этого препарата не нашлось ни ОХЛП в реестре ЕАЭС, ни инструкции в ГРЛС. Сверьтесь с инструкцией в упаковке.</div></div>';
         bindCardAdd(i); return;
@@ -370,7 +379,11 @@
       href: function (name) { return '#drugs?q=' + encodeURIComponent(clean(name)); },
       // есть ли такой препарат в справочнике (для ссылок «Инструкция» в схемах); false, пока данные не загружены
       has: function (name) { if (!D) return false; var r = search(clean(name), 1); return !!(r.length && r[0].s >= 30 && D.rows[r[0].i][6] >= 0); },
-      preload: function () { load().catch(function () {}); }
+      preload: function () { load().catch(function () {}); },
+      // для помощника выписки рецептов (content_rx.js)
+      data: function () { return load().then(function () { return D; }); },
+      search: function (q, limit) { return search(q, limit); },
+      row: function (i) { return D && D.rows[i]; }
     };
   };
 })();
