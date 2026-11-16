@@ -5,6 +5,7 @@
 (function () {
   'use strict';
   var BASE = 'https://raw.githubusercontent.com/victorpolekslab/Spravochnik_nmp/drugs/app/';
+  var MIRROR = 'https://victorpolekslab.github.io/Spravochnik_nmp/drugs/app/';
 
   var CSS = '\
 .dg-wrap{padding:12px;display:flex;flex-direction:column;gap:10px;max-width:820px;margin:0 auto}\
@@ -112,7 +113,12 @@
   window.DrugsModule = function (host) {
     var view = host.view, D = null, IX = null, loading = null, CLS = {};
     if (!document.getElementById('dg-style')) { var st = document.createElement('style'); st.id = 'dg-style'; st.textContent = CSS; document.head.appendChild(st); }
-    function getJSON(url) { return host.fetchText(url).then(function (t) { return JSON.parse(t); }); }
+    // сначала зеркало на GitHub Pages (raw.githubusercontent.com у части операторов недоступен), затем raw
+    function getJSON(url) {
+      var one = function (u) { return host.fetchText(u).then(function (t) { return JSON.parse(t); }); };
+      if (url.indexOf(BASE) !== 0) return one(url);
+      return one(MIRROR + url.slice(BASE.length)).catch(function (e) { return one(url).catch(function () { throw e; }); });
+    }
 
     // основные данные: из кэша сразу, свежую версию — с сервера, если есть сеть
     function load() {

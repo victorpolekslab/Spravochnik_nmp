@@ -2,7 +2,7 @@ name: Публикация веб-версии
 
 on:
   push:
-    branches: [main, apk]
+    branches: [main, apk, drugs]
   workflow_dispatch:
 
 permissions:
@@ -51,6 +51,13 @@ jobs:
             mkdir -p web/dist/download
             git show FETCH_HEAD:SpravochnikNMP.apk > web/dist/download/SpravochnikNMP.apk
             git show FETCH_HEAD:android.json > web/dist/android.json
+          fi
+      - name: Данные препаратов (зеркало ветки drugs)
+        run: |
+          # raw.githubusercontent.com у части операторов недоступен — приложения берут данные отсюда, raw — запасной путь
+          if git fetch --depth=1 origin drugs; then
+            mkdir -p web/dist/drugs
+            git archive FETCH_HEAD app | tar -x -C web/dist/drugs
           fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
