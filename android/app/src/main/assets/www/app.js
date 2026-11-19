@@ -1455,7 +1455,16 @@ function about() {
   </div>`;
   window.onDrugsInstall = (ok, message) => {
     const status = $('#drugsOfflineStatus'), button = $('#drugsOffline');
-    if (status) status.textContent = ok ? 'База установлена, версия: ' + message + '. Откройте раздел препаратов заново.' : 'Установка не завершена: ' + message;
+    if (status) status.textContent = ok ? 'База установлена, версия: ' + message + '. Обновление данных…' : 'Установка не завершена: ' + message;
+    if (ok && DM && DM.refreshNative) {
+      DM.refreshNative().then(() => {
+        const label = $('#drugsOfflineStatus');
+        if (label) label.textContent = 'База установлена, версия: ' + message + '. Новые данные доступны без перезапуска.';
+      }).catch(e => {
+        const label = $('#drugsOfflineStatus');
+        if (label) label.textContent = 'База установлена, но обновление экрана не удалось: ' + (e.message || e) + '. Перезапустите приложение.';
+      });
+    }
     if (button) button.disabled = false;
   };
   const offlineBtn = $('#drugsOffline');
