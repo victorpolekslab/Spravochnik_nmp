@@ -84,7 +84,7 @@ final class Ota {
 
     /** Проверить сайт и скачать новую версию в фоне. onReady вызывается, если загружено новое. */
     static void check(Context ctx, Runnable onReady) {
-        run(ctx, false, onReady);
+        run(ctx, true, onReady);
     }
 
     static void download(Context ctx, Runnable onReady) {
