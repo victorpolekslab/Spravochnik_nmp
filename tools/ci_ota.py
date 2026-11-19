@@ -56,10 +56,12 @@ def check_secret():
         src = open(os.path.join(ROOT, 'android/app/src/main/java/ru/klinrek/app/Ota.java'), encoding='utf-8').read()
         app = serialization.load_der_public_key(base64.b64decode(re.search(r'PUBKEY = "([^"]+)"', src).group(1)))
         fmt = (serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
-        print('OTA: ключ в секрете подходит к приложению' if mine.public_bytes(*fmt) == app.public_bytes(*fmt)
-              else '::error::OTA: ключ в секрете OTA_KEY_PEM не подходит к приложению — замените секрет')
+        if mine.public_bytes(*fmt) != app.public_bytes(*fmt):
+            raise ValueError('OTA_KEY_PEM не соответствует публичному ключу приложения')
+        print('OTA: ключ в секрете подходит к приложению')
     except Exception as e:
-        print('::error::OTA: секрет OTA_KEY_PEM не читается как закрытый ключ PEM:', type(e).__name__)
+        print('::error::OTA: неверный секрет OTA_KEY_PEM:', str(e))
+        sys.exit(1)
 
 check_secret()
 files = current()
