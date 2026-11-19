@@ -36,7 +36,11 @@ final class DrugsDatabase {
     private DrugsDatabase() {}
 
     private static File active(Context context) {
-        return context.getDatabasePath("drugs-offline.db");
+        File target = context.getDatabasePath("drugs-offline.db");
+        File backup = new File(target.getParentFile(), "drugs-previous.tmp");
+        // Restore a valid previous database after interruption between rename operations.
+        if (!target.exists() && backup.isFile()) backup.renameTo(target);
+        return target;
     }
 
     private static byte[] readSmall(String url, int max) throws Exception {
@@ -101,7 +105,7 @@ final class DrugsDatabase {
     static synchronized String install(Context context) throws Exception {
         byte[] manifestBytes = readSmall(BASE + "drugs-manifest.json", 32768);
         byte[] signature = readSmall(BASE + "drugs-manifest.sig", 4096);
-        verifySignature(manifestBytes, signature);
+        verifySignature(manifestBytes, Base64.decode(new String(signature, StandardCharsets.US_ASCII).trim(), Base64.DEFAULT));
         JSONObject m = new JSONObject(new String(manifestBytes, StandardCharsets.UTF_8));
         if (m.getInt("schema") != 1 || !"sqlite3+gzip".equals(m.getString("format"))
                 || !"drugs.db.gz".equals(m.getString("file"))) throw new SecurityException("Unsupported package");
