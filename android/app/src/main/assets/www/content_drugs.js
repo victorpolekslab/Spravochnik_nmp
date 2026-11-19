@@ -143,8 +143,9 @@
         });
         if (c[0] && c[1]) {
           // Show cached data immediately, then activate the newer verified index in the background.
+          var cachedData = setData(c[0], c[1]);
           fresh.then(function (x) { if (x) setData(x[0], x[1]); }).catch(function () {});
-          return setData(c[0], c[1]);
+          return cachedData;
         }
         return fresh.then(function (x) { return setData(x[0], x[1]); });
       }).catch(function (e) { loading = null; throw e; });
