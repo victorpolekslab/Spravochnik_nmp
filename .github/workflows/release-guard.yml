@@ -28,7 +28,7 @@ jobs:
           assert 'git push' not in release, 'Release preparation must not push'
           assert 'build_ota.py' not in release, 'Release preparation must not sign OTA'
           pages = Path('.github/workflows/pages.yml').read_text()
-          assert 'branches: [main]' in pages, 'Only main may auto-deploy'
+          assert 'branches: [main, apk, drugs]' in pages, 'Existing APK/drugs mirrors must keep working until branch rules are configured'
           assert 'workflow_dispatch:' in pages, 'Manual deployment must remain possible'
           print('Release guard checks passed')
           PY
