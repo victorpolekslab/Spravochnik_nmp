@@ -2,6 +2,13 @@ name: Manual signed APK test (no publication)
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/restore-automatic-updates
+    paths:
+      - 'android/**'
+      - 'tools/test_android_ota_recovery.py'
+      - '.github/workflows/android-signed-test.yml'
 
 permissions:
   contents: read
