@@ -165,6 +165,10 @@ public class MainActivity extends Activity {
         public String contentVersion() { return String.valueOf(Ota.running(MainActivity.this)); }
         @android.webkit.JavascriptInterface
         public void checkContent() { MainActivity.this.checkContent(); }
+        @android.webkit.JavascriptInterface
+        public void downloadContent() {
+            Ota.download(MainActivity.this, () -> js("window.onContentReady&&onContentReady()"));
+        }
         /** Слежение за новыми КР (включается при входе организатора). */
         @android.webkit.JavascriptInterface
         public void krWatch(boolean on) {
