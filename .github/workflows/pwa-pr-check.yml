@@ -5,6 +5,10 @@ on:
     paths:
       - 'web/**'
       - 'android/app/src/main/assets/www/**'
+      - 'tools/ci_ota.py'
+      - 'tools/build_ota.py'
+      - 'tools/test_drugs_cache.cjs'
+      - 'android/app/build.gradle'
       - '.github/workflows/pwa-pr-check.yml'
   workflow_dispatch:
 
