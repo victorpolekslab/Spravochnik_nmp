@@ -1,0 +1,55 @@
+name: PWA regression check (no deployment)
+on:
+  push:
+    branches:
+      - feature/restore-automatic-updates
+    paths:
+      - 'web/**'
+      - 'android/app/src/main/assets/www/**'
+      - '.github/workflows/pwa-test.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pwa-test:
+    if: github.ref == 'refs/heads/feature/restore-automatic-updates'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Check JavaScript syntax
+        run: |
+          node --check web/pwa.js
+          node --check web/sw.js
+          node --check android/app/src/main/assets/www/app.js
+      - name: Build PWA without publishing
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          python3 build.py
+      - name: Verify learning tab and versioned offline assets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          p = Path('web/dist')
+          html = (p / 'index.html').read_text()
+          sw = (p / 'sw.js').read_text()
+          assert 'data-tab="learn"' in html, 'Learning tab missing'
+          assert 'content_courses.js' in html, 'Course scripts missing'
+          assert 'content_course.js' in html, 'Course scripts missing'
+          assert '__FILES__' not in sw and '__VERSION__' not in sw
+          assert (p / 'version.json').is_file()
+          assert json.loads((p / 'version.json').read_text())['version']
+          assert (p / 'data/cr.db.gz').stat().st_size > 0
+          print('PWA learning tab, scripts, version and offline database: OK')
+          PY
