@@ -60,6 +60,8 @@ jobs:
             git archive FETCH_HEAD app | tar -x -C web/dist/drugs
           fi
       - name: Сборка подписанного офлайн-пакета препаратов
+        id: drug_package
+        continue-on-error: true # ошибка пакета не блокирует веб-версию; статус публикуется отдельно
         env:
           OTA_KEY_PEM: ${{ secrets.OTA_KEY_PEM }}
         run: |
@@ -83,6 +85,11 @@ jobs:
           (p / "drugs-manifest.sig").write_bytes(base64.b64encode(key.sign(data, ec.ECDSA(hashes.SHA256()))) + b"\n")
           PY
           rm -f "$RUNNER_TEMP/drugs-signing-key.pem"
+      - name: Статус офлайн-пакета
+        if: steps.drug_package.outcome != 'success'
+        run: |
+          echo '::warning::Signed offline drug package was not built. Drug database installation will be unavailable until a signed package is published.'
+          echo '⚠️ Офлайн-пакет препаратов не опубликован; веб-версия продолжает публикацию.' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
