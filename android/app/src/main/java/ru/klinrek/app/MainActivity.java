@@ -293,6 +293,12 @@ public class MainActivity extends Activity {
                 SharedPreferences prefs = getSharedPreferences("drug-auto-update", MODE_PRIVATE);
                 long now = System.currentTimeMillis();
                 if (now - prefs.getLong("lastCheck", 0) < 24L * 60 * 60 * 1000) return;
+                // The drug database is large: automatic downloads are allowed only on
+                // an active unmetered network. Manual installation remains available.
+                android.net.ConnectivityManager cm = (android.net.ConnectivityManager)
+                        getSystemService(CONNECTIVITY_SERVICE);
+                if (cm == null || cm.getActiveNetwork() == null
+                        || cm.isActiveNetworkMetered()) return;
                 String remote = DrugsDatabase.availableVersion();
                 String local = DrugsDatabase.version(MainActivity.this);
                 if (!remote.equals(local)) {
