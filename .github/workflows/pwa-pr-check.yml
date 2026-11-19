@@ -30,6 +30,8 @@ jobs:
           node --check web/sw.js
           node --check android/app/src/main/assets/www/content_drugs.js
           node --check android/app/src/main/assets/www/app.js
+      - name: Проверить работу кэша препаратов
+        run: node tools/test_drugs_cache.cjs
       - name: Собрать PWA без публикации
         working-directory: web
         run: |
