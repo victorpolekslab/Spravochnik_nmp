@@ -1453,6 +1453,23 @@ function about() {
     <div class="card"><b>Важно</b><p>Справочник не заменяет инструкцию к препарату и решение врача. В КР «Бронхиальная астма» (359_3) для преднизолона у взрослых указано «20–30 мг/кг/сут» — это опечатка в единицах, в схеме приведено 20–30 мг/сут.</p></div>
     <div class="card"><b>Встроенные рекомендации</b>${bundled.sort((x, y) => x.name.localeCompare(y.name)).map(x => `<p><a href="#doc/${x.id}">КР${esc(x.id)}</a> — ${esc(x.name)}</p>`).join('')}</div>
   </div>`;
+  // Daily signed-manifest check only; downloading remains an explicit user action.
+  window.onDrugsUpdate = (available, remote, local) => {
+    try { localStorage.setItem('drugsLastCheck', String(Date.now())); } catch (_) {}
+    const status = $('#drugsOfflineStatus');
+    if (status && available) status.textContent = 'Доступна новая база препаратов: ' + remote + (local ? ' (установлена: ' + local + ')' : ' (ещё не установлена)') + '. Для загрузки нажмите кнопку ниже.';
+    else if (status && !available) status.textContent = 'База препаратов актуальна: ' + remote;
+  };
+  window.onDrugsUpdateError = (message) => {
+    const status = $('#drugsOfflineStatus');
+    if (status) status.textContent = 'Не удалось проверить обновление базы: ' + message + '. Офлайн-данные доступны.';
+  };
+  try {
+    const nativeDrugs = window.App;
+    const lastCheck = Number(localStorage.getItem('drugsLastCheck') || 0);
+    if (nativeDrugs && typeof nativeDrugs.checkDrugsUpdate === 'function' &&
+        (!lastCheck || Date.now() - lastCheck > 24 * 60 * 60 * 1000)) nativeDrugs.checkDrugsUpdate();
+  } catch (_) {}
   window.onDrugsInstall = (ok, message) => {
     const status = $('#drugsOfflineStatus'), button = $('#drugsOffline');
     if (status) status.textContent = ok ? 'База установлена, версия: ' + message + '. Обновление данных…' : 'Установка не завершена: ' + message;
