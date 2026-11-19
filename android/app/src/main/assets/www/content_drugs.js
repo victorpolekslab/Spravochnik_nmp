@@ -104,7 +104,15 @@
     dbp = dbp || idb();
     return dbp.then(function (db) {
       if (!db) return;
-      try { db.transaction('kv', 'readwrite').objectStore('kv').put(v, k); } catch (e) {}
+      return new Promise(function (resolve, reject) {
+        try {
+          var tx = db.transaction('kv', 'readwrite');
+          tx.oncomplete = resolve;
+          tx.onerror = function () { reject(tx.error || new Error('Cache write failed')); };
+          tx.onabort = function () { reject(tx.error || new Error('Cache write aborted')); };
+          tx.objectStore('kv').put(v, k);
+        } catch (e) { reject(e); }
+      });
     });
   }
   function lsGet(k, d) { try { var v = localStorage.getItem('drugs.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
