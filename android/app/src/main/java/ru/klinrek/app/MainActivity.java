@@ -142,7 +142,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (!updateChecked) { updateChecked = true; checkUpdate(false); checkContent(); }
+                if (!updateChecked) { updateChecked = true; checkUpdate(false); checkContent(); checkDrugsInBackground(); }
                 if (pendingHash != null) { view.evaluateJavascript("location.hash=" + org.json.JSONObject.quote(pendingHash), null); pendingHash = null; }
             }
         });
@@ -284,6 +284,27 @@ public class MainActivity extends Activity {
                 if (manual) js("window.onUpdateFail&&onUpdateFail()");
             }
         }).start();
+    }
+
+    /** Check signed drug updates once per day without blocking the WebView. */
+    private void checkDrugsInBackground() {
+        new Thread(() -> {
+            try {
+                SharedPreferences prefs = getSharedPreferences("drug-auto-update", MODE_PRIVATE);
+                long now = System.currentTimeMillis();
+                if (now - prefs.getLong("lastCheck", 0) < 24L * 60 * 60 * 1000) return;
+                String remote = DrugsDatabase.availableVersion();
+                String local = DrugsDatabase.version(MainActivity.this);
+                if (!remote.equals(local)) {
+                    String installed = DrugsDatabase.install(MainActivity.this);
+                    js("window.onDrugsInstall&&window.onDrugsInstall(true,"
+                            + org.json.JSONObject.quote(installed) + ")");
+                }
+                prefs.edit().putLong("lastCheck", System.currentTimeMillis()).apply();
+            } catch (Exception ignored) {
+                // Preserve the offline database and retry on a later launch.
+            }
+        }, "drugs-auto-update").start();
     }
 
     // ------------------------------------------------------------ content updates (OTA)
