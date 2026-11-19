@@ -1503,7 +1503,19 @@ function about() {
       .finally(() => { offlineBtn.disabled = false; });
   };
   shareWire();
-  const dl = $('#otaDownload'); if (dl) dl.onclick = () => { $('#updRes').textContent = 'Загрузка запущена…'; window.App.downloadContent(); };
+  const dl = $('#otaDownload');
+  if (dl) {
+    if (!(window.App && typeof window.App.downloadContent === 'function')) {
+      dl.disabled = true;
+      dl.title = 'Для ручного обновления требуется новая версия приложения';
+      dl.onclick = () => { $('#updRes').textContent = 'Обновите APK приложения, чтобы скачивать обновления вручную.'; };
+    } else {
+      dl.onclick = () => {
+        $('#updRes').textContent = 'Загрузка запущена…';
+        try { window.App.downloadContent(); } catch (e) { $('#updRes').textContent = 'Не удалось начать загрузку: ' + (e.message || e); }
+      };
+    }
+  }
   const b = $('#updChk');
   if (b) b.onclick = () => { $('#updRes').textContent = 'Проверяю…'; try { window.App.checkUpdate(); if (window.App.checkContent) window.App.checkContent(); } catch (e) { onUpdateFail(); } };
 }
