@@ -142,11 +142,18 @@ final class Ota {
                     if (data.length != expectedSize) throw new SecurityException("size " + name);
                     try (OutputStream o = new FileOutputStream(out)) { o.write(data); }
                 }
-                // Never remove an existing completed release before the new staging
-                // directory is ready. A version already present should not be overwritten.
-                if (dir.exists()) throw new SecurityException("OTA version already exists");
-                if (!tmp.renameTo(dir)) throw new Exception("rename");
-                staging = null;
+                // An interrupted activation may have renamed the complete directory
+                // before its version was recorded. Verify every file before reusing it.
+                if (dir.exists()) {
+                    if (!matchesManifest(dir, files)) {
+                        throw new SecurityException("Existing OTA version is incomplete or invalid");
+                    }
+                    deleteTree(tmp);
+                    staging = null;
+                } else {
+                    if (!tmp.renameTo(dir)) throw new Exception("rename");
+                    staging = null;
+                }
                 p.edit().putLong("ver", v).putLong("min", m.optLong("minNative", 0)).putInt("tries", 0).apply();
                 // убрать старые версии, кроме запущенной
                 File[] all = root(c).listFiles();
@@ -194,6 +201,23 @@ final class Ota {
         byte[] b = new byte[16384]; int n;
         while ((n = in.read(b)) > 0) o.write(b, 0, n);
         return o.toByteArray();
+    }
+
+    private static boolean matchesManifest(File dir, JSONArray files) throws Exception {
+        if (!dir.isDirectory()) return false;
+        for (int i = 0; i < files.length(); i++) {
+            JSONArray entry = files.getJSONArray(i);
+            String name = entry.getString(0);
+            String hash = entry.getString(1);
+            long size = entry.getLong(2);
+            if (!name.matches("[A-Za-z0-9_.-]{1,80}") || name.startsWith(".")
+                    || !hash.matches("[a-fA-F0-9]{64}")
+                    || size < 0 || size > 20L * 1024 * 1024) return false;
+            File file = new File(dir, name);
+            if (!file.isFile() || file.length() != size
+                    || !hash.equals(sha256(readFile(file, size)))) return false;
+        }
+        return new File(dir, "index.html").isFile();
     }
 
     private static byte[] readFile(File f, long maxBytes) throws Exception {
