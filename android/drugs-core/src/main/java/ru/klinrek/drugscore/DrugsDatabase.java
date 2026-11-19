@@ -102,6 +102,25 @@ public final class DrugsDatabase {
         } catch (Exception e) { return null; }
     }
 
+    /**
+     * Lightweight signed manifest check. Does not download or install the database.
+     * Call from a worker thread; network failures must not invalidate the offline copy.
+     */
+    public static String availableVersion() throws Exception {
+        byte[] manifest = readSmall(BASE + "drugs-manifest.json", 32768);
+        byte[] signature = readSmall(BASE + "drugs-manifest.sig", 4096);
+        verifySignature(manifest, Base64.decode(new String(signature, StandardCharsets.US_ASCII).trim(), Base64.DEFAULT));
+        JSONObject m = new JSONObject(new String(manifest, StandardCharsets.UTF_8));
+        if (m.getInt("schema") != 1 || !"sqlite3+gzip".equals(m.getString("format"))
+                || !"drugs.db.gz".equals(m.getString("file"))
+                || !m.getString("sha256").matches("[0-9a-f]{64}")
+                || m.getLong("size") <= 0 || m.getLong("size") > MAX_COMPRESSED
+                || m.getInt("documents") <= 0) throw new SecurityException("Invalid signed drug package manifest");
+        String v = m.getString("version");
+        if (v.length() == 0 || v.length() > 128) throw new SecurityException("Invalid drug package version");
+        return v;
+    }
+
     public static synchronized String install(Context context) throws Exception {
         byte[] manifestBytes = readSmall(BASE + "drugs-manifest.json", 32768);
         byte[] signature = readSmall(BASE + "drugs-manifest.sig", 4096);
