@@ -72,7 +72,20 @@ jobs:
           } > android/keystore.properties
       - name: Build signed release APK
         working-directory: android
-        run: gradle --no-daemon :app:assembleRelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if gradle --no-daemon --refresh-dependencies :app:assembleRelease; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              echo "::error::Gradle release build failed after 3 attempts"
+              exit 1
+            fi
+            echo "Gradle dependency download/build failed; retrying attempt $((attempt + 1)) of 3"
+            sleep 15
+          done
       - name: Verify signing certificate
         shell: bash
         run: |
