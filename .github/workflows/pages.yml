@@ -64,8 +64,8 @@ jobs:
           OTA_KEY_PEM: ${{ secrets.OTA_KEY_PEM }}
         run: |
           if [ -z "$OTA_KEY_PEM" ]; then
-            echo "::warning::No OTA signing key; offline drug package not published"
-            exit 0
+            echo "::error::OTA_KEY_PEM is required to publish the signed offline drug package"
+            exit 1
           fi
           mkdir -p "$RUNNER_TEMP/drugs-source"
           git fetch --depth=1 origin drugs
