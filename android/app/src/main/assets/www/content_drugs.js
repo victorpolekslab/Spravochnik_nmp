@@ -130,7 +130,7 @@
             cset('search', x[0]); cset('ix', x[1]); cset('ver', v.v); return x;
           });
         });
-        if (c[0] && c[1]) { fresh.then(function (x) { if (x) setData(x[0], x[1]); }).catch(function () {}); return setData(c[0], c[1]); }
+        if (c[0] && c[1]) { return setData(c[0], c[1]); }
         return fresh.then(function (x) { return setData(x[0], x[1]); });
       }).catch(function (e) { loading = null; throw e; });
       return loading;
@@ -166,6 +166,13 @@
     }
     function downloadAll(onProgress) {
       return load().then(function () {
+        // A full refresh is user initiated, never a background content download.
+        return getJSON(BASE + 'version.json?t=' + Date.now()).then(function (v) {
+          return Promise.all([getJSON(BASE + 'search.json?v=' + encodeURIComponent(v.v)), getJSON(BASE + 'ix.json?v=' + encodeURIComponent(v.v))]).then(function (x) {
+            return Promise.all([cset('search', x[0]), cset('ix', x[1]), cset('ver', v.v)]).then(function () { setData(x[0], x[1]); });
+          });
+        });
+      }).then(function () {
         var ids = Array.from(new Set(D.docs.map(function (d) { return d[0]; }).filter(Boolean)));
         var next = 0, done = 0, failed = 0;
         function worker() {
