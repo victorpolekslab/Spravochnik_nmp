@@ -135,8 +135,12 @@ final class Ota {
                     File old = new File(cur, name);
                     byte[] data = null;
                     if (old.isFile() && old.length() == expectedSize) {
-                        byte[] b = readFile(old, expectedSize);
-                        if (hash.equals(sha256(b))) data = b;
+                        // A cached file can disappear or change while being read.
+                        // Fall back to the bundled asset or network instead of aborting OTA.
+                        try {
+                            byte[] b = readFile(old, expectedSize);
+                            if (hash.equals(sha256(b))) data = b;
+                        } catch (java.io.IOException ignored) {}
                     }
                     if (data == null) {
                         try (InputStream in = c.getAssets().open("www/" + name)) {
