@@ -53,6 +53,28 @@ async function test() {
   await assert.rejects(vm.runInContext("cset('doc:3:drugA', {text:'bad'})", context));
   assert.equal(context.mem['doc:3:drugA'], undefined, 'Failed write must not appear cached');
 
+  // A failed overwrite must leave both the persisted record and the in-memory value intact.
+  const existing = fakeDB();
+  existing.records.set('doc:4:drugA', {text:'previous'});
+  context.dbp = Promise.resolve(existing.db);
+  await vm.runInContext("cset('doc:4:drugA', {text:'previous'})", context);
+  context.dbp = Promise.resolve(failed.db);
+  await assert.rejects(vm.runInContext("cset('doc:4:drugA', {text:'replacement'})", context));
+  assert.equal(context.mem['doc:4:drugA']?.text, 'previous', 'Failed overwrite must preserve cached value');
+  assert.equal(existing.records.get('doc:4:drugA')?.text, 'previous', 'Failed overwrite must preserve stored value');
+
+  // Recreating the cache runtime simulates reopening the app: only persisted values survive.
+  const reopened = {Promise, Error, indexedDB: {open() {
+    const req = {result: existing.db};
+    queueMicrotask(() => req.onsuccess?.());
+    return req;
+  }}};
+  vm.createContext(reopened);
+  vm.runInContext(cacheSource, reopened);
+  assert.equal((await vm.runInContext("cget('doc:4:drugA')", reopened)).text, 'previous');
+  assert.equal(await vm.runInContext("cget('doc:5:drugA')", reopened), null,
+    'A different version must not reuse an old instruction');
+
   assert(source.includes("'doc:' + String(version || 'unknown') + ':' + id"), 'Document reader must use versioned keys');
   assert(source.includes("'doc:' + String(offlineVersion) + ':' + id"), 'Offline writer must use versioned keys');
   assert(source.includes("return cset('ver', v.v)"), 'Version marker must wait for cache writes');
