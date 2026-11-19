@@ -1,0 +1,53 @@
+name: Build offline drug database (review artifact)
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'tools/package_drugs.py'
+      - '.github/workflows/drugs-package.yml'
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: application
+      - uses: actions/checkout@v4
+        with:
+          ref: drugs
+          path: drug-source
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build SQLite gzip and SHA-256 manifest
+        run: python application/tools/package_drugs.py --source drug-source/app --out output
+      - name: Verify compressed database and document count
+        run: |
+          python - <<'PY'
+          import gzip, hashlib, json, pathlib, sqlite3, tempfile
+          p=pathlib.Path("output")
+          m=json.loads((p/"drugs-manifest.json").read_text())
+          blob=p/m["file"]
+          assert blob.stat().st_size == m["size"]
+          assert hashlib.sha256(blob.read_bytes()).hexdigest() == m["sha256"]
+          with tempfile.TemporaryDirectory() as d:
+              db=pathlib.Path(d)/"drugs.db"
+              with gzip.open(blob,"rb") as source, db.open("wb") as dest:
+                  import shutil
+                  shutil.copyfileobj(source,dest)
+              con=sqlite3.connect(db)
+              assert con.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+              assert con.execute("SELECT count(*) FROM docs").fetchone()[0] == m["documents"]
+              con.close()
+          print("Archive integrity verified")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: offline-drugs-sqlite-gzip
+          path: |
+            output/drugs.db.gz
+            output/drugs-manifest.json
+          retention-days: 14
