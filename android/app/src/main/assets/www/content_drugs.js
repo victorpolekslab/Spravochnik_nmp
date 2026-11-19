@@ -141,7 +141,11 @@
             cset('search', x[0]); cset('ix', x[1]); cset('ver', v.v); return x;
           });
         });
-        if (c[0] && c[1]) { return setData(c[0], c[1]); }
+        if (c[0] && c[1]) {
+          // Show cached data immediately, then activate the newer verified index in the background.
+          fresh.then(function (x) { if (x) setData(x[0], x[1]); }).catch(function () {});
+          return setData(c[0], c[1]);
+        }
         return fresh.then(function (x) { return setData(x[0], x[1]); });
       }).catch(function (e) { loading = null; throw e; });
       return loading;
@@ -155,9 +159,13 @@
     function doc(id) {
       var local = nativeDrugs('doc', id);
       if (local) return Promise.resolve(local);
-      return cget('doc:' + id).then(function (c) {
-        if (c) return c;
-        return getJSON(BASE + 'doc/' + id + '.json').then(function (d) { cset('doc:' + id, d); return d; });
+      return cget('ver').then(function (version) {
+        // Version-scoped keys prevent old instructions surviving an index update.
+        var key = 'doc:' + String(version || 'unknown') + ':' + id;
+        return cget(key).then(function (cached) {
+          if (cached) return cached;
+          return getJSON(BASE + 'doc/' + id + '.json').then(function (d) { cset(key, d); return d; });
+        });
       });
     }
     // Download every instruction to persistent IndexedDB. Re-running skips completed records.
