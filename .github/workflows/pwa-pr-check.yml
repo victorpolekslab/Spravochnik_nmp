@@ -1,0 +1,50 @@
+name: Проверка PWA без публикации
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - 'android/app/src/main/assets/www/**'
+      - '.github/workflows/pwa-pr-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pwa:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Проверить синтаксис JavaScript
+        run: |
+          node --check web/pwa.js
+          node --check web/sw.js
+          node --check android/app/src/main/assets/www/content_drugs.js
+          node --check android/app/src/main/assets/www/app.js
+      - name: Собрать PWA без публикации
+        working-directory: web
+        run: |
+          npm ci --no-audit --no-fund
+          python3 build.py
+      - name: Проверить вкладку обучения и Service Worker
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('web/dist')
+          html = (p / 'index.html').read_text()
+          sw = (p / 'sw.js').read_text()
+          js = (p / 'pwa.js').read_text()
+          assert 'data-tab="learn"' in html, 'Learning tab missing from PWA'
+          assert '__VERSION__' not in sw and '__FILES__' not in sw, 'Unbuilt service worker'
+          assert 'skipWaiting' in js and 'controllerchange' in js, 'PWA activation handlers missing'
+          assert (p / 'content_course.js').is_file(), 'Course content missing'
+          assert (p / 'content_drugs.js').is_file(), 'Drug content missing'
+          print('PWA build and static checks passed')
+          PY
