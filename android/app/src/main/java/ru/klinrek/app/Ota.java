@@ -142,7 +142,9 @@ final class Ota {
                     if (data.length != expectedSize) throw new SecurityException("size " + name);
                     try (OutputStream o = new FileOutputStream(out)) { o.write(data); }
                 }
-                deleteTree(dir);
+                // Never remove an existing completed release before the new staging
+                // directory is ready. A version already present should not be overwritten.
+                if (dir.exists()) throw new SecurityException("OTA version already exists");
                 if (!tmp.renameTo(dir)) throw new Exception("rename");
                 staging = null;
                 p.edit().putLong("ver", v).putLong("min", m.optLong("minNative", 0)).putInt("tries", 0).apply();
