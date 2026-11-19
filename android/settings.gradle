@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "FeldsherKR"
-include ':app'
+include ':app', ':drugs-core'
