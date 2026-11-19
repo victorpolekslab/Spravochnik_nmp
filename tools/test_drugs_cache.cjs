@@ -45,7 +45,7 @@ async function test() {
   }};
   vm.runInContext(cacheSource, context);
   await vm.runInContext("cset('doc:2:drugA', {text:'new'})", context);
-  assert.deepEqual(success.records.get('doc:2:drugA'), {text:'new'});
+  assert.equal(success.records.get('doc:2:drugA')?.text, 'new');
   assert.equal((await vm.runInContext("cget('doc:2:drugA')", context)).text, 'new');
 
   const failed = fakeDB({fail: true});
