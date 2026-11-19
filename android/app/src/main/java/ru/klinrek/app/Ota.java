@@ -117,7 +117,10 @@ final class Ota {
                 for (int i = 0; i < files.length(); i++) {
                     JSONArray f = files.getJSONArray(i);
                     String name = f.getString(0), hash = f.getString(1);
+                    long expectedSize = f.getLong(2);
                     if (!name.matches("[A-Za-z0-9_.-]{1,80}") || name.startsWith(".")) throw new SecurityException("bad name " + name);
+                    if (!hash.matches("[a-fA-F0-9]{64}") || expectedSize < 0 || expectedSize > 20L * 1024 * 1024)
+                        throw new SecurityException("invalid file metadata " + name);
                     File out = new File(tmp, name);
                     // уже есть такой же файл — взять из текущей версии или из APK, не скачивая
                     File old = new File(cur, name);
@@ -125,6 +128,7 @@ final class Ota {
                     if (old.exists() && hash.equals(sha256(readFile(old)))) data = readFile(old);
                     if (data == null) { try (InputStream in = c.getAssets().open("www/" + name)) { byte[] b = readAll(in); if (hash.equals(sha256(b))) data = b; } catch (Exception ignored) {} }
                     if (data == null) { data = get(BASE + "files/" + name + "?h=" + hash.substring(0, 12)); if (!hash.equals(sha256(data))) throw new SecurityException("hash " + name); }
+                    if (data.length != expectedSize) throw new SecurityException("size " + name);
                     try (OutputStream o = new FileOutputStream(out)) { o.write(data); }
                 }
                 deleteTree(dir);
