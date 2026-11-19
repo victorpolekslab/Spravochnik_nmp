@@ -9,7 +9,7 @@ android {
         minSdk 26
         targetSdk 34
         versionCode 39
-        versionName "4.7 (КР от 13.11.2026)"
+        versionName "4.8 (КР от 13.11.2026)"
     }
 
     signingConfigs {
