@@ -39,6 +39,16 @@ def verify(man, sig_b64):
     except Exception:
         return False
 
+def reusable(man, sig, files):
+    """Reuse only a signed manifest for exactly this release and file set."""
+    if not verify(man, sig):
+        return False
+    data = json.loads(man)
+    from build_ota import MIN_NATIVE
+    return (data.get('minNative') == MIN_NATIVE
+            and data.get('files') == files)
+
+
 def publish(man, sig, why):
     open(os.path.join(out, 'manifest.json'), 'wb').write(man)
     open(os.path.join(out, 'manifest.sig'), 'wb').write(sig)
@@ -56,10 +66,12 @@ def check_secret():
         src = open(os.path.join(ROOT, 'android/app/src/main/java/ru/klinrek/app/Ota.java'), encoding='utf-8').read()
         app = serialization.load_der_public_key(base64.b64decode(re.search(r'PUBKEY = "([^"]+)"', src).group(1)))
         fmt = (serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
-        print('OTA: ключ в секрете подходит к приложению' if mine.public_bytes(*fmt) == app.public_bytes(*fmt)
-              else '::error::OTA: ключ в секрете OTA_KEY_PEM не подходит к приложению — замените секрет')
+        if mine.public_bytes(*fmt) != app.public_bytes(*fmt):
+            raise ValueError('OTA_KEY_PEM не соответствует публичному ключу приложения')
+        print('OTA: ключ в секрете подходит к приложению')
     except Exception as e:
-        print('::error::OTA: секрет OTA_KEY_PEM не читается как закрытый ключ PEM:', type(e).__name__)
+        print('::error::OTA: неверный секрет OTA_KEY_PEM:', str(e))
+        sys.exit(1)
 
 check_secret()
 files = current()
@@ -79,7 +91,7 @@ except Exception as e:
     print('OTA: опубликованный манифест не прочитан:', e)
 for why, m, s in cands:
     try:
-        if [x[:2] for x in json.loads(m)['files']] == [x[:2] for x in files]:
+        if reusable(m, s, files):
             publish(m, s, 'файлы не менялись, манифест ' + why)
             sys.exit(0)
     except Exception:

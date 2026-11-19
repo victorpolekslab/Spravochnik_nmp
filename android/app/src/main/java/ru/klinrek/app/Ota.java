@@ -20,6 +20,7 @@ import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Фоновое обновление содержимого справочника (веб-часть: index.html, app.js, app.css, content_*.js)
@@ -36,7 +37,7 @@ final class Ota {
     static final String BASE = "https://victorpolekslab.github.io/Spravochnik_nmp/ota/";
     static final String BUNDLED_URL = "file:///android_asset/www/index.html";
     private static final String PUBKEY = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5WvSOIL6cIW9vXE1j5GHCvbqFnsvOhZB6dmcjXbS4laIBJ+DahXlPWpBJNhZ3PqO1znJztWjBj6/H8jEsDXKTQ==";
-    private static volatile boolean busy = false;
+    private static final AtomicBoolean busy = new AtomicBoolean(false);
 
     private Ota() {}
 
@@ -84,7 +85,7 @@ final class Ota {
 
     /** Проверить сайт и скачать новую версию в фоне. onReady вызывается, если загружено новое. */
     static void check(Context ctx, Runnable onReady) {
-        run(ctx, false, onReady);
+        run(ctx, true, onReady);
     }
 
     static void download(Context ctx, Runnable onReady) {
@@ -92,13 +93,13 @@ final class Ota {
     }
 
     private static void run(Context ctx, boolean download, Runnable onReady) {
-        if (busy) return;
-        busy = true;
+        if (!busy.compareAndSet(false, true)) return;
         final Context c = ctx.getApplicationContext();
         new Thread(() -> {
+            File staging = null;
             try {
-                byte[] man = get(BASE + "manifest.json?t=" + System.currentTimeMillis());
-                byte[] sig = Base64.decode(new String(get(BASE + "manifest.sig?t=" + System.currentTimeMillis()), "UTF-8").trim(), Base64.DEFAULT);
+                byte[] man = get(BASE + "manifest.json?t=" + System.currentTimeMillis(), 1024 * 1024);
+                byte[] sig = Base64.decode(new String(get(BASE + "manifest.sig?t=" + System.currentTimeMillis(), 4096), "UTF-8").trim(), Base64.DEFAULT);
                 PublicKey key = KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(Base64.decode(PUBKEY, Base64.DEFAULT)));
                 Signature s = Signature.getInstance("SHA256withECDSA");
                 s.initVerify(key); s.update(man);
@@ -111,24 +112,49 @@ final class Ota {
                 p.edit().putLong("remote", v).putString("error", "").apply();
                 if (!download) return;
                 File dir = new File(root(c), String.valueOf(v)), tmp = new File(root(c), v + ".tmp");
-                deleteTree(tmp); tmp.mkdirs();
-                File cur = new File(root(c), String.valueOf(p.getLong("ver", 0)));
                 JSONArray files = m.getJSONArray("files");
+                // A crash may occur after rename but before persisting the version.
+                // Verify that completed directory first, without re-downloading files.
+                boolean alreadyComplete = dir.exists() && matchesManifest(dir, files);
+                if (dir.exists() && !alreadyComplete)
+                    throw new SecurityException("Existing OTA version is incomplete or invalid");
+                if (!alreadyComplete) {
+                staging = tmp;
+                deleteTree(tmp);
+                if (!tmp.mkdirs()) throw new Exception("Cannot create OTA staging directory");
+                File cur = new File(root(c), String.valueOf(p.getLong("ver", 0)));
                 for (int i = 0; i < files.length(); i++) {
                     JSONArray f = files.getJSONArray(i);
                     String name = f.getString(0), hash = f.getString(1);
+                    long expectedSize = f.getLong(2);
                     if (!name.matches("[A-Za-z0-9_.-]{1,80}") || name.startsWith(".")) throw new SecurityException("bad name " + name);
+                    if (!hash.matches("[a-fA-F0-9]{64}") || expectedSize < 0 || expectedSize > 20L * 1024 * 1024)
+                        throw new SecurityException("invalid file metadata " + name);
                     File out = new File(tmp, name);
                     // уже есть такой же файл — взять из текущей версии или из APK, не скачивая
                     File old = new File(cur, name);
                     byte[] data = null;
-                    if (old.exists() && hash.equals(sha256(readFile(old)))) data = readFile(old);
-                    if (data == null) { try (InputStream in = c.getAssets().open("www/" + name)) { byte[] b = readAll(in); if (hash.equals(sha256(b))) data = b; } catch (Exception ignored) {} }
-                    if (data == null) { data = get(BASE + "files/" + name + "?h=" + hash.substring(0, 12)); if (!hash.equals(sha256(data))) throw new SecurityException("hash " + name); }
+                    if (old.isFile() && old.length() == expectedSize) {
+                        // A cached file can disappear or change while being read.
+                        // Fall back to the bundled asset or network instead of aborting OTA.
+                        try {
+                            byte[] b = readFile(old, expectedSize);
+                            if (hash.equals(sha256(b))) data = b;
+                        } catch (java.io.IOException ignored) {}
+                    }
+                    if (data == null) {
+                        try (InputStream in = c.getAssets().open("www/" + name)) {
+                            byte[] b = readLimited(in, expectedSize);
+                            if (hash.equals(sha256(b))) data = b;
+                        } catch (Exception ignored) {}
+                    }
+                    if (data == null) { data = get(BASE + "files/" + name + "?h=" + hash.substring(0, 12), expectedSize); if (!hash.equals(sha256(data))) throw new SecurityException("hash " + name); }
+                    if (data.length != expectedSize) throw new SecurityException("size " + name);
                     try (OutputStream o = new FileOutputStream(out)) { o.write(data); }
                 }
-                deleteTree(dir);
                 if (!tmp.renameTo(dir)) throw new Exception("rename");
+                staging = null;
+                }
                 p.edit().putLong("ver", v).putLong("min", m.optLong("minNative", 0)).putInt("tries", 0).apply();
                 // убрать старые версии, кроме запущенной
                 File[] all = root(c).listFiles();
@@ -139,20 +165,36 @@ final class Ota {
                 if (onReady != null) onReady.run();
             } catch (Exception e) {
                 sp(c).edit().putString("error", String.valueOf(e.getMessage())).apply();
-            } finally { busy = false; }
+            } finally {
+                if (staging != null) deleteTree(staging);
+                busy.set(false);
+            }
         }).start();
     }
 
     // ------------------------------------------------------------ helpers
     @SuppressWarnings("deprecation")
-    private static byte[] get(String url) throws Exception {
+    private static byte[] get(String url, long maxBytes) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setConnectTimeout(15000); c.setReadTimeout(30000); c.setUseCaches(false);
         c.setRequestProperty("Cache-Control", "no-cache");
         try {
             if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
-            try (InputStream in = c.getInputStream()) { return readAll(in); }
+            try (InputStream in = c.getInputStream()) { return readLimited(in, maxBytes); }
         } finally { c.disconnect(); }
+    }
+
+    private static byte[] readLimited(InputStream in, long maxBytes) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buf = new byte[16384];
+        long total = 0;
+        int n;
+        while ((n = in.read(buf)) != -1) {
+            total += n;
+            if (total > maxBytes) throw new SecurityException("OTA response exceeds allowed size");
+            out.write(buf, 0, n);
+        }
+        return out.toByteArray();
     }
 
     private static byte[] readAll(InputStream in) throws Exception {
@@ -162,7 +204,26 @@ final class Ota {
         return o.toByteArray();
     }
 
-    private static byte[] readFile(File f) throws Exception { try (InputStream in = new FileInputStream(f)) { return readAll(in); } }
+    private static boolean matchesManifest(File dir, JSONArray files) throws Exception {
+        if (!dir.isDirectory()) return false;
+        for (int i = 0; i < files.length(); i++) {
+            JSONArray entry = files.getJSONArray(i);
+            String name = entry.getString(0);
+            String hash = entry.getString(1);
+            long size = entry.getLong(2);
+            if (!name.matches("[A-Za-z0-9_.-]{1,80}") || name.startsWith(".")
+                    || !hash.matches("[a-fA-F0-9]{64}")
+                    || size < 0 || size > 20L * 1024 * 1024) return false;
+            File file = new File(dir, name);
+            if (!file.isFile() || file.length() != size
+                    || !hash.equals(sha256(readFile(file, size)))) return false;
+        }
+        return new File(dir, "index.html").isFile();
+    }
+
+    private static byte[] readFile(File f, long maxBytes) throws Exception {
+        try (InputStream in = new FileInputStream(f)) { return readLimited(in, maxBytes); }
+    }
 
     private static String sha256(byte[] b) throws Exception {
         byte[] d = MessageDigest.getInstance("SHA-256").digest(b);

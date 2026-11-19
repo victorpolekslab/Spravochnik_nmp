@@ -1,0 +1,74 @@
+name: Manual signed APK test (no publication)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-apk:
+    if: github.ref == 'refs/heads/feature/restore-automatic-updates'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Install Android SDK 35
+        uses: android-actions/setup-android@v3
+      - name: Install Android platform and build tools
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Validate source and version
+        run: |
+          python3 tools/test_android_ota_recovery.py
+          grep -q 'versionCode 39' android/app/build.gradle
+      - name: Prepare signing credentials
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_PASSWORD"
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/klinrek-ci.jks
+          {
+            printf 'storeFile=../klinrek-ci.jks\n'
+            printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
+            printf 'keyAlias=klinrek\n'
+            printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
+          } > android/keystore.properties
+      - name: Build signed release APK
+        working-directory: android
+        run: gradle --no-daemon :app:assembleRelease
+      - name: Verify signing certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          SIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          "$SIGNER" verify --print-certs "$APK" > "$RUNNER_TEMP/apk-cert.txt"
+          EXPECTED=eb733ca433e8f1bfb7f92bc2da018d5ff06ce4f0bbdad5bdbc77623fcc2f3f88
+          ACTUAL=$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/apk-cert.txt" | head -1 | tr '[:upper:]' '[:lower:]' | tr -d ':')
+          test "$ACTUAL" = "$EXPECTED" || { echo "::error::APK signing certificate does not match installed 4.7"; exit 1; }
+          echo "Release APK signature matches installed 4.7"
+      - name: Remove signing materials
+        if: always()
+        run: rm -f android/klinrek-ci.jks android/keystore.properties
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nmp-4.8-signed-test-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 3
+          if-no-files-found: error

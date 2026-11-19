@@ -100,11 +100,18 @@
     });
   }
   function cset(k, v) {
-    mem[k] = v;
     dbp = dbp || idb();
     return dbp.then(function (db) {
-      if (!db) return;
-      try { db.transaction('kv', 'readwrite').objectStore('kv').put(v, k); } catch (e) {}
+      if (!db) { mem[k] = v; return; }
+      return new Promise(function (resolve, reject) {
+        try {
+          var tx = db.transaction('kv', 'readwrite');
+          tx.oncomplete = function () { mem[k] = v; resolve(); };
+          tx.onerror = function () { reject(tx.error || new Error('Cache write failed')); };
+          tx.onabort = function () { reject(tx.error || new Error('Cache write aborted')); };
+          tx.objectStore('kv').put(v, k);
+        } catch (e) { reject(e); }
+      });
     });
   }
   function lsGet(k, d) { try { var v = localStorage.getItem('drugs.' + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
@@ -138,10 +145,18 @@
         var fresh = getJSON(BASE + 'version.json?t=' + Date.now()).then(function (v) {
           if (c[2] && c[0] && c[1] && v.v === c[2]) return null;
           return Promise.all([getJSON(BASE + 'search.json?v=' + v.v), getJSON(BASE + 'ix.json?v=' + v.v)]).then(function (x) {
-            cset('search', x[0]); cset('ix', x[1]); cset('ver', v.v); return x;
+            // Publish the version marker only after both index files are persisted.
+            return Promise.all([cset('search', x[0]), cset('ix', x[1])])
+              .then(function () { return cset('ver', v.v); })
+              .then(function () { return x; });
           });
         });
-        if (c[0] && c[1]) { return setData(c[0], c[1]); }
+        if (c[0] && c[1]) {
+          // Show cached data immediately, then activate the newer verified index in the background.
+          var cachedData = setData(c[0], c[1]);
+          fresh.then(function (x) { if (x) setData(x[0], x[1]); }).catch(function () {});
+          return cachedData;
+        }
         return fresh.then(function (x) { return setData(x[0], x[1]); });
       }).catch(function (e) { loading = null; throw e; });
       return loading;
@@ -155,14 +170,18 @@
     function doc(id) {
       var local = nativeDrugs('doc', id);
       if (local) return Promise.resolve(local);
-      return cget('doc:' + id).then(function (c) {
-        if (c) return c;
-        return getJSON(BASE + 'doc/' + id + '.json').then(function (d) { cset('doc:' + id, d); return d; });
+      return cget('ver').then(function (version) {
+        // Version-scoped keys prevent old instructions surviving an index update.
+        var key = 'doc:' + String(version || 'unknown') + ':' + id;
+        return cget(key).then(function (cached) {
+          if (cached) return cached;
+          return getJSON(BASE + 'doc/' + id + '.json').then(function (d) { cset(key, d); return d; });
+        });
       });
     }
     // Download every instruction to persistent IndexedDB. Re-running skips completed records.
     // This does not require a ZIP or external file manager.
-    function saveOffline(id, value) {
+    function saveOffline(id, value, offlineVersion) {
       dbp = dbp || idb();
       return dbp.then(function (db) {
         if (!db) throw new Error('Локальное хранилище недоступно');
@@ -172,7 +191,7 @@
             tx.oncomplete = resolve;
             tx.onerror = function () { reject(tx.error || new Error('Ошибка записи')); };
             tx.onabort = function () { reject(tx.error || new Error('Недостаточно места')); };
-            tx.objectStore('kv').put(value, 'doc:' + id);
+            tx.objectStore('kv').put(value, 'doc:' + String(offlineVersion) + ':' + id);
           } catch (e) { reject(e); }
         });
       });
@@ -182,19 +201,22 @@
         // A full refresh is user initiated, never a background content download.
         return getJSON(BASE + 'version.json?t=' + Date.now()).then(function (v) {
           return Promise.all([getJSON(BASE + 'search.json?v=' + encodeURIComponent(v.v)), getJSON(BASE + 'ix.json?v=' + encodeURIComponent(v.v))]).then(function (x) {
-            return Promise.all([cset('search', x[0]), cset('ix', x[1]), cset('ver', v.v)]).then(function () { setData(x[0], x[1]); });
+            return Promise.all([cset('search', x[0]), cset('ix', x[1])])
+              .then(function () { return cset('ver', v.v); })
+              .then(function () { setData(x[0], x[1]); });
           });
         });
       }).then(function () {
         var ids = Array.from(new Set(D.docs.map(function (d) { return d[0]; }).filter(Boolean)));
+        var offlineVersion = null;
         var next = 0, done = 0, failed = 0;
         function worker() {
           if (next >= ids.length) return Promise.resolve();
           var id = ids[next++];
-          return cget('doc:' + id).then(function (cached) {
+          return cget('doc:' + String(offlineVersion) + ':' + id).then(function (cached) {
             if (cached) return;
             return getJSON(BASE + 'doc/' + encodeURIComponent(id) + '.json').then(function (value) {
-              return saveOffline(id, value);
+              return saveOffline(id, value, offlineVersion);
             });
           }).catch(function () { failed++; }).then(function () {
             done++;
@@ -202,7 +224,10 @@
             return worker();
           });
         }
-        return Promise.all([worker(), worker(), worker()]).then(function () {
+        return cget('ver').then(function (v) {
+          offlineVersion = v || 'unknown';
+          return Promise.all([worker(), worker(), worker()]);
+        }).then(function () {
           if (failed) throw new Error('Не загружено инструкций: ' + failed + ' из ' + ids.length + '. Повторите загрузку для продолжения.');
           return ids.length;
         });

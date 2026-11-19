@@ -142,7 +142,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
-                if (!updateChecked) { updateChecked = true; checkUpdate(false); checkContent(); }
+                if (!updateChecked) { updateChecked = true; checkUpdate(false); checkContent(); checkDrugsInBackground(); }
                 if (pendingHash != null) { view.evaluateJavascript("location.hash=" + org.json.JSONObject.quote(pendingHash), null); pendingHash = null; }
             }
         });
@@ -286,6 +286,39 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    private final java.util.concurrent.atomic.AtomicBoolean drugsCheckRunning =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
+    /** Check signed drug updates once per day without blocking the WebView. */
+    private void checkDrugsInBackground() {
+        if (!drugsCheckRunning.compareAndSet(false, true)) return;
+        new Thread(() -> {
+            try {
+                SharedPreferences prefs = getSharedPreferences("drug-auto-update", MODE_PRIVATE);
+                long now = System.currentTimeMillis();
+                if (now - prefs.getLong("lastCheck", 0) < 24L * 60 * 60 * 1000) return;
+                // The drug database is large: automatic downloads are allowed only on
+                // an active unmetered network. Manual installation remains available.
+                android.net.ConnectivityManager cm = (android.net.ConnectivityManager)
+                        getSystemService(CONNECTIVITY_SERVICE);
+                if (cm == null || cm.getActiveNetwork() == null
+                        || cm.isActiveNetworkMetered()) return;
+                String remote = DrugsDatabase.availableVersion();
+                String local = DrugsDatabase.version(MainActivity.this);
+                if (!remote.equals(local)) {
+                    String installed = DrugsDatabase.install(MainActivity.this);
+                    js("window.onDrugsInstall&&window.onDrugsInstall(true,"
+                            + org.json.JSONObject.quote(installed) + ")");
+                }
+                prefs.edit().putLong("lastCheck", System.currentTimeMillis()).apply();
+            } catch (Exception ignored) {
+                // Preserve the offline database and retry on a later launch.
+            } finally {
+                drugsCheckRunning.set(false);
+            }
+        }, "drugs-auto-update").start();
+    }
+
     // ------------------------------------------------------------ content updates (OTA)
     private long pausedAt = 0;
 
@@ -310,6 +343,7 @@ public class MainActivity extends Activity {
         }
         // the app often stays in memory for days: check again when it comes back, at most every 30 minutes
         if (updateChecked && System.currentTimeMillis() - lastCheck > 30 * 60 * 1000) { checkUpdate(false); checkContent(); }
+        checkDrugsInBackground();
         KrWatch.maybeCheck(this, false, () -> js("window.onKrStatus&&onKrStatus()"));
     }
 

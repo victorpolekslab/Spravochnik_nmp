@@ -13,7 +13,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WWW = os.path.join(ROOT, 'android/app/src/main/assets/www')
 OUT = os.path.join(ROOT, 'ota')
 KEY = os.environ.get('OTA_KEY', os.path.join(ROOT, '..', 'keys', 'ota_ec_private.pem'))
-MIN_NATIVE = 32          # первая версия APK с механизмом обновления (4.1); поднимать, если новый JS требует нового Java-кода
+# This release requires the new Android bridge. Do not lower without a compatibility audit.
+MIN_NATIVE = 39
 
 def main():
     v = int(datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5))).strftime('%Y%m%d%H%M'))
