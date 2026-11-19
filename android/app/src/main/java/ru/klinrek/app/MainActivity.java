@@ -1,5 +1,7 @@
 package ru.klinrek.app;
 
+import ru.klinrek.drugscore.DrugsDatabase;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
