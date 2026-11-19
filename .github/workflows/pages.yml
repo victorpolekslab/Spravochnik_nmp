@@ -2,7 +2,7 @@ name: Публикация веб-версии
 
 on:
   push:
-    branches: [main]
+    branches: [main, apk, drugs]
   workflow_dispatch:
 
 permissions:
