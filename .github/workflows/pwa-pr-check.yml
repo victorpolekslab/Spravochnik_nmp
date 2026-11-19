@@ -59,6 +59,10 @@ jobs:
           assert 'MIN_NATIVE = 39' in builder, 'OTA must exclude old APKs for this release'
           gradle = Path('android/app/build.gradle').read_text()
           assert 'versionCode 39' in gradle, 'APK versionCode must match OTA native floor'
-          assert "verify(m, s)" in Path('tools/ci_ota.py').read_text(), 'Reused OTA manifests must be signature-verified'
+          ota = Path('tools/ci_ota.py').read_text()
+          assert 'if reusable(m, s, files):' in ota, 'OTA reuse must be validated'
+          assert 'if not verify(man, sig):' in ota, 'Reused OTA manifests must be signature-verified'
+          assert "data.get('minNative') == MIN_NATIVE" in ota, 'OTA native floor must match release'
+          assert "data.get('files') == files" in ota, 'OTA manifest must match complete file list'
           print('PWA build and static checks passed')
           PY
