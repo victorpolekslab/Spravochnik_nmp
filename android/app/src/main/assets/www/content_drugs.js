@@ -202,7 +202,9 @@
         // A full refresh is user initiated, never a background content download.
         return getJSON(BASE + 'version.json?t=' + Date.now()).then(function (v) {
           return Promise.all([getJSON(BASE + 'search.json?v=' + encodeURIComponent(v.v)), getJSON(BASE + 'ix.json?v=' + encodeURIComponent(v.v))]).then(function (x) {
-            return Promise.all([cset('search', x[0]), cset('ix', x[1]), cset('ver', v.v)]).then(function () { setData(x[0], x[1]); });
+            return Promise.all([cset('search', x[0]), cset('ix', x[1])])
+              .then(function () { return cset('ver', v.v); })
+              .then(function () { setData(x[0], x[1]); });
           });
         });
       }).then(function () {
