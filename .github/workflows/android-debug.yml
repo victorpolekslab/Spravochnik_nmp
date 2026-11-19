@@ -38,6 +38,8 @@ jobs:
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses > /dev/null
           set -o pipefail
           "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --install "platforms;android-35" "build-tools;35.0.0"
+      - name: Check Android OTA recovery source invariants
+        run: python3 tools/test_android_ota_recovery.py
       - name: Compile Android debug APK
         working-directory: android
         run: gradle --no-daemon :app:assembleDebug
