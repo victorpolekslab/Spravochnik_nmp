@@ -59,6 +59,55 @@ jobs:
             mkdir -p web/dist/drugs
             git archive FETCH_HEAD app | tar -x -C web/dist/drugs
           fi
+      - name: Сборка подписанного офлайн-пакета препаратов
+        id: drug_package
+        continue-on-error: true # ошибка пакета не блокирует веб-версию; статус публикуется отдельно
+        env:
+          OTA_KEY_PEM: ${{ secrets.OTA_KEY_PEM }}
+        run: |
+          if [ -z "$OTA_KEY_PEM" ]; then
+            echo "::error::OTA_KEY_PEM is required to publish the signed offline drug package"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/drugs-source"
+          git fetch --depth=1 origin drugs
+          git archive FETCH_HEAD app | tar -x -C "$RUNNER_TEMP/drugs-source"
+          python3 tools/package_drugs.py --source "$RUNNER_TEMP/drugs-source/app" --out web/dist/drugs-package
+          pip install --quiet cryptography
+          printf '%s\n' "$OTA_KEY_PEM" > "$RUNNER_TEMP/drugs-signing-key.pem"
+          python3 - <<'PY'
+          import base64, os, pathlib
+          from cryptography.hazmat.primitives import hashes, serialization
+          from cryptography.hazmat.primitives.asymmetric import ec
+          p = pathlib.Path("web/dist/drugs-package")
+          key = serialization.load_pem_private_key(pathlib.Path(os.environ["RUNNER_TEMP"], "drugs-signing-key.pem").read_bytes(), password=None)
+          data = (p / "drugs-manifest.json").read_bytes()
+          (p / "drugs-manifest.sig").write_bytes(base64.b64encode(key.sign(data, ec.ECDSA(hashes.SHA256()))) + b"\n")
+          PY
+          rm -f "$RUNNER_TEMP/drugs-signing-key.pem"
+      - name: Verify signed drug package before deployment
+        if: steps.drug_package.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s web/dist/drugs-package/drugs-manifest.json
+          test -s web/dist/drugs-package/drugs-manifest.sig
+          python3 - <<'PY'
+          import base64, hashlib, json, pathlib
+          from cryptography.hazmat.primitives import hashes, serialization
+          from cryptography.hazmat.primitives.asymmetric import ec
+          p = pathlib.Path('web/dist/drugs-package')
+          m = json.loads((p / 'drugs-manifest.json').read_text())
+          blob = p / m['file']
+          assert blob.is_file() and blob.stat().st_size == m['size']
+          assert hashlib.sha256(blob.read_bytes()).hexdigest() == m['sha256']
+          print('Signed package present, archive size and digest verified')
+          PY
+      - name: Статус офлайн-пакета
+        if: steps.drug_package.outcome != 'success'
+        run: |
+          echo '::warning::Signed offline drug package was not built. Drug database installation will be unavailable until a signed package is published.'
+          echo '⚠️ Офлайн-пакет препаратов не опубликован; веб-версия продолжает публикацию.' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

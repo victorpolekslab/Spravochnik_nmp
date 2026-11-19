@@ -120,9 +120,20 @@
       return one(MIRROR + url.slice(BASE.length)).catch(function (e) { return one(url).catch(function () { throw e; }); });
     }
 
+    function nativeDrugs(key, id) {
+      try {
+        var app = window.App;
+        if (!app) return null;
+        var raw = key === 'doc' ? (app.drugsInstruction && app.drugsInstruction(id)) :
+          (app.drugsIndex && app.drugsIndex(key));
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }
     // основные данные: из кэша сразу, свежую версию — с сервера, если есть сеть
     function load() {
       if (loading) return loading;
+      var localSearch = nativeDrugs('search'), localIx = nativeDrugs('ix');
+      if (localSearch && localIx) { loading = Promise.resolve(setData(localSearch, localIx)); return loading; }
       loading = Promise.all([cget('search'), cget('ix'), cget('ver')]).then(function (c) {
         var fresh = getJSON(BASE + 'version.json?t=' + Date.now()).then(function (v) {
           if (c[2] && c[0] && c[1] && v.v === c[2]) return null;
@@ -130,7 +141,7 @@
             cset('search', x[0]); cset('ix', x[1]); cset('ver', v.v); return x;
           });
         });
-        if (c[0] && c[1]) { fresh.then(function (x) { if (x) setData(x[0], x[1]); }).catch(function () {}); return setData(c[0], c[1]); }
+        if (c[0] && c[1]) { return setData(c[0], c[1]); }
         return fresh.then(function (x) { return setData(x[0], x[1]); });
       }).catch(function (e) { loading = null; throw e; });
       return loading;
@@ -142,11 +153,62 @@
       return D;
     }
     function doc(id) {
+      var local = nativeDrugs('doc', id);
+      if (local) return Promise.resolve(local);
       return cget('doc:' + id).then(function (c) {
         if (c) return c;
         return getJSON(BASE + 'doc/' + id + '.json').then(function (d) { cset('doc:' + id, d); return d; });
       });
     }
+    // Download every instruction to persistent IndexedDB. Re-running skips completed records.
+    // This does not require a ZIP or external file manager.
+    function saveOffline(id, value) {
+      dbp = dbp || idb();
+      return dbp.then(function (db) {
+        if (!db) throw new Error('Локальное хранилище недоступно');
+        return new Promise(function (resolve, reject) {
+          try {
+            var tx = db.transaction('kv', 'readwrite');
+            tx.oncomplete = resolve;
+            tx.onerror = function () { reject(tx.error || new Error('Ошибка записи')); };
+            tx.onabort = function () { reject(tx.error || new Error('Недостаточно места')); };
+            tx.objectStore('kv').put(value, 'doc:' + id);
+          } catch (e) { reject(e); }
+        });
+      });
+    }
+    function downloadAll(onProgress) {
+      return load().then(function () {
+        // A full refresh is user initiated, never a background content download.
+        return getJSON(BASE + 'version.json?t=' + Date.now()).then(function (v) {
+          return Promise.all([getJSON(BASE + 'search.json?v=' + encodeURIComponent(v.v)), getJSON(BASE + 'ix.json?v=' + encodeURIComponent(v.v))]).then(function (x) {
+            return Promise.all([cset('search', x[0]), cset('ix', x[1]), cset('ver', v.v)]).then(function () { setData(x[0], x[1]); });
+          });
+        });
+      }).then(function () {
+        var ids = Array.from(new Set(D.docs.map(function (d) { return d[0]; }).filter(Boolean)));
+        var next = 0, done = 0, failed = 0;
+        function worker() {
+          if (next >= ids.length) return Promise.resolve();
+          var id = ids[next++];
+          return cget('doc:' + id).then(function (cached) {
+            if (cached) return;
+            return getJSON(BASE + 'doc/' + encodeURIComponent(id) + '.json').then(function (value) {
+              return saveOffline(id, value);
+            });
+          }).catch(function () { failed++; }).then(function () {
+            done++;
+            if (onProgress) onProgress(done, ids.length, failed);
+            return worker();
+          });
+        }
+        return Promise.all([worker(), worker(), worker()]).then(function () {
+          if (failed) throw new Error('Не загружено инструкций: ' + failed + ' из ' + ids.length + '. Повторите загрузку для продолжения.');
+          return ids.length;
+        });
+      });
+    }
+
     function wait(fn) {
       if (D) return fn();
       view.innerHTML = '<div class="dg-empty">Загружаю справочник препаратов…</div>';
@@ -386,6 +448,13 @@
       // есть ли такой препарат в справочнике (для ссылок «Инструкция» в схемах); false, пока данные не загружены
       has: function (name) { if (!D) return false; var r = search(clean(name), 1); return !!(r.length && r[0].s >= 30 && D.rows[r[0].i][6] >= 0); },
       preload: function () { load().catch(function () {}); },
+      // After a verified native database install, invalidate the in-memory index.
+      // The next route/data request loads the newly installed local snapshot.
+      refreshNative: function () {
+        loading = null; D = null; IX = null; CLS = {};
+        return load();
+      },
+      downloadAll: downloadAll,
       // для помощника выписки рецептов (content_rx.js)
       data: function () { return load().then(function () { return D; }); },
       search: function (q, limit) { return search(q, limit); },

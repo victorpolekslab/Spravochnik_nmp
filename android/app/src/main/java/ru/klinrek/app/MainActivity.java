@@ -1,5 +1,7 @@
 package ru.klinrek.app;
 
+import ru.klinrek.drugscore.DrugsDatabase;
+
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
@@ -165,6 +167,43 @@ public class MainActivity extends Activity {
         public String contentVersion() { return String.valueOf(Ota.running(MainActivity.this)); }
         @android.webkit.JavascriptInterface
         public void checkContent() { MainActivity.this.checkContent(); }
+        @android.webkit.JavascriptInterface
+        public void downloadContent() {
+            Ota.download(MainActivity.this, () -> js("window.onContentReady&&onContentReady()"));
+        }
+        @android.webkit.JavascriptInterface
+        public void checkDrugsUpdate() {
+            new Thread(() -> {
+                try {
+                    String remote = DrugsDatabase.availableVersion();
+                    String local = DrugsDatabase.version(MainActivity.this);
+                    boolean update = !remote.equals(local);
+                    js("window.onDrugsUpdate&&window.onDrugsUpdate(" + update + ","
+                            + org.json.JSONObject.quote(remote) + ","
+                            + org.json.JSONObject.quote(local) + ")");
+                } catch (Exception e) {
+                    js("window.onDrugsUpdateError&&window.onDrugsUpdateError("
+                            + org.json.JSONObject.quote(e.getMessage() == null ? "Ошибка проверки" : e.getMessage()) + ")");
+                }
+            }).start();
+        }
+        @android.webkit.JavascriptInterface
+        public String drugsVersion() { return DrugsDatabase.version(MainActivity.this); }
+        @android.webkit.JavascriptInterface
+        public String drugsIndex(String key) { return DrugsDatabase.index(MainActivity.this, key); }
+        @android.webkit.JavascriptInterface
+        public String drugsInstruction(String id) { return DrugsDatabase.instruction(MainActivity.this, id); }
+        @android.webkit.JavascriptInterface
+        public void installDrugs() {
+            new Thread(() -> {
+                try {
+                    String version = DrugsDatabase.install(MainActivity.this);
+                    js("window.onDrugsInstall&&window.onDrugsInstall(true," + org.json.JSONObject.quote(version) + ")");
+                } catch (Exception e) {
+                    js("window.onDrugsInstall&&window.onDrugsInstall(false," + org.json.JSONObject.quote(e.getMessage() == null ? "Ошибка установки" : e.getMessage()) + ")");
+                }
+            }, "drugs-install").start();
+        }
         /** Слежение за новыми КР (включается при входе организатора). */
         @android.webkit.JavascriptInterface
         public void krWatch(boolean on) {

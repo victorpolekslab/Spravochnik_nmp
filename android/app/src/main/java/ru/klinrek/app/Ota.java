@@ -84,6 +84,14 @@ final class Ota {
 
     /** Проверить сайт и скачать новую версию в фоне. onReady вызывается, если загружено новое. */
     static void check(Context ctx, Runnable onReady) {
+        run(ctx, false, onReady);
+    }
+
+    static void download(Context ctx, Runnable onReady) {
+        run(ctx, true, onReady);
+    }
+
+    private static void run(Context ctx, boolean download, Runnable onReady) {
         if (busy) return;
         busy = true;
         final Context c = ctx.getApplicationContext();
@@ -100,6 +108,8 @@ final class Ota {
                 SharedPreferences p = sp(c);
                 if (v <= Math.max(bundledVersion(c), p.getLong("ver", 0)) || v == p.getLong("bad", -1)) return;
                 if (m.optLong("minNative", 0) > nativeCode(c)) return;
+                p.edit().putLong("remote", v).putString("error", "").apply();
+                if (!download) return;
                 File dir = new File(root(c), String.valueOf(v)), tmp = new File(root(c), v + ".tmp");
                 deleteTree(tmp); tmp.mkdirs();
                 File cur = new File(root(c), String.valueOf(p.getLong("ver", 0)));
@@ -127,7 +137,8 @@ final class Ota {
                     if (!n.equals(String.valueOf(v)) && !n.equals(String.valueOf(running(c)))) deleteTree(d);
                 }
                 if (onReady != null) onReady.run();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                sp(c).edit().putString("error", String.valueOf(e.getMessage())).apply();
             } finally { busy = false; }
         }).start();
     }

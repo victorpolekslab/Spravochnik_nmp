@@ -1443,7 +1443,8 @@ function about() {
   const bundled = Object.values(crData()).filter(x => x.off);
   view.innerHTML = `<div class="about">
     <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION}${contentLabel()} · клинические рекомендации от 13.11.2026</p>
-      ${window.App ? '<button class="lnkbtn" id="updChk">Проверить обновления</button><span class="updres" id="updRes"></span>' : ''}</div>
+      ${window.App ? '<button class="lnkbtn" id="updChk">Проверить обновления</button><button class="lnkbtn" id="otaDownload">Скачать обновление вручную</button><span class="updres" id="updRes"></span>' : ''}</div>
+    <div class="card"><b>Офлайн-инструкции препаратов</b><p>Однократная загрузка полной базы для работы без сети. При повторном запуске сохранённые инструкции пропускаются.</p><button class="lnkbtn" id="drugsOffline">Скачать базу инструкций</button><p id="drugsOfflineStatus" class="meta"></p></div>
     <div class="card"><b>Обучение</b><p><a href="#report">Отчёт по обучению</a> — для организатора: кто прослушал лекции и прошёл тесты.</p></div>
     ${shareCard()}
     <div class="card"><b>Что это</b><p>Справочник фельдшера неотложной медицинской помощи по действующим клиническим рекомендациям Минздрава России. Во вкладках «Неотложно» — помощь до приезда СМП: без кислородотерапии, тромболизиса, наркотических анальгетиков и инфузомата. <span class="onebadge" style="margin:0">ОДИН ИЗ</span> — взаимозаменяемые препараты, выбирается один.</p>
@@ -1452,7 +1453,69 @@ function about() {
     <div class="card"><b>Важно</b><p>Справочник не заменяет инструкцию к препарату и решение врача. В КР «Бронхиальная астма» (359_3) для преднизолона у взрослых указано «20–30 мг/кг/сут» — это опечатка в единицах, в схеме приведено 20–30 мг/сут.</p></div>
     <div class="card"><b>Встроенные рекомендации</b>${bundled.sort((x, y) => x.name.localeCompare(y.name)).map(x => `<p><a href="#doc/${x.id}">КР${esc(x.id)}</a> — ${esc(x.name)}</p>`).join('')}</div>
   </div>`;
+  // Daily signed-manifest check only; downloading remains an explicit user action.
+  window.onDrugsUpdate = (available, remote, local) => {
+    try { localStorage.setItem('drugsLastCheck', String(Date.now())); } catch (_) {}
+    const status = $('#drugsOfflineStatus');
+    if (status && available) status.textContent = 'Доступна новая база препаратов: ' + remote + (local ? ' (установлена: ' + local + ')' : ' (ещё не установлена)') + '. Для загрузки нажмите кнопку ниже.';
+    else if (status && !available) status.textContent = 'База препаратов актуальна: ' + remote;
+  };
+  window.onDrugsUpdateError = (message) => {
+    const status = $('#drugsOfflineStatus');
+    if (status) status.textContent = 'Не удалось проверить обновление базы: ' + message + '. Офлайн-данные доступны.';
+  };
+  try {
+    const nativeDrugs = window.App;
+    const lastCheck = Number(localStorage.getItem('drugsLastCheck') || 0);
+    if (nativeDrugs && typeof nativeDrugs.checkDrugsUpdate === 'function' &&
+        (!lastCheck || Date.now() - lastCheck > 24 * 60 * 60 * 1000)) nativeDrugs.checkDrugsUpdate();
+  } catch (_) {}
+  window.onDrugsInstall = (ok, message) => {
+    const status = $('#drugsOfflineStatus'), button = $('#drugsOffline');
+    if (status) status.textContent = ok ? 'База установлена, версия: ' + message + '. Обновление данных…' : 'Установка не завершена: ' + message;
+    if (ok && DM && DM.refreshNative) {
+      DM.refreshNative().then(() => {
+        const label = $('#drugsOfflineStatus');
+        if (label) label.textContent = 'База установлена, версия: ' + message + '. Новые данные доступны без перезапуска.';
+      }).catch(e => {
+        const label = $('#drugsOfflineStatus');
+        if (label) label.textContent = 'База установлена, но обновление экрана не удалось: ' + (e.message || e) + '. Перезапустите приложение.';
+      });
+    }
+    if (button) button.disabled = false;
+  };
+  const offlineBtn = $('#drugsOffline');
+  if (offlineBtn) offlineBtn.onclick = () => {
+    const status = $('#drugsOfflineStatus');
+    if (window.App && typeof window.App.installDrugs === 'function') {
+      offlineBtn.disabled = true;
+      status.textContent = 'Скачивание и проверка подписанной базы…';
+      try { window.App.installDrugs(); }
+      catch (e) { status.textContent = 'Ошибка запуска: ' + e.message; offlineBtn.disabled = false; }
+      return;
+    }
+    if (!DM || !DM.downloadAll) { status.textContent = 'Модуль препаратов недоступен'; return; }
+    offlineBtn.disabled = true;
+    status.textContent = 'Подготовка загрузки…';
+    DM.downloadAll((done, total, failed) => { status.textContent = 'Сохранено или проверено: ' + done + ' из ' + total + (failed ? ' · ошибок: ' + failed : ''); })
+      .then(count => { status.textContent = 'Готово: ' + count + ' инструкций доступны без интернета'; })
+      .catch(e => { status.textContent = 'Загрузка не завершена: ' + (e.message || e) + '. Повторите для продолжения.'; })
+      .finally(() => { offlineBtn.disabled = false; });
+  };
   shareWire();
+  const dl = $('#otaDownload');
+  if (dl) {
+    if (!(window.App && typeof window.App.downloadContent === 'function')) {
+      dl.disabled = true;
+      dl.title = 'Для ручного обновления требуется новая версия приложения';
+      dl.onclick = () => { $('#updRes').textContent = 'Обновите APK приложения, чтобы скачивать обновления вручную.'; };
+    } else {
+      dl.onclick = () => {
+        $('#updRes').textContent = 'Загрузка запущена…';
+        try { window.App.downloadContent(); } catch (e) { $('#updRes').textContent = 'Не удалось начать загрузку: ' + (e.message || e); }
+      };
+    }
+  }
   const b = $('#updChk');
   if (b) b.onclick = () => { $('#updRes').textContent = 'Проверяю…'; try { window.App.checkUpdate(); if (window.App.checkContent) window.App.checkContent(); } catch (e) { onUpdateFail(); } };
 }
