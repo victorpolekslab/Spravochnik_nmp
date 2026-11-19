@@ -35,6 +35,8 @@ jobs:
           node --check web/sw.js
           node --check android/app/src/main/assets/www/content_drugs.js
           node --check android/app/src/main/assets/www/app.js
+      - name: Установить зависимости тестов OTA
+        run: python3 -m pip install 'cryptography>=42,<47'
       - name: Проверить безопасность повторного использования OTA
         run: python3 tools/test_ota_reuse.py
       - name: Проверить работу кэша препаратов
