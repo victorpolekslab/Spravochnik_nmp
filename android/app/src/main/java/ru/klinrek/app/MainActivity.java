@@ -169,6 +169,23 @@ public class MainActivity extends Activity {
         public void downloadContent() {
             Ota.download(MainActivity.this, () -> js("window.onContentReady&&onContentReady()"));
         }
+        @android.webkit.JavascriptInterface
+        public String drugsVersion() { return DrugsDatabase.version(MainActivity.this); }
+        @android.webkit.JavascriptInterface
+        public String drugsIndex(String key) { return DrugsDatabase.index(MainActivity.this, key); }
+        @android.webkit.JavascriptInterface
+        public String drugsInstruction(String id) { return DrugsDatabase.instruction(MainActivity.this, id); }
+        @android.webkit.JavascriptInterface
+        public void installDrugs() {
+            new Thread(() -> {
+                try {
+                    String version = DrugsDatabase.install(MainActivity.this);
+                    js("window.onDrugsInstall&&window.onDrugsInstall(true," + org.json.JSONObject.quote(version) + ")");
+                } catch (Exception e) {
+                    js("window.onDrugsInstall&&window.onDrugsInstall(false," + org.json.JSONObject.quote(e.getMessage() == null ? "Ошибка установки" : e.getMessage()) + ")");
+                }
+            }, "drugs-install").start();
+        }
         /** Слежение за новыми КР (включается при входе организатора). */
         @android.webkit.JavascriptInterface
         public void krWatch(boolean on) {
