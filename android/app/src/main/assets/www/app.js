@@ -1443,7 +1443,7 @@ function about() {
   const bundled = Object.values(crData()).filter(x => x.off);
   view.innerHTML = `<div class="about">
     <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION}${contentLabel()} · клинические рекомендации от 13.11.2026</p>
-      ${window.App ? '<button class="lnkbtn" id="updChk">Проверить обновления</button><span class="updres" id="updRes"></span>' : ''}</div>
+      ${window.App ? '<button class="lnkbtn" id="updChk">Проверить обновления</button><button class="lnkbtn" id="otaDownload">Скачать обновление вручную</button><span class="updres" id="updRes"></span>' : ''}</div>
     <div class="card"><b>Обучение</b><p><a href="#report">Отчёт по обучению</a> — для организатора: кто прослушал лекции и прошёл тесты.</p></div>
     ${shareCard()}
     <div class="card"><b>Что это</b><p>Справочник фельдшера неотложной медицинской помощи по действующим клиническим рекомендациям Минздрава России. Во вкладках «Неотложно» — помощь до приезда СМП: без кислородотерапии, тромболизиса, наркотических анальгетиков и инфузомата. <span class="onebadge" style="margin:0">ОДИН ИЗ</span> — взаимозаменяемые препараты, выбирается один.</p>
@@ -1453,6 +1453,7 @@ function about() {
     <div class="card"><b>Встроенные рекомендации</b>${bundled.sort((x, y) => x.name.localeCompare(y.name)).map(x => `<p><a href="#doc/${x.id}">КР${esc(x.id)}</a> — ${esc(x.name)}</p>`).join('')}</div>
   </div>`;
   shareWire();
+  const dl = $('#otaDownload'); if (dl) dl.onclick = () => { $('#updRes').textContent = 'Загрузка запущена…'; window.App.downloadContent(); };
   const b = $('#updChk');
   if (b) b.onclick = () => { $('#updRes').textContent = 'Проверяю…'; try { window.App.checkUpdate(); if (window.App.checkContent) window.App.checkContent(); } catch (e) { onUpdateFail(); } };
 }
