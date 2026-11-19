@@ -111,7 +111,8 @@ final class Ota {
                 p.edit().putLong("remote", v).putString("error", "").apply();
                 if (!download) return;
                 File dir = new File(root(c), String.valueOf(v)), tmp = new File(root(c), v + ".tmp");
-                deleteTree(tmp); tmp.mkdirs();
+                deleteTree(tmp);
+                if (!tmp.mkdirs()) throw new Exception("Cannot create OTA staging directory");
                 File cur = new File(root(c), String.valueOf(p.getLong("ver", 0)));
                 JSONArray files = m.getJSONArray("files");
                 for (int i = 0; i < files.length(); i++) {
@@ -125,8 +126,16 @@ final class Ota {
                     // уже есть такой же файл — взять из текущей версии или из APK, не скачивая
                     File old = new File(cur, name);
                     byte[] data = null;
-                    if (old.exists() && hash.equals(sha256(readFile(old)))) data = readFile(old);
-                    if (data == null) { try (InputStream in = c.getAssets().open("www/" + name)) { byte[] b = readAll(in); if (hash.equals(sha256(b))) data = b; } catch (Exception ignored) {} }
+                    if (old.isFile() && old.length() == expectedSize) {
+                        byte[] b = readFile(old, expectedSize);
+                        if (hash.equals(sha256(b))) data = b;
+                    }
+                    if (data == null) {
+                        try (InputStream in = c.getAssets().open("www/" + name)) {
+                            byte[] b = readLimited(in, expectedSize);
+                            if (hash.equals(sha256(b))) data = b;
+                        } catch (Exception ignored) {}
+                    }
                     if (data == null) { data = get(BASE + "files/" + name + "?h=" + hash.substring(0, 12), expectedSize); if (!hash.equals(sha256(data))) throw new SecurityException("hash " + name); }
                     if (data.length != expectedSize) throw new SecurityException("size " + name);
                     try (OutputStream o = new FileOutputStream(out)) { o.write(data); }
@@ -179,7 +188,9 @@ final class Ota {
         return o.toByteArray();
     }
 
-    private static byte[] readFile(File f) throws Exception { try (InputStream in = new FileInputStream(f)) { return readAll(in); } }
+    private static byte[] readFile(File f, long maxBytes) throws Exception {
+        try (InputStream in = new FileInputStream(f)) { return readLimited(in, maxBytes); }
+    }
 
     private static String sha256(byte[] b) throws Exception {
         byte[] d = MessageDigest.getInstance("SHA-256").digest(b);
