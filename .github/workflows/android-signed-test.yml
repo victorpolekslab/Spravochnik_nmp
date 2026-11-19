@@ -44,7 +44,7 @@ jobs:
           umask 077
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/klinrek-ci.jks
           {
-            printf 'storeFile=klinrek-ci.jks\n'
+            printf 'storeFile=../klinrek-ci.jks\n'
             printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
             printf 'keyAlias=klinrek\n'
             printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
