@@ -182,7 +182,7 @@
     }
     // Download every instruction to persistent IndexedDB. Re-running skips completed records.
     // This does not require a ZIP or external file manager.
-    function saveOffline(id, value) {
+    function saveOffline(id, value, offlineVersion) {
       dbp = dbp || idb();
       return dbp.then(function (db) {
         if (!db) throw new Error('Локальное хранилище недоступно');
@@ -192,7 +192,7 @@
             tx.oncomplete = resolve;
             tx.onerror = function () { reject(tx.error || new Error('Ошибка записи')); };
             tx.onabort = function () { reject(tx.error || new Error('Недостаточно места')); };
-            tx.objectStore('kv').put(value, 'doc:' + id);
+            tx.objectStore('kv').put(value, 'doc:' + String(offlineVersion) + ':' + id);
           } catch (e) { reject(e); }
         });
       });
@@ -207,14 +207,15 @@
         });
       }).then(function () {
         var ids = Array.from(new Set(D.docs.map(function (d) { return d[0]; }).filter(Boolean)));
+        var offlineVersion = null;
         var next = 0, done = 0, failed = 0;
         function worker() {
           if (next >= ids.length) return Promise.resolve();
           var id = ids[next++];
-          return cget('doc:' + id).then(function (cached) {
+          return cget('doc:' + String(offlineVersion) + ':' + id).then(function (cached) {
             if (cached) return;
             return getJSON(BASE + 'doc/' + encodeURIComponent(id) + '.json').then(function (value) {
-              return saveOffline(id, value);
+              return saveOffline(id, value, offlineVersion);
             });
           }).catch(function () { failed++; }).then(function () {
             done++;
@@ -222,7 +223,10 @@
             return worker();
           });
         }
-        return Promise.all([worker(), worker(), worker()]).then(function () {
+        return cget('ver').then(function (v) {
+          offlineVersion = v || 'unknown';
+          return Promise.all([worker(), worker(), worker()]);
+        }).then(function () {
           if (failed) throw new Error('Не загружено инструкций: ' + failed + ' из ' + ids.length + '. Повторите загрузку для продолжения.');
           return ids.length;
         });
