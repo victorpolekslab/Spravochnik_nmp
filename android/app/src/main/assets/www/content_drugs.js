@@ -120,9 +120,20 @@
       return one(MIRROR + url.slice(BASE.length)).catch(function (e) { return one(url).catch(function () { throw e; }); });
     }
 
+    function nativeDrugs(key, id) {
+      try {
+        var app = window.App;
+        if (!app) return null;
+        var raw = key === 'doc' ? (app.drugsInstruction && app.drugsInstruction(id)) :
+          (app.drugsIndex && app.drugsIndex(key));
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }
     // основные данные: из кэша сразу, свежую версию — с сервера, если есть сеть
     function load() {
       if (loading) return loading;
+      var localSearch = nativeDrugs('search'), localIx = nativeDrugs('ix');
+      if (localSearch && localIx) { loading = Promise.resolve(setData(localSearch, localIx)); return loading; }
       loading = Promise.all([cget('search'), cget('ix'), cget('ver')]).then(function (c) {
         var fresh = getJSON(BASE + 'version.json?t=' + Date.now()).then(function (v) {
           if (c[2] && c[0] && c[1] && v.v === c[2]) return null;
@@ -142,6 +153,8 @@
       return D;
     }
     function doc(id) {
+      var local = nativeDrugs('doc', id);
+      if (local) return Promise.resolve(local);
       return cget('doc:' + id).then(function (c) {
         if (c) return c;
         return getJSON(BASE + 'doc/' + id + '.json').then(function (d) { cset('doc:' + id, d); return d; });
