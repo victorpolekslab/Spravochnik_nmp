@@ -70,13 +70,22 @@ jobs:
             printf 'keyAlias=klinrek\n'
             printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
           } > android/keystore.properties
+      - name: Check Maven repository availability
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in \
+            https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-stdlib-jdk8/2.1.0/kotlin-stdlib-jdk8-2.1.0.pom \
+            https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/8.9.1/gradle-8.9.1.pom; do
+            curl --location --silent --show-error --output /dev/null --write-out 'Maven HTTP %{http_code}\n' --retry 2 --max-time 20 "$url" || true
+          done
       - name: Build signed release APK
         working-directory: android
         shell: bash
         run: |
           set -euo pipefail
           for attempt in 1 2 3; do
-            if gradle --no-daemon --refresh-dependencies :app:assembleRelease; then
+            if gradle --no-daemon :app:assembleRelease; then
               exit 0
             fi
             if [ "$attempt" -eq 3 ]; then
