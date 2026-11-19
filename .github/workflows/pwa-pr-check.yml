@@ -46,5 +46,10 @@ jobs:
           assert 'skipWaiting' in js and 'controllerchange' in js, 'PWA activation handlers missing'
           assert (p / 'content_course.js').is_file(), 'Course content missing'
           assert (p / 'content_drugs.js').is_file(), 'Drug content missing'
+          from pathlib import Path
+          builder = Path('tools/build_ota.py').read_text()
+          assert 'MIN_NATIVE = 39' in builder, 'OTA must exclude old APKs for this release'
+          gradle = Path('android/app/build.gradle').read_text()
+          assert 'versionCode 39' in gradle, 'APK versionCode must match OTA native floor'
           print('PWA build and static checks passed')
           PY
