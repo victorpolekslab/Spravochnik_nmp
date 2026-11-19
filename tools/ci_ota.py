@@ -79,7 +79,8 @@ except Exception as e:
     print('OTA: опубликованный манифест не прочитан:', e)
 for why, m, s in cands:
     try:
-        if [x[:2] for x in json.loads(m)['files']] == [x[:2] for x in files]:
+        if (verify(m, s) and json.loads(m).get('minNative', 0) >= 39
+                and [x[:2] for x in json.loads(m)['files']] == [x[:2] for x in files]):
             publish(m, s, 'файлы не менялись, манифест ' + why)
             sys.exit(0)
     except Exception:
