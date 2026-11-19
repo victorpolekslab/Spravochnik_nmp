@@ -267,8 +267,19 @@
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js').then(reg => {
       const offer = w => {
-        const t = toast('Доступна новая версия справочника. <a href="#" class="upd">Обновить</a>');
-        t.querySelector('.upd').onclick = ev => { ev.preventDefault(); window.__swUpdating = true; w.postMessage('skipWaiting'); };
+        // Update automatically once the PWA is visible; keep the manual check as fallback.
+        if (document.visibilityState === 'visible') {
+          window.__swUpdating = true;
+          w.postMessage('skipWaiting');
+          return;
+        }
+        const onVisible = () => {
+          if (document.visibilityState !== 'visible') return;
+          document.removeEventListener('visibilitychange', onVisible);
+          window.__swUpdating = true;
+          w.postMessage('skipWaiting');
+        };
+        document.addEventListener('visibilitychange', onVisible);
       };
       if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
       reg.addEventListener('updatefound', () => {
