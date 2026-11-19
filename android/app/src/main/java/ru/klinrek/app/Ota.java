@@ -112,11 +112,17 @@ final class Ota {
                 p.edit().putLong("remote", v).putString("error", "").apply();
                 if (!download) return;
                 File dir = new File(root(c), String.valueOf(v)), tmp = new File(root(c), v + ".tmp");
+                JSONArray files = m.getJSONArray("files");
+                // A crash may occur after rename but before persisting the version.
+                // Verify that completed directory first, without re-downloading files.
+                boolean alreadyComplete = dir.exists() && matchesManifest(dir, files);
+                if (dir.exists() && !alreadyComplete)
+                    throw new SecurityException("Existing OTA version is incomplete or invalid");
+                if (!alreadyComplete) {
                 staging = tmp;
                 deleteTree(tmp);
                 if (!tmp.mkdirs()) throw new Exception("Cannot create OTA staging directory");
                 File cur = new File(root(c), String.valueOf(p.getLong("ver", 0)));
-                JSONArray files = m.getJSONArray("files");
                 for (int i = 0; i < files.length(); i++) {
                     JSONArray f = files.getJSONArray(i);
                     String name = f.getString(0), hash = f.getString(1);
@@ -142,17 +148,8 @@ final class Ota {
                     if (data.length != expectedSize) throw new SecurityException("size " + name);
                     try (OutputStream o = new FileOutputStream(out)) { o.write(data); }
                 }
-                // An interrupted activation may have renamed the complete directory
-                // before its version was recorded. Verify every file before reusing it.
-                if (dir.exists()) {
-                    if (!matchesManifest(dir, files)) {
-                        throw new SecurityException("Existing OTA version is incomplete or invalid");
-                    }
-                    deleteTree(tmp);
-                    staging = null;
-                } else {
-                    if (!tmp.renameTo(dir)) throw new Exception("rename");
-                    staging = null;
+                if (!tmp.renameTo(dir)) throw new Exception("rename");
+                staging = null;
                 }
                 p.edit().putLong("ver", v).putLong("min", m.optLong("minNative", 0)).putInt("tries", 0).apply();
                 // убрать старые версии, кроме запущенной
