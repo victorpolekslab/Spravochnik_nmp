@@ -39,6 +39,16 @@ def verify(man, sig_b64):
     except Exception:
         return False
 
+def reusable(man, sig, files):
+    """Reuse only a signed manifest for exactly this release and file set."""
+    if not verify(man, sig):
+        return False
+    data = json.loads(man)
+    from build_ota import MIN_NATIVE
+    return (data.get('minNative') == MIN_NATIVE
+            and data.get('files') == files)
+
+
 def publish(man, sig, why):
     open(os.path.join(out, 'manifest.json'), 'wb').write(man)
     open(os.path.join(out, 'manifest.sig'), 'wb').write(sig)
@@ -81,8 +91,7 @@ except Exception as e:
     print('OTA: опубликованный манифест не прочитан:', e)
 for why, m, s in cands:
     try:
-        if (verify(m, s) and json.loads(m).get('minNative', 0) >= 39
-                and [x[:2] for x in json.loads(m)['files']] == [x[:2] for x in files]):
+        if reusable(m, s, files):
             publish(m, s, 'файлы не менялись, манифест ' + why)
             sys.exit(0)
     except Exception:
