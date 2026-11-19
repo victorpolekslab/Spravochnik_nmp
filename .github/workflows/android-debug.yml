@@ -24,14 +24,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}"
+          SDK="$RUNNER_TEMP/android-sdk"
           mkdir -p "$SDK/cmdline-tools/latest" "$RUNNER_TEMP/android-cmdline"
           curl --fail --location --retry 3 --silent --show-error \
             https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip \
             --output "$RUNNER_TEMP/android-cmdline-tools.zip"
           unzip -q "$RUNNER_TEMP/android-cmdline-tools.zip" -d "$RUNNER_TEMP/android-cmdline"
-          cp -a "$RUNNER_TEMP/android-cmdline/cmdline-tools/." "$SDK/cmdline-tools/latest/"
+          cp -R "$RUNNER_TEMP/android-cmdline/cmdline-tools/." "$SDK/cmdline-tools/latest/"
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
           echo "$SDK/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
           set +o pipefail
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses > /dev/null
