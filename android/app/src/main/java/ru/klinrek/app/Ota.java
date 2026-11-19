@@ -20,6 +20,7 @@ import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Фоновое обновление содержимого справочника (веб-часть: index.html, app.js, app.css, content_*.js)
@@ -36,7 +37,7 @@ final class Ota {
     static final String BASE = "https://victorpolekslab.github.io/Spravochnik_nmp/ota/";
     static final String BUNDLED_URL = "file:///android_asset/www/index.html";
     private static final String PUBKEY = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5WvSOIL6cIW9vXE1j5GHCvbqFnsvOhZB6dmcjXbS4laIBJ+DahXlPWpBJNhZ3PqO1znJztWjBj6/H8jEsDXKTQ==";
-    private static volatile boolean busy = false;
+    private static final AtomicBoolean busy = new AtomicBoolean(false);
 
     private Ota() {}
 
@@ -92,8 +93,7 @@ final class Ota {
     }
 
     private static void run(Context ctx, boolean download, Runnable onReady) {
-        if (busy) return;
-        busy = true;
+        if (!busy.compareAndSet(false, true)) return;
         final Context c = ctx.getApplicationContext();
         new Thread(() -> {
             try {
@@ -143,7 +143,7 @@ final class Ota {
                 if (onReady != null) onReady.run();
             } catch (Exception e) {
                 sp(c).edit().putString("error", String.valueOf(e.getMessage())).apply();
-            } finally { busy = false; }
+            } finally { busy.set(false); }
         }).start();
     }
 
