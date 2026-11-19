@@ -1444,6 +1444,7 @@ function about() {
   view.innerHTML = `<div class="about">
     <div class="card"><b style="font-size:17px">Справочник фельдшера неотложной медицинской помощи</b><p>Версия ${APP_VERSION}${contentLabel()} · клинические рекомендации от 13.11.2026</p>
       ${window.App ? '<button class="lnkbtn" id="updChk">Проверить обновления</button><button class="lnkbtn" id="otaDownload">Скачать обновление вручную</button><span class="updres" id="updRes"></span>' : ''}</div>
+    <div class="card"><b>Офлайн-инструкции препаратов</b><p>Однократная загрузка полной базы для работы без сети. При повторном запуске сохранённые инструкции пропускаются.</p><button class="lnkbtn" id="drugsOffline">Скачать базу инструкций</button><p id="drugsOfflineStatus" class="meta"></p></div>
     <div class="card"><b>Обучение</b><p><a href="#report">Отчёт по обучению</a> — для организатора: кто прослушал лекции и прошёл тесты.</p></div>
     ${shareCard()}
     <div class="card"><b>Что это</b><p>Справочник фельдшера неотложной медицинской помощи по действующим клиническим рекомендациям Минздрава России. Во вкладках «Неотложно» — помощь до приезда СМП: без кислородотерапии, тромболизиса, наркотических анальгетиков и инфузомата. <span class="onebadge" style="margin:0">ОДИН ИЗ</span> — взаимозаменяемые препараты, выбирается один.</p>
@@ -1452,6 +1453,17 @@ function about() {
     <div class="card"><b>Важно</b><p>Справочник не заменяет инструкцию к препарату и решение врача. В КР «Бронхиальная астма» (359_3) для преднизолона у взрослых указано «20–30 мг/кг/сут» — это опечатка в единицах, в схеме приведено 20–30 мг/сут.</p></div>
     <div class="card"><b>Встроенные рекомендации</b>${bundled.sort((x, y) => x.name.localeCompare(y.name)).map(x => `<p><a href="#doc/${x.id}">КР${esc(x.id)}</a> — ${esc(x.name)}</p>`).join('')}</div>
   </div>`;
+  const offlineBtn = $('#drugsOffline');
+  if (offlineBtn) offlineBtn.onclick = () => {
+    const status = $('#drugsOfflineStatus');
+    if (!DM || !DM.downloadAll) { status.textContent = 'Модуль препаратов недоступен'; return; }
+    offlineBtn.disabled = true;
+    status.textContent = 'Подготовка загрузки…';
+    DM.downloadAll((done, total, failed) => { status.textContent = 'Сохранено или проверено: ' + done + ' из ' + total + (failed ? ' · ошибок: ' + failed : ''); })
+      .then(count => { status.textContent = 'Готово: ' + count + ' инструкций доступны без интернета'; })
+      .catch(e => { status.textContent = 'Загрузка не завершена: ' + (e.message || e) + '. Повторите для продолжения.'; })
+      .finally(() => { offlineBtn.disabled = false; });
+  };
   shareWire();
   const dl = $('#otaDownload'); if (dl) dl.onclick = () => { $('#updRes').textContent = 'Загрузка запущена…'; window.App.downloadContent(); };
   const b = $('#updChk');
