@@ -33,7 +33,23 @@ public final class DrugsDatabase {
     private static final long MAX_COMPRESSED = 250L * 1024 * 1024;
     private static final long MAX_UNCOMPRESSED = 1024L * 1024 * 1024;
     private static final int BUFFER = 64 * 1024;
+    private static final Object INDEX_LOCK = new Object();
+    private static String cachedIndexPath;
+    private static long cachedIndexModified;
+    private static long cachedIndexLength;
+    private static String cachedSearch;
+    private static String cachedIx;
     private DrugsDatabase() {}
+
+    private static void clearIndexCache() {
+        synchronized (INDEX_LOCK) {
+            cachedIndexPath = null;
+            cachedSearch = null;
+            cachedIx = null;
+            cachedIndexModified = 0;
+            cachedIndexLength = 0;
+        }
+    }
 
     private static File active(Context context) {
         File target = context.getDatabasePath("drugs-offline.db");
@@ -95,11 +111,30 @@ public final class DrugsDatabase {
     public static String index(Context context, String key) {
         if (!"search".equals(key) && !"ix".equals(key)) return null;
         File file = active(context);
-        if (!file.isFile()) return null;
-        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(file.getPath(), null, SQLiteDatabase.OPEN_READONLY);
-             Cursor c = db.rawQuery("SELECT value FROM meta WHERE key=?", new String[]{key})) {
-            return c.moveToFirst() ? c.getString(0) : null;
-        } catch (Exception e) { return null; }
+        if (!file.isFile()) {
+            clearIndexCache();
+            return null;
+        }
+        synchronized (INDEX_LOCK) {
+            String path = file.getAbsolutePath();
+            long modified = file.lastModified(), length = file.length();
+            if (!path.equals(cachedIndexPath) || modified != cachedIndexModified || length != cachedIndexLength) {
+                cachedIndexPath = path;
+                cachedIndexModified = modified;
+                cachedIndexLength = length;
+                cachedSearch = null;
+                cachedIx = null;
+            }
+            String result = "search".equals(key) ? cachedSearch : cachedIx;
+            if (result != null) return result;
+            try (SQLiteDatabase db = SQLiteDatabase.openDatabase(file.getPath(), null, SQLiteDatabase.OPEN_READONLY);
+                 Cursor c = db.rawQuery("SELECT value FROM meta WHERE key=?", new String[]{key})) {
+                result = c.moveToFirst() ? c.getString(0) : null;
+                if ("search".equals(key)) cachedSearch = result;
+                else cachedIx = result;
+                return result;
+            } catch (Exception e) { return null; }
+        }
     }
 
     /**
@@ -187,6 +222,7 @@ public final class DrugsDatabase {
                 throw new IllegalStateException("Cannot activate database");
             }
             previous.delete();
+            clearIndexCache();
             return m.getString("version");
         } finally {
             archive.delete();
