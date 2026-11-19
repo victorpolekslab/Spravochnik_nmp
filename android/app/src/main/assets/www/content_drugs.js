@@ -100,14 +100,13 @@
     });
   }
   function cset(k, v) {
-    mem[k] = v;
     dbp = dbp || idb();
     return dbp.then(function (db) {
-      if (!db) return;
+      if (!db) { mem[k] = v; return; }
       return new Promise(function (resolve, reject) {
         try {
           var tx = db.transaction('kv', 'readwrite');
-          tx.oncomplete = resolve;
+          tx.oncomplete = function () { mem[k] = v; resolve(); };
           tx.onerror = function () { reject(tx.error || new Error('Cache write failed')); };
           tx.onabort = function () { reject(tx.error || new Error('Cache write aborted')); };
           tx.objectStore('kv').put(v, k);
