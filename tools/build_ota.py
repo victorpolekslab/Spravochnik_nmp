@@ -13,9 +13,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WWW = os.path.join(ROOT, 'android/app/src/main/assets/www')
 OUT = os.path.join(ROOT, 'ota')
 KEY = os.environ.get('OTA_KEY', os.path.join(ROOT, '..', 'keys', 'ota_ec_private.pem'))
-# Default to the minimum Android version that can safely run this release's web bundle.
-# Override only after explicitly auditing compatibility with older installed APKs.
-MIN_NATIVE = int(os.environ.get('OTA_MIN_NATIVE', '39'))
+# This release requires the new Android bridge. Do not lower without a compatibility audit.
+MIN_NATIVE = 39
 
 def main():
     v = int(datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=5))).strftime('%Y%m%d%H%M'))
