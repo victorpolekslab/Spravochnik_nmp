@@ -286,8 +286,25 @@
         const w = reg.installing;
         w && w.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) offer(w); });
       });
-      // check for updates whenever the app is brought back to the screen
-      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => { }); });
+      // Keep installed PWAs current after startup, reconnection and returning to the app.
+      // Throttle overlapping lifecycle events; a failed offline check must not suppress
+      // the next check when the network comes back.
+      let checking = false;
+      let lastCheck = 0;
+      const checkInBackground = () => {
+        if (document.visibilityState !== 'visible' || navigator.onLine === false || checking) return;
+        const now = Date.now();
+        if (now - lastCheck < 30000) return;
+        checking = true;
+        reg.update().then(() => { lastCheck = Date.now(); })
+          .catch(() => { /* offline/temporary network error: retry on next event */ })
+          .finally(() => { checking = false; });
+      };
+      checkInBackground();
+      window.addEventListener('online', () => { lastCheck = 0; checkInBackground(); });
+      window.addEventListener('pageshow', checkInBackground);
+      window.addEventListener('focus', checkInBackground);
+      document.addEventListener('visibilitychange', checkInBackground);
       // "Проверить обновления" button (same interface as the Android app)
       window.App = {
         checkUpdate() {
