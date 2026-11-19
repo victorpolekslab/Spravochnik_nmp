@@ -8,6 +8,7 @@ on:
       - 'tools/ci_ota.py'
       - 'tools/build_ota.py'
       - 'tools/test_drugs_cache.cjs'
+      - 'tools/test_ota_reuse.py'
       - 'android/app/build.gradle'
       - '.github/workflows/pwa-pr-check.yml'
   workflow_dispatch:
@@ -34,6 +35,8 @@ jobs:
           node --check web/sw.js
           node --check android/app/src/main/assets/www/content_drugs.js
           node --check android/app/src/main/assets/www/app.js
+      - name: Проверить безопасность повторного использования OTA
+        run: python3 tools/test_ota_reuse.py
       - name: Проверить работу кэша препаратов
         run: node tools/test_drugs_cache.cjs
       - name: Собрать PWA без публикации
