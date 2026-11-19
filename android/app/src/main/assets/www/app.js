@@ -1453,9 +1453,21 @@ function about() {
     <div class="card"><b>Важно</b><p>Справочник не заменяет инструкцию к препарату и решение врача. В КР «Бронхиальная астма» (359_3) для преднизолона у взрослых указано «20–30 мг/кг/сут» — это опечатка в единицах, в схеме приведено 20–30 мг/сут.</p></div>
     <div class="card"><b>Встроенные рекомендации</b>${bundled.sort((x, y) => x.name.localeCompare(y.name)).map(x => `<p><a href="#doc/${x.id}">КР${esc(x.id)}</a> — ${esc(x.name)}</p>`).join('')}</div>
   </div>`;
+  window.onDrugsInstall = (ok, message) => {
+    const status = $('#drugsOfflineStatus'), button = $('#drugsOffline');
+    if (status) status.textContent = ok ? 'База установлена, версия: ' + message + '. Откройте раздел препаратов заново.' : 'Установка не завершена: ' + message;
+    if (button) button.disabled = false;
+  };
   const offlineBtn = $('#drugsOffline');
   if (offlineBtn) offlineBtn.onclick = () => {
     const status = $('#drugsOfflineStatus');
+    if (window.App && typeof window.App.installDrugs === 'function') {
+      offlineBtn.disabled = true;
+      status.textContent = 'Скачивание и проверка подписанной базы…';
+      try { window.App.installDrugs(); }
+      catch (e) { status.textContent = 'Ошибка запуска: ' + e.message; offlineBtn.disabled = false; }
+      return;
+    }
     if (!DM || !DM.downloadAll) { status.textContent = 'Модуль препаратов недоступен'; return; }
     offlineBtn.disabled = true;
     status.textContent = 'Подготовка загрузки…';
