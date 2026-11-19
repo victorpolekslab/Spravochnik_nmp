@@ -96,6 +96,7 @@ final class Ota {
         if (!busy.compareAndSet(false, true)) return;
         final Context c = ctx.getApplicationContext();
         new Thread(() -> {
+            File staging = null;
             try {
                 byte[] man = get(BASE + "manifest.json?t=" + System.currentTimeMillis(), 1024 * 1024);
                 byte[] sig = Base64.decode(new String(get(BASE + "manifest.sig?t=" + System.currentTimeMillis(), 4096), "UTF-8").trim(), Base64.DEFAULT);
@@ -111,6 +112,7 @@ final class Ota {
                 p.edit().putLong("remote", v).putString("error", "").apply();
                 if (!download) return;
                 File dir = new File(root(c), String.valueOf(v)), tmp = new File(root(c), v + ".tmp");
+                staging = tmp;
                 deleteTree(tmp);
                 if (!tmp.mkdirs()) throw new Exception("Cannot create OTA staging directory");
                 File cur = new File(root(c), String.valueOf(p.getLong("ver", 0)));
@@ -142,6 +144,7 @@ final class Ota {
                 }
                 deleteTree(dir);
                 if (!tmp.renameTo(dir)) throw new Exception("rename");
+                staging = null;
                 p.edit().putLong("ver", v).putLong("min", m.optLong("minNative", 0)).putInt("tries", 0).apply();
                 // убрать старые версии, кроме запущенной
                 File[] all = root(c).listFiles();
@@ -152,7 +155,10 @@ final class Ota {
                 if (onReady != null) onReady.run();
             } catch (Exception e) {
                 sp(c).edit().putString("error", String.valueOf(e.getMessage())).apply();
-            } finally { busy.set(false); }
+            } finally {
+                if (staging != null) deleteTree(staging);
+                busy.set(false);
+            }
         }).start();
     }
 
