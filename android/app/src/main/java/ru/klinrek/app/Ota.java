@@ -97,8 +97,8 @@ final class Ota {
         final Context c = ctx.getApplicationContext();
         new Thread(() -> {
             try {
-                byte[] man = get(BASE + "manifest.json?t=" + System.currentTimeMillis());
-                byte[] sig = Base64.decode(new String(get(BASE + "manifest.sig?t=" + System.currentTimeMillis()), "UTF-8").trim(), Base64.DEFAULT);
+                byte[] man = get(BASE + "manifest.json?t=" + System.currentTimeMillis(), 1024 * 1024);
+                byte[] sig = Base64.decode(new String(get(BASE + "manifest.sig?t=" + System.currentTimeMillis(), 4096), "UTF-8").trim(), Base64.DEFAULT);
                 PublicKey key = KeyFactory.getInstance("EC").generatePublic(new X509EncodedKeySpec(Base64.decode(PUBKEY, Base64.DEFAULT)));
                 Signature s = Signature.getInstance("SHA256withECDSA");
                 s.initVerify(key); s.update(man);
@@ -127,7 +127,7 @@ final class Ota {
                     byte[] data = null;
                     if (old.exists() && hash.equals(sha256(readFile(old)))) data = readFile(old);
                     if (data == null) { try (InputStream in = c.getAssets().open("www/" + name)) { byte[] b = readAll(in); if (hash.equals(sha256(b))) data = b; } catch (Exception ignored) {} }
-                    if (data == null) { data = get(BASE + "files/" + name + "?h=" + hash.substring(0, 12)); if (!hash.equals(sha256(data))) throw new SecurityException("hash " + name); }
+                    if (data == null) { data = get(BASE + "files/" + name + "?h=" + hash.substring(0, 12), expectedSize); if (!hash.equals(sha256(data))) throw new SecurityException("hash " + name); }
                     if (data.length != expectedSize) throw new SecurityException("size " + name);
                     try (OutputStream o = new FileOutputStream(out)) { o.write(data); }
                 }
@@ -149,14 +149,27 @@ final class Ota {
 
     // ------------------------------------------------------------ helpers
     @SuppressWarnings("deprecation")
-    private static byte[] get(String url) throws Exception {
+    private static byte[] get(String url, long maxBytes) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         c.setConnectTimeout(15000); c.setReadTimeout(30000); c.setUseCaches(false);
         c.setRequestProperty("Cache-Control", "no-cache");
         try {
             if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
-            try (InputStream in = c.getInputStream()) { return readAll(in); }
+            try (InputStream in = c.getInputStream()) { return readLimited(in, maxBytes); }
         } finally { c.disconnect(); }
+    }
+
+    private static byte[] readLimited(InputStream in, long maxBytes) throws Exception {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buf = new byte[16384];
+        long total = 0;
+        int n;
+        while ((n = in.read(buf)) != -1) {
+            total += n;
+            if (total > maxBytes) throw new SecurityException("OTA response exceeds allowed size");
+            out.write(buf, 0, n);
+        }
+        return out.toByteArray();
     }
 
     private static byte[] readAll(InputStream in) throws Exception {
