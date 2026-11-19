@@ -138,7 +138,10 @@
         var fresh = getJSON(BASE + 'version.json?t=' + Date.now()).then(function (v) {
           if (c[2] && c[0] && c[1] && v.v === c[2]) return null;
           return Promise.all([getJSON(BASE + 'search.json?v=' + v.v), getJSON(BASE + 'ix.json?v=' + v.v)]).then(function (x) {
-            cset('search', x[0]); cset('ix', x[1]); cset('ver', v.v); return x;
+            // Publish the version marker only after both index files are persisted.
+            return Promise.all([cset('search', x[0]), cset('ix', x[1])])
+              .then(function () { return cset('ver', v.v); })
+              .then(function () { return x; });
           });
         });
         if (c[0] && c[1]) {
