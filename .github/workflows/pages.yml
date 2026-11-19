@@ -85,6 +85,24 @@ jobs:
           (p / "drugs-manifest.sig").write_bytes(base64.b64encode(key.sign(data, ec.ECDSA(hashes.SHA256()))) + b"\n")
           PY
           rm -f "$RUNNER_TEMP/drugs-signing-key.pem"
+      - name: Verify signed drug package before deployment
+        if: steps.drug_package.outcome == 'success'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s web/dist/drugs-package/drugs-manifest.json
+          test -s web/dist/drugs-package/drugs-manifest.sig
+          python3 - <<'PY'
+          import base64, hashlib, json, pathlib
+          from cryptography.hazmat.primitives import hashes, serialization
+          from cryptography.hazmat.primitives.asymmetric import ec
+          p = pathlib.Path('web/dist/drugs-package')
+          m = json.loads((p / 'drugs-manifest.json').read_text())
+          blob = p / m['file']
+          assert blob.is_file() and blob.stat().st_size == m['size']
+          assert hashlib.sha256(blob.read_bytes()).hexdigest() == m['sha256']
+          print('Signed package present, archive size and digest verified')
+          PY
       - name: Статус офлайн-пакета
         if: steps.drug_package.outcome != 'success'
         run: |
