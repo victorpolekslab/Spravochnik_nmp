@@ -286,8 +286,12 @@ public class MainActivity extends Activity {
         }).start();
     }
 
+    private final java.util.concurrent.atomic.AtomicBoolean drugsCheckRunning =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
+
     /** Check signed drug updates once per day without blocking the WebView. */
     private void checkDrugsInBackground() {
+        if (!drugsCheckRunning.compareAndSet(false, true)) return;
         new Thread(() -> {
             try {
                 SharedPreferences prefs = getSharedPreferences("drug-auto-update", MODE_PRIVATE);
@@ -309,6 +313,8 @@ public class MainActivity extends Activity {
                 prefs.edit().putLong("lastCheck", System.currentTimeMillis()).apply();
             } catch (Exception ignored) {
                 // Preserve the offline database and retry on a later launch.
+            } finally {
+                drugsCheckRunning.set(false);
             }
         }, "drugs-auto-update").start();
     }
@@ -337,6 +343,7 @@ public class MainActivity extends Activity {
         }
         // the app often stays in memory for days: check again when it comes back, at most every 30 minutes
         if (updateChecked && System.currentTimeMillis() - lastCheck > 30 * 60 * 1000) { checkUpdate(false); checkContent(); }
+        checkDrugsInBackground();
         KrWatch.maybeCheck(this, false, () -> js("window.onKrStatus&&onKrStatus()"));
     }
 
