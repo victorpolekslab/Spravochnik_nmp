@@ -77,21 +77,30 @@ class MultiProcess(unittest.TestCase):
         _,b = self.worker()
         code,data,cookie = self.post(a,"login",dict(email=self.fixture.email,password=base.PW))
         self.assertEqual(code,200)
-        self.assertEqual(self.post(b,"resume",{},cookie)[:2],(200,data))
+        self.assertTrue(self.post(b,"resume",{},cookie)[:2] == (200,data), "other worker must see the same session")
+        time.sleep(1.1)
         self.fixture.s.repo.transaction(lambda tx:self.fixture.s.repo.query(tx,
             "UPDATE browser_sessions SET issued_at_seconds=1 WHERE app_id='nmp' AND session_id=$sid;",
             sid=(data["session_id"],"Utf8")),write=True)
         identity = {key:data[key] for key in ("session_id","user_id")}
         left,right = self.fixture.concurrent(lambda i:self.post([a,b][i],"refresh",identity,cookie))
-        self.assertEqual(left[:2],right[:2])
+        self.assertTrue(left[:2] == right[:2], "concurrent refresh must converge")
         self.assertEqual(left[0],200)
-        self.assertNotEqual(left[1]["access_token"],data["access_token"])
+        self.assertTrue(left[1]["access_token"] != data["access_token"], "expired access must be replaced")
         self.stop(child)
         _,restarted = self.worker()
-        self.assertEqual(self.post(restarted,"resume",{},cookie)[:2],left[:2])
+        self.assertTrue(self.post(restarted,"resume",{},cookie)[:2] == left[:2], "restarted worker must resume session")
         self.assertEqual(self.post(b,"logout",identity,cookie)[0],200)
         self.assertEqual(self.post(restarted,"resume",{},cookie)[0],401)
         code,data,cookie = self.post(b,"login",dict(email=self.fixture.email,password=base.PW))
         self.assertEqual(code,200)
+        self.fixture.s.repo.transaction(lambda tx:self.fixture.s.repo.query(tx,
+            "UPDATE user_access SET revoked_at=CurrentUtcTimestamp() WHERE user_id=$uid AND app_id='nmp' AND permission='app:use';",
+            uid=(self.fixture.uid,"Utf8")),write=True)
+        self.assertEqual(self.post(restarted,"resume",{},cookie)[0],403)
+        self.fixture.grant_fixture(self.fixture.uid,"nmp","app:use")
+        self.fixture.s.repo.transaction(lambda tx:self.fixture.s.repo.query(tx,
+            "UPDATE user_access SET revoked_at=NULL WHERE user_id=$uid AND app_id='nmp' AND permission='app:use';",
+            uid=(self.fixture.uid,"Utf8")),write=True)
         self.fixture.s.sessions.revoke_all(data["access_token"],"nmp")
         self.assertEqual(self.post(restarted,"resume",{},cookie)[0],401)

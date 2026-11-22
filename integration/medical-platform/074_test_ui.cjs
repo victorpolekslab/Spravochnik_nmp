@@ -52,7 +52,13 @@ test('actual application route: default off, embedded opt-in and auth', {timeout
     posts++;
     if(stored.has(body.attempt_id))assert.deepEqual(stored.get(body.attempt_id),body);
     else stored.set(body.attempt_id,body);
-    if(dropAck){dropAck=false;req.socket.destroy();return;}
+    if(dropAck){
+     dropAck=false;
+     res.writeHead(200,{'Content-Type':'application/json','Content-Length':'20','Cache-Control':'no-store'});
+     res.write('{');
+     setTimeout(()=>res.destroy(),100);
+     return;
+    }
     send(res,200,body);return;
    }
    const fixed=part==='/'?'index.html':part.slice(1);

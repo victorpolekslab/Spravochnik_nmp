@@ -29,6 +29,11 @@ jobs:
           docker run -d --name medical-ydb --hostname localhost -p 127.0.0.1:2136:2136 \
             -e GRPC_PORT=2136 -e YDB_GRPC_ENABLE_TLS=false -e YDB_USE_IN_MEMORY_PDISKS=true ydbplatform/local-ydb:26.2.1.16
           docker inspect --format '{{.Image}}' medical-ydb
+          for attempt in $(seq 1 60); do
+            test "$(docker inspect --format '{{.State.Health.Status}}' medical-ydb)" = healthy && break
+            sleep 2
+          done
+          test "$(docker inspect --format '{{.State.Health.Status}}' medical-ydb)" = healthy
           python - <<'PY'
           import socket, time, ydb
           for _ in range(30):
