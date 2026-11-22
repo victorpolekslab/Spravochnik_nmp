@@ -23,7 +23,7 @@ async function start(){
    const targets=await response.json();
    last=targets.map(({type,url})=>type+' '+new URL(url).origin).join(', ');
    if(targets.some(t=>t.type==='page')){
-    const connection=await chromium.connectOverCDP(endpoint,{timeout:3000});
+    const connection=await chromium.connectOverCDP(endpoint,{timeout:3000,noDefaults:true});
     const page=connection.contexts().flatMap(context=>context.pages())[0];
     if(page){
      keep=true;

@@ -5,7 +5,7 @@ export PYTHONPATH="$PWD/integration/medical-platform:$PWD/integration/medical-pl
 export MEDICAL_YDB_LOCAL_PORT=2136
 export PYTHONDONTWRITEBYTECODE=1
 python -m pip install ydb==3.35.0 argon2-cffi==25.1.0
-npm install --prefix "$RUNNER_TEMP/medical-webview" --no-audit --no-fund playwright@1.57.0
+npm install --prefix "$RUNNER_TEMP/medical-webview" --no-audit --no-fund playwright@1.60.0
 export NODE_PATH="$RUNNER_TEMP/medical-webview/node_modules"
 docker run -d --name medical-ydb --hostname localhost -p 127.0.0.1:2136:2136 \
   -e GRPC_PORT=2136 -e YDB_GRPC_ENABLE_TLS=false -e YDB_USE_IN_MEMORY_PDISKS=true ydbplatform/local-ydb:26.2.1.16
