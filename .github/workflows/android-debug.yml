@@ -46,3 +46,15 @@ jobs:
           name: debug-apk-unverified
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 7
+      - name: Android emulator runtime smoke
+        env:
+          MEDICAL_ANDROID_START_EMULATOR: '1'
+        shell: bash
+        run: |
+          APK=$(find android/app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -print -quit)
+          bash integration/medical-platform/076_android.sh "$APK" android-runtime-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-runtime-evidence
+          path: android-runtime-evidence/
