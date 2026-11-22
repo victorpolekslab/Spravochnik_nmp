@@ -44,7 +44,9 @@ class RepositoryModel:
         key = (p["app"][0], p["digest"][0])
         if sql.startswith("INSERT"):
             self.rows[key] = SimpleNamespace(user_id=p["uid"][0], session_id=p["sid"][0],
-               expiry=p["exp"][0]//1_000_000, issued_at_seconds=p["issued"][0], auth_version=p["ver"][0])
+               expiry=p["exp"][0]//1_000_000, issued_at_seconds=p["issued"][0], auth_version=p["ver"][0], disabled=False)
+        elif "SET disabled=true" in sql:
+            self.rows[key].disabled = True
         elif sql.startswith("UPDATE"):
             self.updates += 1
             self.rows[key].issued_at_seconds = p["issued"][0]
@@ -102,3 +104,10 @@ class SessionsTest(unittest.TestCase):
         with self.assertRaises(AuthError) as error:
             self.worker().use("nmp", A, "refresh")
         self.assertEqual(error.exception.status, 503)
+
+    def test_stale_cookie_cannot_create_second_replacement(self):
+        self.bind(self.worker(), B, A, uid="other", sid="sid2")
+        with self.assertRaises(AuthError) as raised:
+            self.bind(self.worker(), C, A, uid="third", sid="sid3")
+        self.assertEqual(raised.exception.status, 409)
+        self.assertEqual(self.worker().use("nmp", B, "resume")["user_id"], "other")

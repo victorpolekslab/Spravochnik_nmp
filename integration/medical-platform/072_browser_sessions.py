@@ -19,13 +19,13 @@ class BrowserSessions:
         return dict(app=(app, "Utf8"), digest=(hashlib.sha256(handle.encode("ascii")).digest(), "String"))
 
     def lookup(self, tx, key):
-        return self.repo.one(tx, """SELECT user_id, session_id, auth_version, issued_at_seconds,
+        return self.repo.one(tx, """SELECT user_id, session_id, auth_version, issued_at_seconds, disabled,
              CAST(CAST(expires_at AS Uint64) / 1000000 AS Uint64) AS expiry
              FROM browser_sessions WHERE app_id=$app AND handle_digest=$digest
              AND expires_at > CurrentUtcTimestamp();""", **key)
 
     def claims(self, row, app, now):
-        if not row or row.expiry <= now:
+        if not row or row.disabled or row.expiry <= now:
             raise auth.AuthError()
         return [row.user_id, row.session_id, app, row.auth_version, row.expiry, now, 0, ""]
 
@@ -45,14 +45,16 @@ class BrowserSessions:
             self.repo.authorize(tx, claims)
             existing = self.lookup(tx, key)
             if existing:
-                if (existing.user_id, existing.session_id) != tuple(claims[:2]):
+                if existing.disabled or (existing.user_id, existing.session_id) != tuple(claims[:2]):
                     raise auth.AuthError(503, "PILOT_UNAVAILABLE")
                 return self.access(claims, existing.issued_at_seconds)
             if old_key:
                 old = self.lookup(tx, old_key)
+                if old and old.disabled:
+                    raise auth.AuthError(409, "SESSION_CHANGED")
                 if old:
                     self.repo.mark_revoked(tx, old.user_id, old.session_id)
-                    self.repo.query(tx, "DELETE FROM browser_sessions WHERE app_id=$app AND handle_digest=$digest;",
+                    self.repo.query(tx, "UPDATE browser_sessions SET disabled=true WHERE app_id=$app AND handle_digest=$digest;",
                                     **old_key)
             self.repo.query(tx, """INSERT INTO browser_sessions
                  (app_id,handle_digest,user_id,session_id,auth_version,expires_at,issued_at_seconds)
@@ -68,7 +70,7 @@ class BrowserSessions:
 
         def operation(tx):
             row = self.lookup(tx, key)
-            if row is None and action == "logout":
+            if (row is None or row.disabled) and action == "logout":
                 return {}
             claims = self.claims(row, app, now)
             if identity and not all(isinstance(value, str) and value.isascii() and
@@ -77,7 +79,7 @@ class BrowserSessions:
                 raise auth.AuthError(401, "SESSION_CHANGED")
             if action == "logout":
                 self.repo.mark_revoked(tx, row.user_id, row.session_id)
-                self.repo.query(tx, "DELETE FROM browser_sessions WHERE app_id=$app AND handle_digest=$digest;",
+                self.repo.query(tx, "UPDATE browser_sessions SET disabled=true WHERE app_id=$app AND handle_digest=$digest;",
                                 **key)
                 return {}
             self.repo.authorize(tx, claims)

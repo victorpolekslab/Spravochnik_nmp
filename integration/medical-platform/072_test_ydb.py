@@ -61,3 +61,12 @@ class SharedSessions(unittest.TestCase):
             result = self.workers[0].use("nmp", self.handle, "refresh")
         self.assertTrue(commits)
         self.assertEqual(result, self.workers[1].use("nmp", self.handle, "resume"))
+
+    def test_parallel_login_replacements_have_one_winner(self):
+        replacements = [secrets.token_urlsafe(32) for _ in range(2)]
+        entered = [self.fixture.enter(), self.fixture.enter()]
+        results = self.fixture.concurrent(lambda i: self.workers[i].bind(
+            "nmp", replacements[i], self.handle, entered[i]))
+        self.assertEqual(sum(isinstance(result, dict) for result in results), 1)
+        self.assertIn(409, results)
+        self.fixture.deny(401, lambda: self.workers[0].use("nmp", self.handle, "resume"))

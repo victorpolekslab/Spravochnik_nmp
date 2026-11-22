@@ -6,5 +6,6 @@ CREATE TABLE browser_sessions (
     auth_version Uint64 NOT NULL,
     expires_at Timestamp NOT NULL,
     issued_at_seconds Uint64 NOT NULL,
+    disabled Bool,
     PRIMARY KEY (app_id, handle_digest)
 ) WITH (TTL = Interval("PT0S") ON expires_at);
