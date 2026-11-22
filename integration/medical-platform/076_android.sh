@@ -12,9 +12,20 @@ if [[ "${MEDICAL_ANDROID_START_EMULATOR:-0}" == 1 ]]; then
   if [[ ! -c /dev/kvm ]]; then echo "ANDROID BLOCKED: /dev/kvm absent"; exit 0; fi
   sudo chmod a+rw /dev/kvm
   sdkmanager --install platform-tools emulator 'system-images;android-34;google_apis;x86_64'
-  echo no | avdmanager create avd --force -n medical-audit -k 'system-images;android-34;google_apis;x86_64'
+  export ANDROID_AVD_HOME="$(mktemp -d)"
+  mkdir -p "$ANDROID_AVD_HOME"
+  echo no | avdmanager create avd --force -n medical-audit -p "$ANDROID_AVD_HOME/medical-audit.avd" -k 'system-images;android-34;google_apis;x86_64'
+  if [[ ! -f "$ANDROID_AVD_HOME/medical-audit.ini" ]]; then
+    # Older avdmanager resolves its metadata directory differently than emulator.
+    printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-34\n' "$ANDROID_AVD_HOME/medical-audit.avd" >"$ANDROID_AVD_HOME/medical-audit.ini"
+  fi
+  test -f "$ANDROID_AVD_HOME/medical-audit.avd/config.ini"
+  emulator -list-avds | grep -Fx medical-audit
   emulator -avd medical-audit -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot >"$evidence/emulator.txt" 2>&1 &
-  trap 'adb emu kill || true' EXIT
+  emulator_pid=$!
+  trap 'adb emu kill || true; rm -rf "$ANDROID_AVD_HOME"' EXIT
+  sleep 3
+  if ! kill -0 "$emulator_pid" 2>/dev/null; then cat "$evidence/emulator.txt"; exit 1; fi
 fi
 timeout 180 adb wait-for-device
 for i in $(seq 1 90); do
