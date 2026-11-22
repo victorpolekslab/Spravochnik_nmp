@@ -14,7 +14,7 @@ class GatewayModel(TestCase):
         self.model = fixture_module.Fixture()
         self.clock = 1
         self.services = SimpleNamespace(sessions=self.model, login=self.model)
-        self.gateway = pilot.PilotGateway(self.services, None, ORIGIN, clock=lambda: self.clock,
+        self.gateway = pilot.PilotGateway(self.services, None, ORIGIN, fixture_memory=True, clock=lambda: self.clock,
                                           enable_learning=True)
         self.cookie = ""
 
@@ -73,7 +73,7 @@ class GatewayModel(TestCase):
     def test_foreign_origin_and_unsupported_worker(self):
         self.login()
         self.assertEqual(self.request("auth/resume", {}, origin="https://other.invalid")[0], 403)
-        self.gateway = pilot.PilotGateway(self.services, None, ORIGIN)
+        self.gateway = pilot.PilotGateway(self.services, None, ORIGIN, fixture_memory=True)
         self.assertEqual(self.request("auth/resume", {})[0], 401)
 
     def test_revoked_session_cannot_resume_from_fresh_cached_access(self):

@@ -44,13 +44,15 @@ def main():
                                registration_key=keys[2],recovery_key=keys[3],
                                verification_queue=lambda *_: None,recovery_queue=lambda *_: None)
             service.sessions.configure_retired_keys(access=old_access, refresh=old_refresh)
-            handler=gateway(service,catalog,origin,
+            shared = import_module("072_browser_sessions").BrowserSessions(service.sessions, service.sessions.clock)
+            handler=gateway(service,catalog,origin,browser_sessions=shared,
                             enable_learning=os.getenv("MEDICAL_PILOT_LEARNING")=="1")
 
             def dispatch(env, respond):
                 path=env.get("PATH_INFO","")
                 allowed={ "/pilot/nmp": ("07_pilot.html", "text/html"),
                           "/pilot/07_pilot_ui.mjs": ("07_pilot_ui.mjs", "text/javascript"),
+                          "/pilot/072_ui_adapter.mjs": ("072_ui_adapter.mjs", "text/javascript"),
                           "/pilot/07_client.mjs": ("07_client.mjs", "text/javascript") }
                 if therapist:
                     allowed["/pilot/terapevt"]=("07_pilot.html","text/html")

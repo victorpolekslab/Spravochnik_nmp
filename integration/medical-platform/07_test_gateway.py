@@ -38,7 +38,7 @@ class GatewayTests(unittest.TestCase):
         self.fixture=integration.Integration("test_concurrent_progress_monotonic")
         self.fixture.setUp()
         self.service=self.fixture.s
-        self.gateway=Gateway(self.service,self.fixture.catalog,origin,enable_learning=True,
+        self.gateway=Gateway(self.service,self.fixture.catalog,origin,enable_learning=True, fixture_memory=True,
                              clock=lambda: self.fixture.old.now)
         self.path="/v1/nmp/"
         self.password=integration.stage5.PW
@@ -83,7 +83,7 @@ class GatewayTests(unittest.TestCase):
         self.assertEqual(refresh_after_logout(self.gateway,self.path,identity,cookie),401)
 
     def test_write_disabled_and_loopback_only(self):
-        disabled=Gateway(self.service,self.fixture.catalog,origin)
+        disabled=Gateway(self.service,self.fixture.catalog,origin,fixture_memory=True)
         self.assertEqual(request(disabled,self.path+"learning/attempts",{})[0],503)
         self.assertEqual(request(disabled,self.path+"auth/login",{},host="external.invalid")[0],403)
 

@@ -68,7 +68,7 @@ def main():
     with make_server("127.0.0.1", 0, app, handler_class=Quiet) as server:
         origin = f"http://localhost:{server.server_port}"
         services = SimpleNamespace(login=fixture, sessions=fixture)
-        handler = gateway.PilotGateway(services, None, origin, clock=lambda: 90)
+        handler = gateway.PilotGateway(services, None, origin, fixture_memory=True, clock=lambda: 90)
         print(origin, flush=True)
         server.serve_forever()
 

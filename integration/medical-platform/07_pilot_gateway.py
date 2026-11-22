@@ -1,4 +1,4 @@
-"""Loopback-only stage-7 WSGI integration, with process-local cookie sessions."""
+"""Loopback WSGI integration with an explicit browser-session backend."""
 import hmac
 from importlib import import_module
 from http import HTTPStatus
@@ -14,7 +14,7 @@ learning = import_module("06_learning_api")
 
 
 class PilotGateway:
-    def __init__(self, services, catalog, origin, *, enable_learning=False, clock=time):
+    def __init__(self, services, catalog, origin, *, enable_learning=False, clock=time, browser_sessions=None, fixture_memory=False):
         url = urlsplit(origin)
         if (url.scheme not in ("http", "https") or url.hostname not in ("localhost", "127.0.0.1")
                 or url.username or url.password or url.path or url.query or url.fragment):
@@ -23,7 +23,11 @@ class PilotGateway:
         self.learning = learning.LearningAPI(services.sessions, catalog)
         self.origin, self.host = origin, url.netloc
         self.enable_learning, self.clock = enable_learning, clock
-        self.sessions, self.guard = {}, RLock()
+        if browser_sessions is None and not fixture_memory:
+            raise ValueError("A browser-session backend is required")
+        self.browser_sessions = browser_sessions
+        if fixture_memory:
+            self.sessions, self.guard = {}, RLock()
 
     def __call__(self, env, respond):
         cookie = None
@@ -33,11 +37,17 @@ class PilotGateway:
             status, result = error.status, {"error": error.code}
         except Exception:
             status, result = 503, {"error": "PILOT_UNAVAILABLE"}
+        if status == 429:
+            retry_after = "60"
+        else:
+            retry_after = None
         if status is None:
             return self.learning(env, respond)
         body = json.dumps(result, separators=(",", ":")).encode()
         headers = [("Content-Type", "application/json"), ("Cache-Control", "no-store"),
                    ("X-Content-Type-Options", "nosniff"), ("Content-Length", str(len(body)))]
+        if retry_after:
+            headers.append(("Retry-After", retry_after))
         if cookie:
             headers.append(("Set-Cookie", cookie))
         respond(f"{status} {HTTPStatus(status).phrase}", headers)
@@ -46,10 +56,13 @@ class PilotGateway:
     def dispatch(self, env):
         if env.get("HTTP_HOST") != self.host or env.get("REMOTE_ADDR") not in ("127.0.0.1", "::1"):
             raise AuthError(403, "PILOT_LOOPBACK_ONLY")
-        for field, limit in (("HTTP_AUTHORIZATION", 1040), ("HTTP_COOKIE", 4096),
+        for field, limit in (("HTTP_ORIGIN", 256), ("HTTP_AUTHORIZATION", 1040), ("HTTP_COOKIE", 4096),
                              ("PATH_INFO", 500), ("QUERY_STRING", 1200)):
             if len(env.get(field, "")) > limit:
                 raise AuthError(400, "REQUEST_LIMIT")
+        if any(env.get(name) for name in ("HTTP_FORWARDED", "HTTP_X_FORWARDED_FOR",
+                                             "HTTP_X_FORWARDED_HOST", "HTTP_X_FORWARDED_PROTO")):
+            raise AuthError(400, "UNSUPPORTED_PROXY_HEADERS")
         if env.get("HTTP_TRANSFER_ENCODING") or env.get("HTTP_CONTENT_ENCODING"):
             raise AuthError(400, "REQUEST_LIMIT")
         parts = env.get("PATH_INFO", "").split("/")
@@ -63,6 +76,15 @@ class PilotGateway:
             if not self.enable_learning or app != "nmp":
                 raise AuthError(503, "LEARNING_PILOT_DISABLED")
             active = self.cookie_handle(env, "__Host-medical_" + app)
+            if self.browser_sessions is not None:
+                value = env.get("HTTP_AUTHORIZATION", "")
+                if not value.startswith("Bearer "):
+                    raise AuthError()
+                claims = self.services.sessions.claims(value[7:], app)
+                shared = self.browser_sessions.use(app, active, "check", claims[:2])
+                if shared["session_id"] != claims[1]:
+                    raise AuthError()
+                return None, None, None
             with self.guard:
                 state = self.sessions.get(active)
                 auth = env.get("HTTP_AUTHORIZATION", "")
@@ -84,6 +106,8 @@ class PilotGateway:
         action = parts[4]
         name = "__Host-medical_" + app
         handle = self.cookie_handle(env, name)
+        if self.browser_sessions is not None:
+            return self.shared_auth(env, body, app, action, name, handle)
         with self.guard:
             now = int(self.clock())
             for entry, (_, pair) in tuple(self.sessions.items()):
@@ -135,6 +159,20 @@ class PilotGateway:
             else:
                 self.services.sessions.validate(pair["access_token"], app)
             return 200, self.public(pair), None
+
+    def shared_auth(self, env, body, app, action, name, handle):
+        if action == "login" and set(body) == {"email", "password"}:
+            pair = self.services.login.login(body["email"], body["password"], app,
+                                            source_ip=env["REMOTE_ADDR"])
+            replacement = secrets.token_urlsafe(32)
+            public = self.browser_sessions.bind(app, replacement, handle, pair)
+            return 200, public, self.cookie(name, replacement)
+        if action == "resume" and not body:
+            return 200, self.browser_sessions.use(app, handle, action), None
+        if action in ("refresh", "logout") and set(body) == {"user_id", "session_id"}:
+            result = self.browser_sessions.use(app, handle, action, (body["user_id"], body["session_id"]))
+            return 200, result, self.cookie(name, "", clear=True) if action == "logout" else None
+        raise AuthError(400, "INVALID_REQUEST")
 
     @staticmethod
     def cookie_handle(env, name):
