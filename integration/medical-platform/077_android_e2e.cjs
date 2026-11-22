@@ -9,28 +9,34 @@ const origin='http://localhost:'+port;
 
 async function start(){
  adb('shell','am','force-stop',pkg);
- adb('shell','am','start','-W','-n',pkg+'/'+(app==='nmp'?'ru.klinrek.app':'ru.klinrek.terapevt')+'.PilotAuditActivity','--ei','pilotPort',port);
- for(let i=0;i<80;i++){
+ const launched=adb('shell','am','start','-W','-n',pkg+'/'+(app==='nmp'?'ru.klinrek.app':'ru.klinrek.terapevt')+'.PilotAuditActivity','--ei','pilotPort',port);
+ assert.match(launched,/Status: ok/,launched);
+ let last;
+ for(let i=0;i<40;i++){
+  let debug,keep=false;
   try{
    const pid=adb('shell','pidof',pkg).split(/\s+/)[0];
-   const debug=adb('forward','tcp:0','localabstract:webview_devtools_remote_'+pid);
-   try{
-    const endpoint='http://127.0.0.1:'+debug;
-    const r=await fetch(endpoint+'/json/list');
-    if(r.ok&&(await r.json()).some(x=>x.url.startsWith(origin+'/'))){
-     const connection=await chromium.connectOverCDP(endpoint);
-     const page=connection.contexts()[0].pages().find(x=>x.url().startsWith(origin+'/'));
-     if(page)return {connection,page,debug};
-     await connection.close();
+   assert.match(pid,/^\d+$/);
+   debug=adb('forward','tcp:0','localabstract:webview_devtools_remote_'+pid);
+   const endpoint='http://127.0.0.1:'+debug;
+   const response=await fetch(endpoint+'/json/list',{signal:AbortSignal.timeout(1000)});
+   const targets=await response.json();
+   last=targets.map(({type,url})=>type+' '+new URL(url).origin).join(', ');
+   if(targets.some(t=>t.type==='page')){
+    const connection=await chromium.connectOverCDP(endpoint,{timeout:3000});
+    const page=connection.contexts().flatMap(context=>context.pages())[0];
+    if(page){
+     keep=true;
+     await page.waitForURL(url=>url.origin===origin,{timeout:10000});
+     return {connection,page,debug};
     }
-   }finally{
-    // Keep only the successful binding; the process-specific socket disappears on force-stop.
+    await connection.close();
    }
-   adb('forward','--remove','tcp:'+debug);
-  }catch{ /* WebView is still launching. */ }
+  }catch(error){last=error.message}
+  finally{if(debug&&!keep)adb('forward','--remove','tcp:'+debug)}
   await pause(250);
  }
- throw Error('Android WebView DevTools target unavailable');
+ throw Error('Android WebView DevTools target unavailable: '+last);
 }
 async function panelFor(page){
  await page.evaluate(()=>sessionStorage.setItem('medical-platform-pilot','1'));
@@ -51,7 +57,7 @@ async function main(){
  try{
   handle=await start();
   let panel=await panelFor(handle.page);
-  assert.ok(await handle.page.evaluate(()=>!window.Native));
+  assert.ok(await handle.page.evaluate(()=>!window.App && !window.Native));
   await login(panel,process.env.MP_EMAIL);
   adb('shell','input','keyevent','KEYCODE_HOME');
   await pause(1000);
