@@ -50,6 +50,8 @@ def main():
             handler=gateway(service,catalog,origin,browser_sessions=shared,
                             enable_learning=os.getenv("MEDICAL_PILOT_LEARNING")=="1")
 
+            bounded_api = import_module("075_deadline").Deadline(handler)
+
             def dispatch(env, respond):
                 path=env.get("PATH_INFO","")
                 allowed={ "/pilot/nmp": ("07_pilot.html", "text/html"),
@@ -77,7 +79,7 @@ def main():
                             ("Cache-Control", "no-store"), ("X-Content-Type-Options", "nosniff"),
                             ("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")])
                         return [data]
-                return handler(env,respond)
+                return bounded_api(env,respond)
 
             with make_server("127.0.0.1",port,dispatch,handler_class=Quiet) as web:
                 print(origin+"/pilot/nmp",flush=True)

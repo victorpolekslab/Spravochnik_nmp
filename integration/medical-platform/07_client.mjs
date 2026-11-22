@@ -159,7 +159,7 @@ export function client({app, fetcher, locks, store, now=Date.now, random=Math.ra
       await store.save(p,rows);
       return true;
     }); },
-    drain() { return lock(async () => {
+    drain(onResult) { return lock(async () => {
       const p=partition(), rows=await store.load(p);
       for (const row of rows.slice()) {
         if (row.state!=='pending' || row.next>now()) continue;
@@ -189,6 +189,7 @@ export function client({app, fetcher, locks, store, now=Date.now, random=Math.ra
         } else row.state='needs_review';
         await store.save(p,rows);
         if (status!==200 || rows.includes(row)) break;
+        if (typeof onResult==='function') onResult(data);
       }
       return rows.map(({body,state})=>({attempt_id:body.attempt_id,state}));
     }); },

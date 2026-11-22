@@ -12,7 +12,14 @@ function build(app) {
   panel.innerHTML=shell+(app==='nmp'?learning:'');
   const find=name=>panel.querySelector('[data-'+name+']');
   const status=message=>{find('status').textContent=message;};
-  const ready=attachMedicalPilot({enabled:true,app}).then(pilot=>{
+  const result=document.createElement('p');
+  result.dataset.result='';
+  if (app==='nmp') panel.append(result);
+  const onResult=data=>{
+    if(Number.isInteger(data.score)&&Number.isInteger(data.max_score)&&typeof data.passed==='boolean')
+      result.textContent=`Результат: ${data.score} / ${data.max_score} · ${data.passed?'зачёт':'не зачтено'}`;
+  };
+  const ready=attachMedicalPilot({enabled:true,app,onResult}).then(pilot=>{
     if (!pilot) throw Error('UNSUPPORTED');
     void pilot.resume().then(ok=>{if(ok)status('Сессия восстановлена.');}).catch(()=>{});
     return pilot;
@@ -37,11 +44,13 @@ function build(app) {
     const data=new FormData(form);
     form.elements.password.value='';
     clearQuiz();
+    result.textContent='';
     await pilot.login(data.get('email'),data.get('password'));
     status('Вход выполнен.');
   });
   bind(find('logout'),'click',async pilot=>{
     clearQuiz();
+    result.textContent='';
     await pilot.logout();
     status('Вы вышли.');
   });

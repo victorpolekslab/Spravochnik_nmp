@@ -2,7 +2,7 @@ import {client, encryptedStore} from './07_client.mjs';
 
 // Opt-in adapter for an independently served pilot UI. Never enters the legacy
 // rendering or native bridge path. The host can keep its local UI on null.
-export async function attachMedicalPilot({enabled, app, fetcher=globalThis.fetch?.bind(globalThis)}) {
+export async function attachMedicalPilot({enabled, app, onResult, fetcher=globalThis.fetch?.bind(globalThis)}) {
   const loopback = ['localhost','127.0.0.1'].includes(globalThis.location?.hostname);
   if (!enabled || !loopback || !globalThis.isSecureContext || !globalThis.navigator?.locks ||
       !globalThis.indexedDB || !globalThis.crypto?.subtle || !fetcher) return null;
@@ -12,7 +12,7 @@ export async function attachMedicalPilot({enabled, app, fetcher=globalThis.fetch
   const onOnline = async () => {
     try { await pilot.resume(); } catch { /* Try the current identity. */ }
     if (app === 'nmp') {
-      try { await pilot.drain(); } catch { /* Retain the durable queue. */ }
+      try { await pilot.drain(onResult); } catch { /* Retain the durable queue. */ }
     }
   };
   globalThis.addEventListener('online', onOnline);
@@ -21,7 +21,7 @@ export async function attachMedicalPilot({enabled, app, fetcher=globalThis.fetch
     resume: () => pilot.resume(),
     logout: () => pilot.logout(),
     ...(app === 'nmp' ? {test: id => pilot.test(id),
-      enqueue: (attempt,owner) => pilot.enqueue(attempt,owner), drain: () => pilot.drain()} : {}),
+      enqueue: (attempt,owner) => pilot.enqueue(attempt,owner), drain: () => pilot.drain(onResult)} : {}),
     close() { globalThis.removeEventListener('online', onOnline); store.close(); },
   };
 }

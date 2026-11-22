@@ -51,6 +51,15 @@ jobs:
               driver.wait(timeout=75, fail_fast=False)
           PY
       - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb 074_test_processes
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: |
+          npm install --prefix "$RUNNER_TEMP/medical-e2e" --no-audit --no-fund playwright@1.57.0
+          export NODE_PATH="$RUNNER_TEMP/medical-e2e/node_modules"
+          "$RUNNER_TEMP/medical-e2e/node_modules/.bin/playwright" install --with-deps chromium
+          export CHROMIUM="$(node -p 'require("playwright").chromium.executablePath()')"
+          python -m unittest -v 075_e2e
       - if: always()
         run: |
           docker ps -a --filter name=medical-ydb
