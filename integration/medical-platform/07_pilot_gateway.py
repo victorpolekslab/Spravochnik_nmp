@@ -62,23 +62,20 @@ class PilotGateway:
         if parts[3] == "learning":
             if not self.enable_learning or app != "nmp":
                 raise AuthError(503, "LEARNING_PILOT_DISABLED")
-            if method == "POST":
-                cookie_name = "__Host-medical_" + app
-                active = self.cookie_handle(env, cookie_name)
-                with self.guard:
-                    state = self.sessions.get(active)
-                    auth = env.get("HTTP_AUTHORIZATION", "")
-                    if not state or state[0] != app or not auth.startswith("Bearer "):
-                        raise AuthError(401, "SESSION_CHANGED")
-                    claims = self.services.sessions.claims(auth[7:], app)
-                    if tuple(claims[:2]) != (state[1]["user_id"], state[1]["session_id"]):
-                        raise AuthError(401, "SESSION_CHANGED")
-                    captured = {}
-                    def capture(status, headers):
-                        captured["status"], captured["headers"] = status, headers
-                    output = self.learning(env, capture)
-                    return int(captured["status"].split()[0]), json.loads(b"".join(output)), None
-            return None, None, None
+            active = self.cookie_handle(env, "__Host-medical_" + app)
+            with self.guard:
+                state = self.sessions.get(active)
+                auth = env.get("HTTP_AUTHORIZATION", "")
+                if not state or state[0] != app or not auth.startswith("Bearer "):
+                    raise AuthError(401, "SESSION_CHANGED")
+                claims = self.services.sessions.claims(auth[7:], app)
+                if tuple(claims[:2]) != (state[1]["user_id"], state[1]["session_id"]):
+                    raise AuthError(401, "SESSION_CHANGED")
+                captured = {}
+                def capture(status, headers):
+                    captured["status"] = status
+                output = self.learning(env, capture)
+                return int(captured["status"].split()[0]), json.loads(b"".join(output)), None
         if parts[3] != "auth" or len(parts) != 5 or method != "POST":
             raise AuthError(404, "NOT_FOUND")
         body = learning.get_body(env)
@@ -119,19 +116,24 @@ class PilotGateway:
                 raise AuthError(401, "SESSION_CHANGED")
             if action == "logout":
                 try:
-                    if pair["access_expires_at"] <= now:
-                        pair = self.services.sessions.refresh(pair["refresh_token"], app)
-                    self.services.sessions.logout(pair["access_token"], app)
-                finally:
-                    self.sessions.pop(handle, None)
+                    sessions = self.services.sessions
+                    claims = sessions.claims(pair["refresh_token"], app, "r5")
+                    sessions.repo.revoke(claims, claims[1], allow_already_revoked=True)
+                except AuthError as error:
+                    if error.status not in (401, 403):
+                        raise
+                self.sessions.pop(handle, None)
                 return 200, {}, self.cookie(name, "", clear=True)
             if pair["access_expires_at"] <= now + 15:
                 try:
                     pair = self.services.sessions.refresh(pair["refresh_token"], app)
-                except Exception:
-                    self.sessions.pop(handle, None)
+                except AuthError as error:
+                    if error.status in (401, 403):
+                        self.sessions.pop(handle, None)
                     raise
                 self.sessions[handle] = app, pair
+            else:
+                self.services.sessions.validate(pair["access_token"], app)
             return 200, self.public(pair), None
 
     @staticmethod
@@ -149,4 +151,4 @@ class PilotGateway:
 
     @staticmethod
     def cookie(name, value, *, clear=False):
-        return f"{name}={value}; Path=/; Secure; HttpOnly; SameSite=Strict" + ("; Max-Age=0" if clear else "")
+        return f"{name}={value}; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age={0 if clear else 2592000}"

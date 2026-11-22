@@ -6,7 +6,16 @@ try {
   if (!navigator.locks || !crypto.subtle) throw Error('Требуется защищённый контекст с Web Locks.');
   const store=await encryptedStore(indexedDB,crypto,navigator.locks);
   const pilot=client({app,fetcher:fetch.bind(window),locks:navigator.locks,store});
-  pilot.resume().then(ok=>{if (ok) status('Сессия восстановлена.');}).catch(()=>{});
+  async function reconnect() {
+    try {
+      if (await pilot.resume()) status('Сессия восстановлена.');
+    } catch { /* An existing identity or transient failure is handled by drain. */ }
+    if (app==='nmp') {
+      try { await pilot.drain(); } catch { /* Keep the durable queue for a later retry. */ }
+    }
+  }
+  window.addEventListener('online', reconnect);
+  void reconnect();
   const handle=fn=>async event=>{
     event.preventDefault();
     try { await fn(event); } catch { status('Операция недоступна. Проверьте сеть, вход и права.'); }

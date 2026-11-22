@@ -25,7 +25,16 @@ def main():
     catalog_class = import_module("06_learning_grader").Catalog
     root = Path(__file__).resolve().parent
     therapist = Path(os.environ["MEDICAL_PILOT_THERAPIST_DIR"]).resolve() if os.getenv("MEDICAL_PILOT_THERAPIST_DIR") else None
-    catalog = catalog_class(json.loads(Path(os.environ["MEDICAL_PILOT_CATALOG"]).read_text()),keys[4])
+    def retired(kind):
+        raw = os.getenv("MEDICAL_PILOT_RETIRED_" + kind + "_KEYS", "")
+        return [base64.b64decode(value, validate=True) for value in raw.split(",")] if raw else []
+
+    old_access, old_refresh, old_digest = map(retired, ("ACCESS", "REFRESH", "DIGEST"))
+    all_keys = [*keys, *old_access, *old_refresh, *old_digest]
+    if len(set(all_keys)) != len(all_keys) or any(len(key) != 32 for key in all_keys):
+        raise ValueError("All active and retired keys must be independent 32-byte keys")
+    catalog = catalog_class(json.loads(Path(os.environ["MEDICAL_PILOT_CATALOG"]).read_text()),
+                            keys[4], historical_keys=old_digest)
     origin = f"http://localhost:{port}"
     with ydb.Driver(endpoint=f"grpc://127.0.0.1:{db_port}",database="/local",
                     credentials=ydb.AnonymousCredentials(),disable_discovery=True) as driver:
@@ -34,6 +43,7 @@ def main():
             service=auth.build(pool,access_key=keys[0],refresh_key=keys[1],
                                registration_key=keys[2],recovery_key=keys[3],
                                verification_queue=lambda *_: None,recovery_queue=lambda *_: None)
+            service.sessions.configure_retired_keys(access=old_access, refresh=old_refresh)
             handler=gateway(service,catalog,origin,
                             enable_learning=os.getenv("MEDICAL_PILOT_LEARNING")=="1")
 

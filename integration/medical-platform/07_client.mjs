@@ -1,7 +1,26 @@
 const id = /^[A-Za-z0-9:_-]{1,128}$/;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const enc = new TextEncoder();
-const dec = new TextDecoder();
+const dec = new TextDecoder('utf-8', {fatal:true});
+const transient = status => status===0 || status===408 || status===429 || status>=500;
+
+function retryAfter(value, now) {
+  if (!value) return 0;
+  if (/^\d+$/.test(value)) return Number(value)*1000;
+  return Math.max(0, Date.parse(value)-now) || 0;
+}
+
+function validateRows(rows) {
+  if (!Array.isArray(rows) || rows.length>100) throw new Error('STORAGE_CORRUPT');
+  for (const row of rows) {
+    if (JSON.stringify(canonical(row.body))!==JSON.stringify(row.body) ||
+        !Number.isInteger(row.retries) || row.retries<0 || row.retries>5 ||
+        !Number.isFinite(row.next) ||
+        !['pending','paused_permission','retake','needs_review','paused_retry_budget'].includes(row.state))
+      throw new Error('STORAGE_CORRUPT');
+  }
+  return rows;
+}
 
 export function canonical(body) {
   if (!body || ![body.test_id,body.test_version,body.attempt_id].every(v=>typeof v==='string') ||
@@ -28,25 +47,31 @@ function tx(db, mode, fn) {
 }
 
 export async function encryptedStore(indexedDB, crypto, locks) {
+  if (!locks?.request) throw new Error('PILOT_REQUIRES_WEB_LOCKS');
   const db = await new Promise((resolve,reject) => {
     const req=indexedDB.open('medical-learning-pilot-v1',1);
     req.onupgradeneeded=()=>req.result.createObjectStore('records');
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error);
+    req.onblocked=()=>reject(new Error('STORAGE_BLOCKED'));
   });
+  db.onversionchange=()=>db.close();
   const key = await locks.request('medical-pilot-key',async () => {
     const saved=await tx(db,'readonly',s=>s.get('key'));
     if (saved) return saved;
+    const count=await tx(db,'readonly',s=>s.count());
+    if (count) throw new Error('STORAGE_KEY_MISSING');
     const fresh=await crypto.subtle.generateKey({name:'AES-GCM',length:256},false,['encrypt','decrypt']);
     await tx(db,'readwrite',s=>s.put(fresh,'key'));
     return fresh;
   });
   return {
+    close() { db.close(); },
     async load(partition) {
       const value=await tx(db,'readonly',s=>s.get(partition));
       if (!value) return [];
       const clear=await crypto.subtle.decrypt({name:'AES-GCM',iv:value.iv,additionalData:enc.encode(partition)},key,value.data);
-      return JSON.parse(dec.decode(clear));
+      return validateRows(JSON.parse(dec.decode(clear)));
     },
     async save(partition, rows) {
       const iv=crypto.getRandomValues(new Uint8Array(12));
@@ -56,7 +81,7 @@ export async function encryptedStore(indexedDB, crypto, locks) {
   };
 }
 
-export function client({app, fetcher, locks, store, now=Date.now}) {
+export function client({app, fetcher, locks, store, now=Date.now, random=Math.random}) {
   if (!['nmp','terapevt'].includes(app) || !locks?.request) throw new Error('PILOT_REQUIRES_WEB_LOCKS');
   let current;
   const lock = fn => locks.request('medical-pilot-auth-and-queue:'+app,fn);
@@ -71,7 +96,7 @@ export function client({app, fetcher, locks, store, now=Date.now}) {
       credentials:'same-origin',redirect:'error',cache:'no-store',signal:AbortSignal.timeout(12000),
       body:JSON.stringify(body)});
     const data=await response.json().catch(()=>({}));
-    return {status:response.status,data};
+    return {status:response.status,data,retry:response.headers?.get('Retry-After')};
   }
   function identity() { return {user_id:current.user_id,session_id:current.session_id}; }
   function usable(value) {
@@ -81,20 +106,19 @@ export function client({app, fetcher, locks, store, now=Date.now}) {
   }
   async function refresh() {
     const expected=identity();
-    try {
-      const {status,data}=await call('auth/refresh',expected);
-      if (status!==200 || !usable(data) || data.user_id!==expected.user_id || data.session_id!==expected.session_id)
-        throw new Error('AUTH_REQUIRED');
-      current=data;
-    } catch(error) {
+    const {status,data}=await call('auth/refresh',expected);
+    if (transient(status)) throw new Error('AUTH_TEMPORARY');
+    if (status!==200 || !usable(data) || data.user_id!==expected.user_id || data.session_id!==expected.session_id) {
       current=undefined;
-      throw error;
+      throw new Error('AUTH_REQUIRED');
     }
+    current=data;
   }
   return {
     resume() { return lock(async () => {
       if (current) throw new Error('ALREADY_AUTHENTICATED');
       const {status,data}=await call('auth/resume',{});
+      if (transient(status)) throw new Error('AUTH_TEMPORARY');
       if (status!==200 || !usable(data)) return false;
       current=data;
       return true;
@@ -107,8 +131,10 @@ export function client({app, fetcher, locks, store, now=Date.now}) {
       return data.user_id;
     }); },
     logout() { return lock(async () => {
-      try { if (current) await call('auth/logout',identity()); }
-      finally { current=undefined; }
+      if (!current) throw new Error('AUTH_REQUIRED');
+      const {status}=await call('auth/logout',identity());
+      if (status!==200 && status!==401) throw new Error('LOGOUT_NOT_CONFIRMED');
+      current=undefined;
     }); },
     test(testId) { return lock(async () => {
       if (app!=='nmp' || typeof testId!=='string' || !id.test(testId) || !current) throw new Error('TEST_UNAVAILABLE');
@@ -155,7 +181,10 @@ export function client({app, fetcher, locks, store, now=Date.now}) {
         else if (status===401) {current=undefined; break;}
         else if (status===0 || status===200 || status===408 || status===429 || status>=500) {
           row.retries+=1;
-          row.next=now()+1000*2**row.retries;
+          const delay=1000*2**row.retries*(0.75+random()*0.5);
+          const serverDelay=retryAfter(result.retry,now());
+          row.next=now()+Math.max(delay,Math.min(serverDelay,86_400_000));
+          if (serverDelay>86_400_000) row.retries=5;
           if (row.retries>=5) row.state='paused_retry_budget';
         } else row.state='needs_review';
         await store.save(p,rows);
