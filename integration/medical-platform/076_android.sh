@@ -56,5 +56,11 @@ if [[ "${MEDICAL_ANDROID_START_EMULATOR:-0}" == 1 ]]; then
   adb shell svc data enable
   launch restored
 fi
+if [[ -n "${MP_ANDROID_APP:-}" ]]; then
+  if ! bash "${MP_E2E_HARNESS:?missing harness}"; then
+    adb logcat -d -t 500 >"$evidence/logcat.txt"
+    exit 1
+  fi
+fi
 adb logcat -d -t 500 >"$evidence/logcat.txt"
 echo "ANDROID_RUNTIME PASS install, launcher, process restart"

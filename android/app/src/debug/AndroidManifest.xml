@@ -1,0 +1,5 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <application android:networkSecurityConfig="@xml/pilot_debug_network" tools:replace="android:networkSecurityConfig">
+        <activity android:name="ru.klinrek.app.PilotAuditActivity" android:exported="true" />
+    </application>
+</manifest>
