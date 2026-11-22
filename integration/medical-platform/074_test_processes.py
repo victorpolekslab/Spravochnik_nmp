@@ -104,3 +104,25 @@ class MultiProcess(unittest.TestCase):
             uid=(self.fixture.uid,"Utf8")),write=True)
         self.fixture.s.sessions.revoke_all(data["access_token"],"nmp")
         self.assertEqual(self.post(restarted,"resume",{},cookie)[0],401)
+
+    @unittest.skipUnless(os.getenv("MEDICAL_YDB_DISPOSABLE_CONTAINER") == "medical-ydb",
+                         "requires CI disposable container")
+    def test_ydb_transport_failure_and_recovery_across_workers(self):
+        _,a = self.worker()
+        _,b = self.worker()
+        code,data,cookie = self.post(a,"login",dict(email=self.fixture.email,password=base.PW))
+        self.assertEqual(code,200)
+        subprocess.run(["docker","pause","medical-ydb"],check=True,timeout=15)
+        try:
+            self.assertEqual(self.post(b,"resume",{},cookie)[0],503)
+        finally:
+            subprocess.run(["docker","unpause","medical-ydb"],check=True,timeout=15)
+        deadline=time.monotonic()+20
+        while time.monotonic()<deadline:
+            status=self.post(a,"resume",{},cookie)[0]
+            if status==200:
+                break
+            self.assertEqual(status,503)
+            time.sleep(0.5)
+        self.assertEqual(status,200)
+        self.assertEqual(self.post(b,"resume",{},cookie)[0],200)

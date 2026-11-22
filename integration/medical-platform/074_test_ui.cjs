@@ -14,7 +14,7 @@ const target=app==='nmp'?'#learn':'#about';
 test('actual application route: default off, embedded opt-in and auth', {timeout:45000},async()=>{
  const uid=randomUUID(), sessions=new Map(), stored=new Map();
  const get=async res=>Buffer.concat(await Array.fromAsync(res)).toString();
- let posts=0, dropAck=true, legacyPosts=0;
+ let posts=0, dropAck=true, legacyPosts=0, holdAck=false, heldResponse;
  const send=(res,status,data)=>{res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
  const server=createServer(async(req,res)=>{
   try{
@@ -52,6 +52,7 @@ test('actual application route: default off, embedded opt-in and auth', {timeout
     posts++;
     if(stored.has(body.attempt_id))assert.deepEqual(stored.get(body.attempt_id),body);
     else stored.set(body.attempt_id,body);
+    if(holdAck){holdAck=false;heldResponse=res;return;}
     if(dropAck){
      dropAck=false;
      res.writeHead(200,{'Content-Type':'application/json','Content-Length':'20','Cache-Control':'no-store'});
@@ -95,6 +96,8 @@ test('actual application route: default off, embedded opt-in and auth', {timeout
   await panel.getByText('Вход выполнен.').waitFor();
   await page.reload();
   await panel.getByText('Сессия восстановлена.').waitFor();
+  const screenshot=await panel.screenshot({type:'jpeg',quality:55,animations:'disabled'});
+  console.log('AUDIT_SCREENSHOT_'+app+'='+screenshot.toString('base64'));
   if(app==='nmp'){
    assert.ok(await page.locator('#lLogin').isVisible());
    await panel.getByRole('button',{name:'Загрузить'}).click();
@@ -111,10 +114,39 @@ test('actual application route: default off, embedded opt-in and auth', {timeout
    await panel.getByRole('button',{name:'Синхронизировать'}).click();
    await panel.getByText('Очередь пуста.').waitFor();
    assert.equal(posts,2); assert.equal(stored.size,1);assert.equal(legacyPosts,0);
+   const tab=async()=>{
+    const t=await context.newPage();
+    await t.goto(origin+'/'+target);
+    await t.evaluate(()=>sessionStorage.setItem('medical-platform-pilot','1'));
+    await t.reload();
+    await t.getByText('Сессия восстановлена.').waitFor();
+    return t;
+   };
+   const sender=await tab(), verifier=await tab();
+   await panel.getByRole('button',{name:'Загрузить'}).click();
+   await panel.locator('input[type=radio]').last().check();
+   await panel.getByRole('button',{name:'Сохранить попытку'}).click();
+   await panel.getByText('Попытка сохранена на устройстве.').waitFor();
+   holdAck=true;
+   await sender.getByRole('button',{name:'Синхронизировать'}).click();
+   for(let i=0;i<30&&!heldResponse;i++)await new Promise(resolve=>setTimeout(resolve,100));
+   assert.ok(heldResponse);
+   await sender.close();
+   heldResponse.destroy();
+   await Promise.all([page,verifier].map(tab=>tab.getByRole('button',{name:'Синхронизировать'}).click()));
+   await panel.getByText('Очередь пуста.').waitFor();
+   assert.equal(posts,4);assert.equal(stored.size,2);assert.equal(legacyPosts,0);
   } else assert.equal(await panel.locator('[data-load]').count(),0);
   await panel.getByRole('button',{name:'Выйти'}).click();
   await panel.getByText('Вы вышли.').waitFor();
   await panel.getByRole('button',{name:'Отключить пилот'}).click();
   await panel.waitFor({state:'detached'});
+  const unsupported=await context.newPage();
+  await unsupported.addInitScript(()=>{
+   sessionStorage.setItem('medical-platform-pilot','1');
+   Object.defineProperty(Navigator.prototype,'locks',{value:undefined});
+  });
+  await unsupported.goto(origin+'/'+target);
+  assert.equal(await unsupported.locator('[data-medical-platform]').count(),0);
  }finally{await browser.close();server.close();}
 });

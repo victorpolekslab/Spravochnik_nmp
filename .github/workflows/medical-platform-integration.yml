@@ -15,6 +15,7 @@ jobs:
     timeout-minutes: 15
     env:
       MEDICAL_YDB_LOCAL_PORT: '2136'
+      MEDICAL_YDB_DISPOSABLE_CONTAINER: medical-ydb
       PYTHONDONTWRITEBYTECODE: '1'
       PYTHONPATH: integration/medical-platform:integration/medical-platform/testdeps
     steps:
