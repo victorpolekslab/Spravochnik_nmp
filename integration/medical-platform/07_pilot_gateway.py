@@ -14,11 +14,13 @@ learning = import_module("06_learning_api")
 
 
 class PilotGateway:
-    def __init__(self, services, catalog, origin, *, enable_learning=False, clock=time, browser_sessions=None, fixture_memory=False):
+    def __init__(self, services, catalog, origin, *, enable_learning=False, clock=time, browser_sessions=None, fixture_memory=False, allow_private_ingress=False):
         url = urlsplit(origin)
-        if (url.scheme not in ("http", "https") or url.hostname not in ("localhost", "127.0.0.1")
+        allowed = (url.scheme == "https" and url.hostname) if allow_private_ingress else (
+            url.scheme in ("http", "https") and url.hostname in ("localhost", "127.0.0.1"))
+        if (not allowed
                 or url.username or url.password or url.path or url.query or url.fragment):
-            raise ValueError("Use an exact loopback origin")
+            raise ValueError("Use an exact pilot origin")
         self.services = services
         self.learning = learning.LearningAPI(services.sessions, catalog)
         self.origin, self.host = origin, url.netloc

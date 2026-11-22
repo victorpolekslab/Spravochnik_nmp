@@ -16,7 +16,7 @@ class Quiet(WSGIRequestHandler):
 
 def main():
     port = int(os.getenv("MEDICAL_PILOT_PORT", "8766"))
-    db_port = int(os.environ["MEDICAL_YDB_LOCAL_PORT"])
+    database = import_module("076_ydb").Database.from_env(os.environ)
     key_names = ("ACCESS", "REFRESH", "REGISTRATION", "RECOVERY", "DIGEST")
     keys = [base64.b64decode(os.environ["MEDICAL_PILOT_"+name+"_KEY"],validate=True) for name in key_names]
     if len(set(keys)) != 5 or any(len(key)!=32 for key in keys):
@@ -37,53 +37,53 @@ def main():
         raise ValueError("All active and retired keys must be independent 32-byte keys")
     catalog = catalog_class(json.loads(Path(os.environ["MEDICAL_PILOT_CATALOG"]).read_text()),
                             keys[4], historical_keys=old_digest)
-    origin = f"http://localhost:{port}"
-    with ydb.Driver(endpoint=f"grpc://localhost:{db_port}",database="/local",
-                    credentials=ydb.AnonymousCredentials()) as driver:
-        driver.wait(timeout=10,fail_fast=True)
-        with ydb.QuerySessionPool(driver) as pool:
-            service=auth.build(pool,access_key=keys[0],refresh_key=keys[1],
-                               registration_key=keys[2],recovery_key=keys[3],
-                               verification_queue=lambda *_: None,recovery_queue=lambda *_: None)
-            service.sessions.configure_retired_keys(access=old_access, refresh=old_refresh)
-            shared = import_module("072_browser_sessions").BrowserSessions(service.sessions, service.sessions.clock)
-            handler=gateway(service,catalog,origin,browser_sessions=shared,
-                            enable_learning=os.getenv("MEDICAL_PILOT_LEARNING")=="1")
+    origin = os.environ["MEDICAL_PILOT_HTTPS_ORIGIN"] if database.managed else f"http://localhost:{port}"
+    def metadata():
+        from ydb.iam import MetadataUrlCredentials
+        return MetadataUrlCredentials()
+    with database.pool(ydb, metadata) as pool:
+        service=auth.build(pool,access_key=keys[0],refresh_key=keys[1],
+                           registration_key=keys[2],recovery_key=keys[3],
+                           verification_queue=lambda *_: None,recovery_queue=lambda *_: None)
+        service.sessions.configure_retired_keys(access=old_access, refresh=old_refresh)
+        shared = import_module("072_browser_sessions").BrowserSessions(service.sessions, service.sessions.clock)
+        handler=gateway(service,catalog,origin,browser_sessions=shared, allow_private_ingress=database.managed,
+                        enable_learning=os.getenv("MEDICAL_PILOT_LEARNING")=="1")
 
-            bounded_api = import_module("075_deadline").Deadline(handler)
+        bounded_api = import_module("075_deadline").Deadline(handler)
 
-            def dispatch(env, respond):
-                path=env.get("PATH_INFO","")
-                allowed={ "/pilot/nmp": ("07_pilot.html", "text/html"),
-                          "/pilot/074_panel.mjs": ("074_panel.mjs", "text/javascript"),
-                          "/pilot/07_pilot_ui.mjs": ("07_pilot_ui.mjs", "text/javascript"),
-                          "/pilot/072_ui_adapter.mjs": ("072_ui_adapter.mjs", "text/javascript"),
-                          "/pilot/07_client.mjs": ("07_client.mjs", "text/javascript") }
-                if therapist:
-                    allowed["/pilot/terapevt"]=("07_pilot.html","text/html")
-                if env.get("REQUEST_METHOD")=="GET" and path in allowed and env.get("HTTP_HOST")==f"localhost:{port}":
-                    name, content_type=allowed[path]
-                    folder=therapist if path=="/pilot/terapevt" else root
-                    data=(folder/name).read_bytes()
-                    respond("200 OK",[("Content-Type",content_type+"; charset=utf-8"),
-                                      ("Cache-Control","no-store"),("X-Content-Type-Options","nosniff"),
-                                      ("Content-Security-Policy","default-src 'none'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'")])
+        def dispatch(env, respond):
+            path=env.get("PATH_INFO","")
+            allowed={ "/pilot/nmp": ("07_pilot.html", "text/html"),
+                      "/pilot/074_panel.mjs": ("074_panel.mjs", "text/javascript"),
+                      "/pilot/07_pilot_ui.mjs": ("07_pilot_ui.mjs", "text/javascript"),
+                      "/pilot/072_ui_adapter.mjs": ("072_ui_adapter.mjs", "text/javascript"),
+                      "/pilot/07_client.mjs": ("07_client.mjs", "text/javascript") }
+            if therapist:
+                allowed["/pilot/terapevt"]=("07_pilot.html","text/html")
+            if env.get("REQUEST_METHOD")=="GET" and path in allowed and env.get("HTTP_HOST")==handler.host:
+                name, content_type=allowed[path]
+                folder=therapist if path=="/pilot/terapevt" else root
+                data=(folder/name).read_bytes()
+                respond("200 OK",[("Content-Type",content_type+"; charset=utf-8"),
+                                  ("Cache-Control","no-store"),("X-Content-Type-Options","nosniff"),
+                                  ("Content-Security-Policy","default-src 'none'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'")])
+                return [data]
+            if (web_root and env.get("REQUEST_METHOD") == "GET"
+                    and env.get("HTTP_HOST") == handler.host and not path.startswith(("/v1/", "/pilot/"))):
+                asset = (web_root / (path.lstrip("/") or "index.html")).resolve()
+                if (asset.is_relative_to(web_root) and asset.is_file() and
+                        asset.suffix in {".html", ".js", ".css", ".svg", ".png", ".jpg", ".webp", ".woff2"}):
+                    data = asset.read_bytes()
+                    respond("200 OK", [("Content-Type", guess_type(asset)[0] or "application/octet-stream"),
+                        ("Cache-Control", "no-store"), ("X-Content-Type-Options", "nosniff"),
+                        ("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")])
                     return [data]
-                if (web_root and env.get("REQUEST_METHOD") == "GET"
-                        and env.get("HTTP_HOST") == f"localhost:{port}" and not path.startswith(("/v1/", "/pilot/"))):
-                    asset = (web_root / (path.lstrip("/") or "index.html")).resolve()
-                    if (asset.is_relative_to(web_root) and asset.is_file() and
-                            asset.suffix in {".html", ".js", ".css", ".svg", ".png", ".jpg", ".webp", ".woff2"}):
-                        data = asset.read_bytes()
-                        respond("200 OK", [("Content-Type", guess_type(asset)[0] or "application/octet-stream"),
-                            ("Cache-Control", "no-store"), ("X-Content-Type-Options", "nosniff"),
-                            ("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")])
-                        return [data]
-                return bounded_api(env,respond)
+            return bounded_api(env,respond)
 
-            with make_server("127.0.0.1",port,dispatch,handler_class=Quiet) as web:
-                print(origin+"/pilot/nmp",flush=True)
-                web.serve_forever()
+        with make_server("127.0.0.1",port,dispatch,handler_class=Quiet) as web:
+            print(origin+"/pilot/nmp",flush=True)
+            web.serve_forever()
 
 
 if __name__=="__main__":

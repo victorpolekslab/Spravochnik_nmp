@@ -50,11 +50,11 @@ jobs:
                           credentials=ydb.AnonymousCredentials()) as driver:
               driver.wait(timeout=75, fail_fast=False)
           PY
-      - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb 074_test_processes 075_test_deadline
+      - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb 074_test_processes 075_test_deadline 076_test_ydb
       - uses: actions/checkout@v4
         with:
           repository: victorpolekslab/Spravochnik_terapevt
-          ref: 98cfb64710857c543bfa3509a5303647753d500c
+          ref: 3e8d531c431809caa037859f37615b58405bf1d1
           path: therapist-e2e-checkout
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -95,3 +95,30 @@ jobs:
           export CHROMIUM="$(node -p 'require("playwright").chromium.executablePath()')"
           "$CHROMIUM" --version
           node --test integration/medical-platform/071_test_browser.cjs integration/medical-platform/074_test_ui.cjs integration/medical-platform/075_sw.cjs
+
+  ingress:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+          mkdir -p "$RUNNER_TEMP/pilot-tls"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=pilot.example.invalid \
+            -addext subjectAltName=DNS:pilot.example.invalid \
+            -keyout "$RUNNER_TEMP/pilot-tls/key.pem" -out "$RUNNER_TEMP/pilot-tls/fullchain.pem"
+          sudo mkdir -p /run/medical-tls
+          sudo install -m 0600 "$RUNNER_TEMP/pilot-tls/key.pem" /run/medical-tls/key.pem
+          sudo install -m 0644 "$RUNNER_TEMP/pilot-tls/fullchain.pem" /run/medical-tls/fullchain.pem
+          sed -e 's/10.70.0.10:443/127.0.0.1:8443/' -e 's/10.70.10.0\/24/127.0.0.1/' \
+            integration/medical-platform/076_nginx.conf | sudo tee /etc/nginx/conf.d/medical-pilot.conf >/dev/null
+          sudo nginx -t
+          sudo service nginx restart
+          opts=(--noproxy '*' --cacert "$RUNNER_TEMP/pilot-tls/fullchain.pem" --resolve pilot.example.invalid:8443:127.0.0.1 -sS -o /dev/null -w '%{http_code}')
+          test "$(curl "${opts[@]}" -H 'Host: rejected.invalid' https://pilot.example.invalid:8443/)" = 421
+          test "$(curl "${opts[@]}" https://pilot.example.invalid:8443/)" = 502
+          head -c 33000 /dev/zero > "$RUNNER_TEMP/body"
+          test "$(curl "${opts[@]}" --data-binary "@$RUNNER_TEMP/body" https://pilot.example.invalid:8443/v1/nmp/auth/login)" = 413
+          echo 'INGRESS PASS TLS, exact Host, body cap, upstream unavailable'
