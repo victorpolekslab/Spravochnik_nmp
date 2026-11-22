@@ -24,8 +24,8 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install ydb==3.35.0 argon2-cffi==25.1.0
       - run: |
-          docker run -d --name medical-ydb -p 127.0.0.1:32136:2136 \
-            -e GRPC_PORT=2136 -e YDB_USE_IN_MEMORY_PDISKS=true ydbplatform/local-ydb:26.2.1.16
+          docker run -d --name medical-ydb --hostname localhost -p 127.0.0.1:32136:2136 \
+            -e GRPC_PORT=2136 -e YDB_GRPC_ENABLE_TLS=false -e YDB_USE_IN_MEMORY_PDISKS=true ydbplatform/local-ydb:26.2.1.16
           docker inspect --format '{{.Image}}' medical-ydb
           python - <<'PY'
           import ydb
@@ -35,7 +35,10 @@ jobs:
           PY
       - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb
       - if: always()
-        run: docker rm -f medical-ydb || true
+        run: |
+          docker ps -a --filter name=medical-ydb
+          docker logs --tail 200 medical-ydb || true
+          docker rm -f medical-ydb || true
   chromium:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
