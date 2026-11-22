@@ -25,8 +25,8 @@ class YdbTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         port = int(os.environ["MEDICAL_YDB_LOCAL_PORT"])
-        driver = ydb.Driver(endpoint=f"grpc://127.0.0.1:{port}", database="/local",
-                            credentials=ydb.AnonymousCredentials(), disable_discovery=True)
+        driver = ydb.Driver(endpoint=f"grpc://localhost:{port}", database="/local",
+                            credentials=ydb.AnonymousCredentials())
         cls.addClassCleanup(driver.stop)
         driver.wait(timeout=20)
         cls.pool = ydb.QuerySessionPool(driver)

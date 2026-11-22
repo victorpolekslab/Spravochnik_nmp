@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      MEDICAL_YDB_LOCAL_PORT: '32136'
+      MEDICAL_YDB_LOCAL_PORT: '2136'
       PYTHONDONTWRITEBYTECODE: '1'
       PYTHONPATH: integration/medical-platform:integration/medical-platform/testdeps
     steps:
@@ -24,14 +24,23 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install ydb==3.35.0 argon2-cffi==25.1.0
       - run: |
-          docker run -d --name medical-ydb --hostname localhost -p 127.0.0.1:32136:2136 \
+          docker run -d --name medical-ydb --hostname localhost -p 127.0.0.1:2136:2136 \
             -e GRPC_PORT=2136 -e YDB_GRPC_ENABLE_TLS=false -e YDB_USE_IN_MEMORY_PDISKS=true ydbplatform/local-ydb:26.2.1.16
           docker inspect --format '{{.Image}}' medical-ydb
           python - <<'PY'
-          import ydb
-          with ydb.Driver(endpoint="grpc://127.0.0.1:32136", database="/local",
-                          credentials=ydb.AnonymousCredentials(), disable_discovery=True) as driver:
-              driver.wait(timeout=120, fail_fast=False)
+          import socket, time, ydb
+          for _ in range(30):
+              try:
+                  with socket.create_connection(("127.0.0.1", 2136), timeout=1):
+                      print("Loopback TCP connection established", flush=True)
+                      break
+              except OSError:
+                  time.sleep(1)
+          else:
+              raise RuntimeError("YDB loopback TCP port not reachable")
+          with ydb.Driver(endpoint="grpc://localhost:2136", database="/local",
+                          credentials=ydb.AnonymousCredentials()) as driver:
+              driver.wait(timeout=75, fail_fast=False)
           PY
       - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb
       - if: always()
