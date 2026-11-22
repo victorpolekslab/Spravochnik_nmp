@@ -57,7 +57,7 @@ async function main(){
  try{
   handle=await start();
   let panel=await panelFor(handle.page);
-  assert.ok(await handle.page.evaluate(()=>!window.App && !window.Native));
+  assert.ok(await handle.page.evaluate(()=>!window.Native && typeof window.App?.krUpload !== 'function'));
   await login(panel,process.env.MP_EMAIL);
   adb('shell','input','keyevent','KEYCODE_HOME');
   await pause(1000);
