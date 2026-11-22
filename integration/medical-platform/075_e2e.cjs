@@ -3,15 +3,16 @@ const { chromium }=require('playwright');
 
 async function main(){
  const origin='http://localhost:'+process.env.MP_A, second='http://localhost:'+process.env.MP_B;
+ const app=process.env.MP_APP||'nmp';
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM,headless:true,args:['--no-sandbox']});
  try{
   const context=await browser.newContext({serviceWorkers:'block'});
   await context.route('**/*',r=>[origin,second].some(x=>r.request().url().startsWith(x+'/'))?r.continue():r.abort());
   const page=await context.newPage();
-  await page.goto(origin+'/#learn');
+  await page.goto(origin+(app==='nmp'?'/#learn':'/#about'));
   await page.evaluate(()=>sessionStorage.setItem('medical-platform-pilot','1'));
   await page.reload();
-  const panel=page.locator('[data-medical-platform=nmp]');
+  const panel=page.locator('[data-medical-platform='+app+']');
   const login=async email=>{
    const done=page.waitForResponse(r=>r.url().endsWith('/auth/login'));
    await panel.locator('[name=email]').fill(email);
@@ -34,9 +35,21 @@ async function main(){
   }
   const alternate=await context.newPage();
   await alternate.goto(second);
-  const shared=await call(alternate,'/v1/nmp/auth/resume',null,{});
+  const shared=await call(alternate,'/v1/'+app+'/auth/resume',null,{});
   assert.equal(shared.status,200);
   assert.ok(shared.body.session_id===first.session_id);
+  if(app==='terapevt'){
+   await page.reload();
+   await panel.getByText('Сессия восстановлена.').waitFor();
+   const identity={user_id:first.user_id,session_id:first.session_id};
+   assert.equal((await call(alternate,'/v1/terapevt/auth/refresh',null,identity)).status,200);
+   assert.equal(await panel.locator('[data-load]').count(),0);
+   await panel.getByRole('button',{name:'Выйти'}).click();
+   await panel.getByText('Вы вышли.').waitFor();
+   assert.equal((await call(alternate,'/v1/terapevt/auth/resume',null,{})).status,401);
+   console.log('FULL_E2E_THERAPIST PASS route; login; shared worker; resume; refresh; logout');
+   return;
+  }
   await panel.locator('[name=test]').fill('quiz');
   await panel.getByRole('button',{name:'Загрузить'}).click();
   await panel.locator('input[name=q1][value="1"]').check();

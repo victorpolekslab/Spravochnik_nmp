@@ -3,6 +3,8 @@ from importlib import import_module
 import os
 from pathlib import Path
 import subprocess
+import shutil
+import tempfile
 import unittest
 
 mp = import_module("074_test_processes")
@@ -16,7 +18,7 @@ class FullE2E(mp.MultiProcess):
     def setUpClass(cls):
         super().setUpClass()
         mp.base.YdbTest.pool.execute_with_retries(
-            "ALTER TABLE test_attempts ADD COLUMN IF NOT EXISTS answers_digest String;")
+            "ALTER TABLE test_attempts ADD COLUMN answers_digest String;")
 
     def test_browser_learning_and_isolation(self):
         fixture = self.fixture
@@ -41,3 +43,17 @@ class FullE2E(mp.MultiProcess):
             self.assertEqual([x.status for x in progress],["completed"])
             print("YDB readback: test_attempts count=1 score=2 max_score=2 passed=true; learning_progress status=completed")
         fixture.s.repo.transaction(verify)
+
+    @unittest.skipUnless(os.getenv("MP_THERAPIST_WEB"), "requires therapist worktree")
+    def test_browser_therapist_auth(self):
+        web = Path(self.enterContext(tempfile.TemporaryDirectory()))
+        shutil.copytree(os.environ["MP_THERAPIST_WEB"], web, dirs_exist_ok=True)
+        meta = web / "data_meta.js"
+        if not meta.exists():
+            meta.write_text('const META={v:"test"};')
+        self.env["MEDICAL_PILOT_WEB_ROOT"] = str(web)
+        _,a = self.worker()
+        _,b = self.worker()
+        subprocess.run(["node", str(ROOT/"075_e2e.cjs")], check=True, timeout=60,
+            env=dict(os.environ, MP_A=str(a), MP_B=str(b), MP_EMAIL=self.fixture.email,
+                     MP_APP="terapevt", MP_PASSWORD=mp.base.PW))

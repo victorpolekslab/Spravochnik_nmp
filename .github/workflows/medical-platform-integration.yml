@@ -50,7 +50,13 @@ jobs:
                           credentials=ydb.AnonymousCredentials()) as driver:
               driver.wait(timeout=75, fail_fast=False)
           PY
-      - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb 074_test_processes
+      - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb 074_test_processes 075_test_deadline
+      - uses: actions/checkout@v4
+        with:
+          repository: victorpolekslab/Spravochnik_terapevt
+          ref: 98cfb64710857c543bfa3509a5303647753d500c
+          path: therapist-e2e-checkout
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -59,6 +65,7 @@ jobs:
           export NODE_PATH="$RUNNER_TEMP/medical-e2e/node_modules"
           "$RUNNER_TEMP/medical-e2e/node_modules/.bin/playwright" install --with-deps chromium
           export CHROMIUM="$(node -p 'require("playwright").chromium.executablePath()')"
+          export MP_THERAPIST_WEB="$GITHUB_WORKSPACE/therapist-e2e-checkout/web"
           python -m unittest -v 075_e2e
       - if: always()
         run: |
@@ -87,4 +94,4 @@ jobs:
           "$RUNNER_TEMP/medical-test/node_modules/.bin/playwright" install --with-deps chromium
           export CHROMIUM="$(node -p 'require("playwright").chromium.executablePath()')"
           "$CHROMIUM" --version
-          node --test integration/medical-platform/071_test_browser.cjs integration/medical-platform/074_test_ui.cjs
+          node --test integration/medical-platform/071_test_browser.cjs integration/medical-platform/074_test_ui.cjs integration/medical-platform/075_sw.cjs
