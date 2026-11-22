@@ -525,6 +525,14 @@ function learnSaved() { const v = LS.get('learnSaved', null); return v && v.lg &
 let LEARN_TAB = 'course';   // вкладка ленты обучения: по умолчанию «Курсы»
 function learnPage(noFetch) {
   setTitle('Обучение и опросы', false);
+  if (location.hostname === 'localhost' && window.isSecureContext && navigator.locks) {
+    let enabled = false;
+    try { enabled = sessionStorage.getItem('medical-platform-pilot') === '1'; } catch {}
+    if (enabled) import('/pilot/074_panel.mjs').then(module => {
+      if (cur === '#learn' && sessionStorage.getItem('medical-platform-pilot') === '1')
+        module.mountMedicalPanel(view, 'nmp');
+    }).catch(() => {});
+  }
   const d = learnData(), u = learnUser();
   if (!noFetch) learnFetch(() => { learnBackfill(); learnFlush(); if (cur === '#learn') learnPage(true); });
   if (!u) {

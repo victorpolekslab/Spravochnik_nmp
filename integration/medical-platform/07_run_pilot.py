@@ -3,6 +3,7 @@ import base64
 from importlib import import_module
 import json
 import os
+from mimetypes import guess_type
 from pathlib import Path
 from wsgiref.simple_server import WSGIRequestHandler, make_server
 import ydb
@@ -24,6 +25,7 @@ def main():
     gateway = import_module("07_pilot_gateway").PilotGateway
     catalog_class = import_module("06_learning_grader").Catalog
     root = Path(__file__).resolve().parent
+    web_root = Path(os.environ["MEDICAL_PILOT_WEB_ROOT"]).resolve() if os.getenv("MEDICAL_PILOT_WEB_ROOT") else None
     therapist = Path(os.environ["MEDICAL_PILOT_THERAPIST_DIR"]).resolve() if os.getenv("MEDICAL_PILOT_THERAPIST_DIR") else None
     def retired(kind):
         raw = os.getenv("MEDICAL_PILOT_RETIRED_" + kind + "_KEYS", "")
@@ -36,8 +38,8 @@ def main():
     catalog = catalog_class(json.loads(Path(os.environ["MEDICAL_PILOT_CATALOG"]).read_text()),
                             keys[4], historical_keys=old_digest)
     origin = f"http://localhost:{port}"
-    with ydb.Driver(endpoint=f"grpc://127.0.0.1:{db_port}",database="/local",
-                    credentials=ydb.AnonymousCredentials(),disable_discovery=True) as driver:
+    with ydb.Driver(endpoint=f"grpc://localhost:{db_port}",database="/local",
+                    credentials=ydb.AnonymousCredentials()) as driver:
         driver.wait(timeout=10,fail_fast=True)
         with ydb.QuerySessionPool(driver) as pool:
             service=auth.build(pool,access_key=keys[0],refresh_key=keys[1],
@@ -51,6 +53,7 @@ def main():
             def dispatch(env, respond):
                 path=env.get("PATH_INFO","")
                 allowed={ "/pilot/nmp": ("07_pilot.html", "text/html"),
+                          "/pilot/074_panel.mjs": ("074_panel.mjs", "text/javascript"),
                           "/pilot/07_pilot_ui.mjs": ("07_pilot_ui.mjs", "text/javascript"),
                           "/pilot/072_ui_adapter.mjs": ("072_ui_adapter.mjs", "text/javascript"),
                           "/pilot/07_client.mjs": ("07_client.mjs", "text/javascript") }
@@ -64,6 +67,16 @@ def main():
                                       ("Cache-Control","no-store"),("X-Content-Type-Options","nosniff"),
                                       ("Content-Security-Policy","default-src 'none'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'")])
                     return [data]
+                if (web_root and env.get("REQUEST_METHOD") == "GET"
+                        and env.get("HTTP_HOST") == f"localhost:{port}" and not path.startswith(("/v1/", "/pilot/"))):
+                    asset = (web_root / (path.lstrip("/") or "index.html")).resolve()
+                    if (asset.is_relative_to(web_root) and asset.is_file() and
+                            asset.suffix in {".html", ".js", ".css", ".svg", ".png", ".jpg", ".webp", ".woff2"}):
+                        data = asset.read_bytes()
+                        respond("200 OK", [("Content-Type", guess_type(asset)[0] or "application/octet-stream"),
+                            ("Cache-Control", "no-store"), ("X-Content-Type-Options", "nosniff"),
+                            ("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")])
+                        return [data]
                 return handler(env,respond)
 
             with make_server("127.0.0.1",port,dispatch,handler_class=Quiet) as web:

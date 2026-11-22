@@ -29,6 +29,7 @@ self.addEventListener('message', e => { if (e.data === 'skipWaiting') self.skipW
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const u = new URL(e.request.url);
+  if (u.pathname.startsWith('/v1/') || u.pathname.startsWith('/pilot/')) return;
   if (u.origin !== self.location.origin) return; // apicr.minzdrav.gov.ru etc. go straight to the network
   const k = keyed[u.origin + u.pathname];
   if (!k) return;

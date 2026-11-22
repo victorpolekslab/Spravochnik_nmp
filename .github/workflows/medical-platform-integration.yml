@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'integration/medical-platform/**'
+      - 'android/app/src/main/assets/www/**'
+      - 'web/sw.js'
       - '.github/workflows/medical-platform-integration.yml'
 permissions:
   contents: read
@@ -42,7 +44,7 @@ jobs:
                           credentials=ydb.AnonymousCredentials()) as driver:
               driver.wait(timeout=75, fail_fast=False)
           PY
-      - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb
+      - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb 074_test_processes
       - if: always()
         run: |
           docker ps -a --filter name=medical-ydb
@@ -70,4 +72,4 @@ jobs:
           "$RUNNER_TEMP/medical-test/node_modules/.bin/playwright" install --with-deps chromium
           export CHROMIUM="$(node -p 'require("playwright").chromium.executablePath()')"
           "$CHROMIUM" --version
-          node --test integration/medical-platform/071_test_browser.cjs
+          node --test integration/medical-platform/071_test_browser.cjs integration/medical-platform/074_test_ui.cjs
