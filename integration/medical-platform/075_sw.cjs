@@ -52,21 +52,32 @@ test('production SW template: install, update, offline and API bypass',async()=>
     const sets=await Promise.all((await caches.keys()).map(async k=>(await caches.open(k)).keys()));
     return sets.flat().some(x=>/\/(?:v1|pilot)\//.test(x.url));
   }),false);
+  async function poll(predicate,label){
+   for(let i=0;i<160;i++){
+    if(await predicate())return;
+    await new Promise(resolve=>setTimeout(resolve,50));
+   }
+   throw Error(label);
+  }
   const switchVersion=async next=>{
    version=next;
    await page.evaluate(async()=>{const reg=await navigator.serviceWorker.ready;await reg.update();});
-   await page.waitForFunction(async()=>!!(await navigator.serviceWorker.ready).waiting);
-   await page.evaluate(async()=>{(await navigator.serviceWorker.ready).waiting.postMessage('skipWaiting');});
-   await page.waitForFunction(async name=>{
+   await poll(()=>page.evaluate(async()=>{
+    const worker=(await navigator.serviceWorker.ready).waiting;
+    if(!worker)return false;
+    worker.postMessage('skipWaiting');
+    return true;
+   }),'updated SW never entered waiting');
+   await poll(()=>page.evaluate(async name=>{
     const keys=await caches.keys();
     return keys.length===1&&keys[0].endsWith(name);
-   },next);
+   },next),'updated SW did not activate');
   };
   await switchVersion('two');
   await switchVersion('one');
   await context.setOffline(true);
   await page.reload();
-  await page.locator('#view').waitFor();
+  await page.locator(app==='nmp'?'#lLogin':'#view .card').first().waitFor();
   assert.equal(await page.evaluate(()=>localStorage.getItem('audit-preserve')),'yes');
   await assert.rejects(probe());
   console.log('PWA_REAL_SW PASS '+app+' initial/update/rollback/offline/private-cache-exclusion');
