@@ -50,11 +50,11 @@ jobs:
                           credentials=ydb.AnonymousCredentials()) as driver:
               driver.wait(timeout=75, fail_fast=False)
           PY
-      - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb 074_test_processes 075_test_deadline 076_test_ydb
+      - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb 074_test_processes 075_test_deadline 076_test_ydb 078_test_cloud_preflight 078_test_account
       - uses: actions/checkout@v4
         with:
           repository: victorpolekslab/Spravochnik_terapevt
-          ref: 3e8d531c431809caa037859f37615b58405bf1d1
+          ref: a9f021f1f0d4e946c31ce1e2fe452b151be50e85
           path: therapist-e2e-checkout
           persist-credentials: false
       - uses: actions/setup-node@v4
@@ -95,6 +95,7 @@ jobs:
           export CHROMIUM="$(node -p 'require("playwright").chromium.executablePath()')"
           "$CHROMIUM" --version
           node --test integration/medical-platform/071_test_browser.cjs integration/medical-platform/074_test_ui.cjs integration/medical-platform/075_sw.cjs
+          python integration/medical-platform/078_https_origin_test.py
 
   ingress:
     runs-on: ubuntu-24.04

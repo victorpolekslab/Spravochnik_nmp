@@ -1,4 +1,4 @@
-import {attachMedicalPilot} from './072_ui_adapter.mjs';
+import {attachMedicalPilot, pilotOriginAllowed} from './072_ui_adapter.mjs';
 
 const panels = new Map();
 const shell = '<h2>Общий вход</h2><form data-login><label>Email <input name="email" type="email" required autocomplete="username"></label> <label>Пароль <input name="password" type="password" required autocomplete="current-password"></label> <button>Войти</button></form><button data-logout type="button">Выйти</button> <button data-off type="button">Отключить пилот</button><p data-status role="status"></p>';
@@ -21,7 +21,8 @@ function build(app) {
   };
   const ready=attachMedicalPilot({enabled:true,app,onResult}).then(pilot=>{
     if (!pilot) throw Error('UNSUPPORTED');
-    void pilot.resume().then(ok=>{if(ok)status('Сессия восстановлена.');}).catch(()=>{});
+    void pilot.resume().then(ok=>{status(ok?'Сессия восстановлена.':'Требуется вход.');})
+      .catch(()=>status('Не удалось проверить сессию.'));
     return pilot;
   });
   ready.catch(()=>status('Пилот недоступен. Основные разделы работают в прежнем режиме.'));
@@ -97,7 +98,9 @@ function build(app) {
   return panel;
 }
 
-export function mountMedicalPanel(container,app) {
+export async function mountMedicalPanel(container,app) {
+  if (!await pilotOriginAllowed() || sessionStorage.getItem('medical-platform-pilot') !== '1' ||
+      location.hash !== (app==='nmp'?'#learn':'#about')) return;
   if(!panels.has(app))panels.set(app,build(app));
   const panel=panels.get(app);
   if(panel.parentNode!==container)container.prepend(panel);

@@ -14,7 +14,7 @@ learning = import_module("06_learning_api")
 
 
 class PilotGateway:
-    def __init__(self, services, catalog, origin, *, enable_learning=False, clock=time, browser_sessions=None, fixture_memory=False, allow_private_ingress=False):
+    def __init__(self, services, catalog, origin, *, enable_learning=False, clock=time, browser_sessions=None, fixture_memory=False, allow_private_ingress=False, enable_account_capture=False):
         url = urlsplit(origin)
         allowed = (url.scheme == "https" and url.hostname) if allow_private_ingress else (
             url.scheme in ("http", "https") and url.hostname in ("localhost", "127.0.0.1"))
@@ -28,6 +28,9 @@ class PilotGateway:
         if browser_sessions is None and not fixture_memory:
             raise ValueError("A browser-session backend is required")
         self.browser_sessions = browser_sessions
+        if enable_account_capture and (allow_private_ingress or not browser_sessions):
+            raise ValueError("Synthetic account capture requires local shared sessions")
+        self.enable_account_capture = enable_account_capture
         if fixture_memory:
             self.sessions, self.guard = {}, RLock()
 
@@ -108,6 +111,11 @@ class PilotGateway:
         action = parts[4]
         name = "__Host-medical_" + app
         handle = self.cookie_handle(env, name)
+        if action in ("register", "confirm", "forgot", "reset"):
+            if not self.enable_account_capture:
+                raise AuthError(404, "NOT_FOUND")
+            status, result = self.synthetic_account(action, body, env["REMOTE_ADDR"])
+            return status, result, None
         if self.browser_sessions is not None:
             return self.shared_auth(env, body, app, action, name, handle)
         with self.guard:
@@ -161,6 +169,19 @@ class PilotGateway:
             else:
                 self.services.sessions.validate(pair["access_token"], app)
             return 200, self.public(pair), None
+
+    def synthetic_account(self, action, body, source_ip):
+        # Capture is local-only and expressly limited to synthetic addresses.
+        if action in ("register", "forgot") and set(body) == {"email"}:
+            email = body["email"]
+            if not isinstance(email, str) or not email.casefold().endswith("@example.invalid"):
+                raise AuthError(400, "INVALID_EMAIL")
+            service = self.services.register.register if action == "register" else self.services.reset.request
+            return service(email, source_ip=source_ip)
+        if action in ("confirm", "reset") and set(body) == {"token", "password", "request_id"}:
+            service = self.services.register.verify_email if action == "confirm" else self.services.reset.complete
+            return service(body["token"], body["password"], body["request_id"], source_ip=source_ip)
+        raise AuthError(400, "INVALID_REQUEST")
 
     def shared_auth(self, env, body, app, action, name, handle):
         if action == "login" and set(body) == {"email", "password"}:

@@ -38,6 +38,19 @@ async function start(){
  }
  throw Error('Android WebView DevTools target unavailable: '+last);
 }
+function traceResume(page, phase) {
+ page.on('response',async response=>{
+  if (!response.url().endsWith('/auth/resume')) return;
+  try {
+   const header=await response.request().headerValue('cookie');
+   const present=Boolean(header?.split(';').some(part=>part.trim().startsWith('__Host-medical_'+app+'=')));
+   console.log('ANDROID_RESUME '+JSON.stringify({phase,status:response.status(),cookieSent:present}));
+  } catch {
+   console.log('ANDROID_RESUME '+JSON.stringify({phase,status:response.status(),cookieSent:null}));
+  }
+ });
+ page.on('pageerror',()=>console.log('ANDROID_JS_ERROR phase='+phase));
+}
 async function panelFor(page){
  await page.evaluate(()=>sessionStorage.setItem('medical-platform-pilot','1'));
  await page.reload();
@@ -56,14 +69,19 @@ async function main(){
  let handle;
  try{
   handle=await start();
+  traceResume(handle.page,'initial');
   let panel=await panelFor(handle.page);
   assert.ok(await handle.page.evaluate(()=>!window.Native && typeof window.App?.krUpload !== 'function'));
   await login(panel,process.env.MP_EMAIL);
+  await handle.page.evaluate(app=>fetch('/v1/'+app+'/auth/resume',{
+   method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'
+  }),app);
   adb('shell','input','keyevent','KEYCODE_HOME');
   await pause(1000);
   await handle.connection.close();
   adb('forward','--remove','tcp:'+handle.debug);
   handle=await start();
+  traceResume(handle.page,'after-force-stop');
   panel=await panelFor(handle.page);
   await panel.getByText('Сессия восстановлена.').waitFor({timeout:10000});
   if(app==='nmp'){

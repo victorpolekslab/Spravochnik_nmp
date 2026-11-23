@@ -3,6 +3,8 @@ import base64
 from importlib import import_module
 import json
 import os
+import stat
+from tempfile import NamedTemporaryFile
 from mimetypes import guess_type
 from pathlib import Path
 from wsgiref.simple_server import WSGIRequestHandler, make_server
@@ -12,6 +14,15 @@ import ydb
 class Quiet(WSGIRequestHandler):
     def log_message(self, *args):
         pass
+
+
+def capture_mail(directory, kind):
+    def capture(email, token):
+        if not email.endswith("@example.invalid"):
+            raise ValueError("Capture accepts synthetic addresses only")
+        with NamedTemporaryFile(mode="w", dir=directory, prefix=kind + "-", delete=False) as out:
+            json.dump({"email": email, "token": token}, out)
+    return capture
 
 
 def main():
@@ -41,19 +52,43 @@ def main():
     def metadata():
         from ydb.iam import MetadataUrlCredentials
         return MetadataUrlCredentials()
+    capture_dir = os.getenv("MEDICAL_PILOT_SYNTHETIC_MAIL_DIR")
+    if capture_dir:
+        directory = Path(capture_dir).resolve(strict=True)
+        info = directory.stat()
+        if (database.managed or not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid()
+                or stat.S_IMODE(info.st_mode) != 0o700
+                or directory.is_relative_to(root) or (web_root and directory.is_relative_to(web_root))):
+            raise ValueError("Synthetic capture requires a private local directory outside served assets")
+        verification = capture_mail(directory, "verify")
+        recovery = capture_mail(directory, "reset")
+    else:
+        def verification(*_):
+            raise RuntimeError("Synthetic capture disabled")
+        recovery = verification
     with database.pool(ydb, metadata) as pool:
         service=auth.build(pool,access_key=keys[0],refresh_key=keys[1],
                            registration_key=keys[2],recovery_key=keys[3],
-                           verification_queue=lambda *_: None,recovery_queue=lambda *_: None)
+                           verification_queue=verification,recovery_queue=recovery)
         service.sessions.configure_retired_keys(access=old_access, refresh=old_refresh)
         shared = import_module("072_browser_sessions").BrowserSessions(service.sessions, service.sessions.clock)
         handler=gateway(service,catalog,origin,browser_sessions=shared, allow_private_ingress=database.managed,
-                        enable_learning=os.getenv("MEDICAL_PILOT_LEARNING")=="1")
+                        enable_account_capture=bool(capture_dir), enable_learning=os.getenv("MEDICAL_PILOT_LEARNING")=="1")
 
         bounded_api = import_module("075_deadline").Deadline(handler)
 
         def dispatch(env, respond):
             path=env.get("PATH_INFO","")
+            if path == "/pilot/config.json":
+                if (env.get("REQUEST_METHOD") != "GET" or env.get("HTTP_HOST") != handler.host
+                        or not database.managed or os.getenv("MEDICAL_PILOT_CONFIG_ENABLED") != "1"):
+                    respond("404 Not Found", [("Cache-Control", "no-store")])
+                    return [b""]
+                data = json.dumps({"origins": [handler.origin]}).encode()
+                respond("200 OK", [("Content-Type", "application/json"),
+                                   ("Cache-Control", "no-store"),
+                                   ("X-Content-Type-Options", "nosniff")])
+                return [data]
             allowed={ "/pilot/nmp": ("07_pilot.html", "text/html"),
                       "/pilot/074_panel.mjs": ("074_panel.mjs", "text/javascript"),
                       "/pilot/07_pilot_ui.mjs": ("07_pilot_ui.mjs", "text/javascript"),
