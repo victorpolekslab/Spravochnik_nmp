@@ -11,6 +11,20 @@ mp = import_module("074_test_processes")
 ROOT = Path(__file__).resolve().parent
 
 class AndroidE2E(mp.MultiProcess):
+    def run_android(self, **identity):
+        tls = import_module("079_tls_proxy")
+        def execute(origin, control):
+            subprocess.run(["node", str(ROOT/"077_android_e2e.cjs")], check=True, timeout=150,
+                           env=dict(os.environ, MP_ORIGIN=origin,
+                                    MP_HTTP_CONTROL="1" if control else "0", **identity))
+        self.env["MEDICAL_PILOT_TEST_COOKIE_DIAGNOSTICS"] = "1"
+        _, http = self.worker()
+        execute(f"http://localhost:{http}", True)
+        with tls.ingress(os.environ["MP_TEST_TLS_DIR"]) as (origin, upstream):
+            self.env["MEDICAL_PILOT_TEST_TLS_ORIGIN"] = origin
+            upstream.extend([self.worker()[1], self.worker()[1]])
+            execute(origin, False)
+
     test_workers_share_refresh_restart_and_revoke = None
     test_ydb_transport_failure_and_recovery_across_workers = None
 
@@ -29,11 +43,7 @@ class AndroidE2E(mp.MultiProcess):
                 fixture.grant_fixture(uid,"nmp",permission)
         self.env.update(MEDICAL_PILOT_LEARNING="1", MEDICAL_PILOT_WEB_ROOT=str(
             ROOT.parents[1]/"android/app/src/main/assets/www"))
-        _,a = self.worker()
-        _,b = self.worker()
-        subprocess.run(["node", str(ROOT/"077_android_e2e.cjs")], check=True, timeout=150,
-            env=dict(os.environ, MP_A=str(a), MP_B=str(b), MP_EMAIL=fixture.email,
-                     MP_SECOND=second, MP_PASSWORD=mp.base.PW))
+        self.run_android(MP_EMAIL=fixture.email, MP_SECOND=second, MP_PASSWORD=mp.base.PW)
         def verify(tx):
             key=dict(uid=(fixture.uid,"Utf8"))
             attempts=fixture.s.repo.query(tx, """SELECT score, max_score, passed FROM test_attempts
@@ -53,8 +63,4 @@ class AndroidE2E(mp.MultiProcess):
         if not meta.exists():
             meta.write_text('const META={v:"test"};')
         self.env["MEDICAL_PILOT_WEB_ROOT"] = str(web)
-        _,a = self.worker()
-        _,b = self.worker()
-        subprocess.run(["node", str(ROOT/"077_android_e2e.cjs")], check=True, timeout=150,
-            env=dict(os.environ, MP_A=str(a), MP_B=str(b), MP_EMAIL=self.fixture.email,
-                     MP_APP="terapevt", MP_PASSWORD=mp.base.PW))
+        self.run_android(MP_EMAIL=self.fixture.email, MP_PASSWORD=mp.base.PW)

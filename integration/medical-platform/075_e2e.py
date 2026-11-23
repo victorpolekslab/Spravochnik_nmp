@@ -11,6 +11,20 @@ mp = import_module("074_test_processes")
 ROOT = Path(__file__).resolve().parent
 
 class FullE2E(mp.MultiProcess):
+    def execute_browser(self, **identity):
+        def execute(**env):
+            subprocess.run(["node", str(ROOT/"075_e2e.cjs")], check=True, timeout=90,
+                           env=dict(os.environ, **identity, **env))
+        if not os.getenv("MP_TEST_TLS_DIR"):
+            execute(MP_A=str(self.worker()[1]), MP_B=str(self.worker()[1]))
+            return
+        tls = import_module("079_tls_proxy")
+        with tls.ingress(os.environ["MP_TEST_TLS_DIR"]) as (origin, upstream):
+            self.env["MEDICAL_PILOT_TEST_TLS_ORIGIN"] = origin
+            self.env["MEDICAL_PILOT_TEST_COOKIE_DIAGNOSTICS"] = "1"
+            upstream.extend([self.worker()[1], self.worker()[1]])
+            execute(MP_ORIGIN=origin)
+
     test_workers_share_refresh_restart_and_revoke = None
     test_ydb_transport_failure_and_recovery_across_workers = None
 
@@ -28,11 +42,7 @@ class FullE2E(mp.MultiProcess):
                 fixture.grant_fixture(uid,"nmp",permission)
         self.env.update(MEDICAL_PILOT_LEARNING="1", MEDICAL_PILOT_WEB_ROOT=str(
             ROOT.parents[1]/"android/app/src/main/assets/www"))
-        _,a = self.worker()
-        _,b = self.worker()
-        subprocess.run(["node", str(ROOT/"075_e2e.cjs")], check=True, timeout=60,
-            env=dict(os.environ, MP_A=str(a), MP_B=str(b), MP_EMAIL=fixture.email,
-                     MP_SECOND=second, MP_PASSWORD=mp.base.PW))
+        self.execute_browser(MP_EMAIL=fixture.email, MP_SECOND=second, MP_PASSWORD=mp.base.PW)
         def verify(tx):
             key=dict(uid=(fixture.uid,"Utf8"))
             attempts=fixture.s.repo.query(tx, """SELECT score, max_score, passed FROM test_attempts
@@ -52,8 +62,4 @@ class FullE2E(mp.MultiProcess):
         if not meta.exists():
             meta.write_text('const META={v:"test"};')
         self.env["MEDICAL_PILOT_WEB_ROOT"] = str(web)
-        _,a = self.worker()
-        _,b = self.worker()
-        subprocess.run(["node", str(ROOT/"075_e2e.cjs")], check=True, timeout=60,
-            env=dict(os.environ, MP_A=str(a), MP_B=str(b), MP_EMAIL=self.fixture.email,
-                     MP_APP="terapevt", MP_PASSWORD=mp.base.PW))
+        self.execute_browser(MP_EMAIL=self.fixture.email, MP_APP="terapevt", MP_PASSWORD=mp.base.PW)

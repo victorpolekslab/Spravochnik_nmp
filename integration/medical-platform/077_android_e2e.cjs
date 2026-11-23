@@ -1,15 +1,16 @@
 const assert=require('node:assert/strict');
 const {execFileSync}=require('node:child_process');
 const {chromium}=require('playwright');
-const port=process.env.MP_A, app=process.env.MP_ANDROID_APP;
+const origin=process.env.MP_ORIGIN, app=process.env.MP_ANDROID_APP;
+const url=new URL(origin), port=url.port, tls=url.protocol==='https:';
 const pkg=app==='nmp'?'ru.klinrek.feldsher':'ru.klinrek.terapevt';
 const adb=(...args)=>execFileSync('adb',args,{encoding:'utf8',timeout:20000}).trim();
 const pause=ms=>new Promise(done=>setTimeout(done,ms));
-const origin='http://localhost:'+port;
+
 
 async function start(){
  adb('shell','am','force-stop',pkg);
- const launched=adb('shell','am','start','-W','-n',pkg+'/'+(app==='nmp'?'ru.klinrek.app':'ru.klinrek.terapevt')+'.PilotAuditActivity','--ei','pilotPort',port);
+ const launched=adb('shell','am','start','-W','-n',pkg+'/'+(app==='nmp'?'ru.klinrek.app':'ru.klinrek.terapevt')+'.PilotAuditActivity','--ei','pilotPort',port,'--ez','pilotHttps',String(tls));
  assert.match(launched,/Status: ok/,launched);
  let last;
  for(let i=0;i<40;i++){
@@ -73,9 +74,12 @@ async function main(){
   let panel=await panelFor(handle.page);
   assert.ok(await handle.page.evaluate(()=>!window.Native && typeof window.App?.krUpload !== 'function'));
   await login(panel,process.env.MP_EMAIL);
-  await handle.page.evaluate(app=>fetch('/v1/'+app+'/auth/resume',{
+  const status=await handle.page.evaluate(app=>fetch('/v1/'+app+'/auth/resume',{
    method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'
-  }),app);
+  }).then(r=>r.status),app);
+  console.log('ANDROID_CONTROL tls='+tls+' resume='+status);
+  if(process.env.MP_HTTP_CONTROL==='1') return;
+  assert.equal(status,200);
   adb('shell','input','keyevent','KEYCODE_HOME');
   await pause(1000);
   await handle.connection.close();
@@ -96,6 +100,8 @@ async function main(){
   }
   await panel.getByRole('button',{name:'Выйти'}).click();
   await panel.getByText('Вы вышли.').waitFor({timeout:10000});
+  const revoked=await handle.page.evaluate(app=>fetch('/v1/'+app+'/auth/resume',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'}).then(r=>r.status),app);
+  assert.equal(revoked,401);
   console.log('ANDROID_WEBVIEW_E2E PASS '+app+' documented opt-in, login, process restart/resume, logout'+(app==='nmp'?', server score':''));
  } finally {
   if(handle){

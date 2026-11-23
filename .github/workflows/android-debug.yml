@@ -38,6 +38,8 @@ jobs:
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses > /dev/null
           set -o pipefail
           "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --install "platforms;android-35" "build-tools;35.0.0"
+      - name: Create ephemeral debug-only CA
+        run: bash integration/medical-platform/079_test_ca.sh "$RUNNER_TEMP/pilot-tls" "$GITHUB_WORKSPACE"
       - name: Compile Android debug APK
         working-directory: android
         run: gradle --no-daemon :app:assembleDebug
@@ -56,6 +58,7 @@ jobs:
         env:
           MEDICAL_ANDROID_START_EMULATOR: '1'
           MP_ANDROID_APP: nmp
+          MP_TEST_TLS_DIR: ${{ runner.temp }}/pilot-tls
           MP_E2E_HARNESS: integration/medical-platform/077_android_backend.sh
         shell: bash
         run: |

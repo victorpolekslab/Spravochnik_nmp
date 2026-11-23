@@ -40,7 +40,7 @@ class MultiProcess(unittest.TestCase):
             port = sock.getsockname()[1]
         command = [sys.executable, "-u", str(Path(__file__).with_name("07_run_pilot.py"))]
         child = subprocess.Popen(command, env=dict(self.env, MEDICAL_PILOT_PORT=str(port)),
-                                 stdout=subprocess.DEVNULL)
+                                 stdout=None if self.env.get("MEDICAL_PILOT_TEST_COOKIE_DIAGNOSTICS") else subprocess.DEVNULL)
         self.addCleanup(self.stop, child)
         print(f"worker pid={child.pid} loopback={port} command={command[-1]}", flush=True)
         deadline = time.monotonic()+15

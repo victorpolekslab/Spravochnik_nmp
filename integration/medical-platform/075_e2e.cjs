@@ -2,7 +2,8 @@ const assert=require('node:assert/strict');
 const { chromium }=require('playwright');
 
 async function main(){
- const origin='http://localhost:'+process.env.MP_A, second='http://localhost:'+process.env.MP_B;
+ const origin=process.env.MP_ORIGIN||'http://localhost:'+process.env.MP_A;
+ const second=process.env.MP_ORIGIN||'http://localhost:'+process.env.MP_B;
  const app=process.env.MP_APP||'nmp';
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM,headless:true,args:['--no-sandbox']});
  try{
@@ -33,6 +34,7 @@ async function main(){
     return {status:res.status, body:await res.json()};
    },{url,token,data});
   }
+  console.log('BROWSER_AUTH login=200 tls='+origin.startsWith('https:'));
   const alternate=await context.newPage();
   await alternate.goto(second);
   const shared=await call(alternate,'/v1/'+app+'/auth/resume',null,{});

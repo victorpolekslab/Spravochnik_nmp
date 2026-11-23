@@ -67,6 +67,14 @@ jobs:
           export CHROMIUM="$(node -p 'require("playwright").chromium.executablePath()')"
           export MP_THERAPIST_WEB="$GITHUB_WORKSPACE/therapist-e2e-checkout/web"
           python -m unittest -v 075_e2e
+          sudo apt-get install -y libnss3-tools
+          export MP_TEST_TLS_DIR="$RUNNER_TEMP/pilot-tls"
+          bash integration/medical-platform/079_test_ca.sh "$MP_TEST_TLS_DIR"
+          export HOME="$RUNNER_TEMP/chromium-ca-home"
+          mkdir -p "$HOME/.pki/nssdb"
+          certutil -N --empty-password -d "sql:$HOME/.pki/nssdb"
+          certutil -A -d "sql:$HOME/.pki/nssdb" -n 'Medical Pilot Test CA' -t 'C,,' -i "$MP_TEST_TLS_DIR/ca.pem"
+          python -m unittest -v 075_e2e
       - if: always()
         run: |
           docker ps -a --filter name=medical-ydb

@@ -49,6 +49,12 @@ def main():
     catalog = catalog_class(json.loads(Path(os.environ["MEDICAL_PILOT_CATALOG"]).read_text()),
                             keys[4], historical_keys=old_digest)
     origin = os.environ["MEDICAL_PILOT_HTTPS_ORIGIN"] if database.managed else f"http://localhost:{port}"
+    test_origin = os.getenv("MEDICAL_PILOT_TEST_TLS_ORIGIN")
+    if test_origin:
+        import re
+        if database.managed or not re.fullmatch(r"https://localhost:[0-9]{4,5}", test_origin):
+            raise ValueError("TLS test origin is only allowed for loopback YDB")
+        origin = test_origin
     def metadata():
         from ydb.iam import MetadataUrlCredentials
         return MetadataUrlCredentials()
@@ -81,7 +87,7 @@ def main():
             path=env.get("PATH_INFO","")
             if path == "/pilot/config.json":
                 if (env.get("REQUEST_METHOD") != "GET" or env.get("HTTP_HOST") != handler.host
-                        or not database.managed or os.getenv("MEDICAL_PILOT_CONFIG_ENABLED") != "1"):
+                        or not (test_origin or (database.managed and os.getenv("MEDICAL_PILOT_CONFIG_ENABLED") == "1"))):
                     respond("404 Not Found", [("Cache-Control", "no-store")])
                     return [b""]
                 data = json.dumps({"origins": [handler.origin]}).encode()
@@ -114,6 +120,18 @@ def main():
                         ("Cache-Control", "no-store"), ("X-Content-Type-Options", "nosniff"),
                         ("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")])
                     return [data]
+            if os.getenv("MEDICAL_PILOT_TEST_COOKIE_DIAGNOSTICS") == "1" and not database.managed:
+                parts = path.split("/")
+                if len(parts) == 5 and parts[3] == "auth" and parts[4] in ("login", "resume", "refresh", "logout"):
+                    cookie = any(part.strip().startswith("__Host-medical_" + parts[2] + "=")
+                                 for part in env.get("HTTP_COOKIE", "").split(";"))
+                    def record(status, headers):
+                        print("COOKIE_WSGI", parts[4], "status=" + status.split()[0],
+                              "cookie=" + str(cookie),
+                              "setCookie=" + str(any(k.lower() == "set-cookie" for k, _ in headers)),
+                              flush=True)
+                        return respond(status, headers)
+                    return bounded_api(env,record)
             return bounded_api(env,respond)
 
         with make_server("127.0.0.1",port,dispatch,handler_class=Quiet) as web:

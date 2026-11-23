@@ -19,6 +19,8 @@ public final class PilotAuditActivity extends Activity {
         super.onCreate(state);
         int port = getIntent().getIntExtra("pilotPort", 0);
         if (port < 1024 || port > 65535) { finish(); return; }
+        String scheme = getIntent().getBooleanExtra("pilotHttps", false) ? "https" : "http";
+        String origin = scheme + "://localhost:" + port;
         WebView.setWebContentsDebuggingEnabled(true);
         WebView view = new WebView(this);
         view.getSettings().setJavaScriptEnabled(true);
@@ -27,7 +29,7 @@ public final class PilotAuditActivity extends Activity {
         view.getSettings().setAllowContentAccess(false);
         view.setWebViewClient(new WebViewClient() {
             private boolean loopback(Uri uri) {
-                return "http".equals(uri.getScheme()) && "localhost".equals(uri.getHost())
+                return scheme.equals(uri.getScheme()) && "localhost".equals(uri.getHost())
                     && uri.getPort() == port && uri.getUserInfo() == null;
             }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
@@ -38,7 +40,19 @@ public final class PilotAuditActivity extends Activity {
                     : new WebResourceResponse("text/plain", "UTF-8", new ByteArrayInputStream(new byte[0]));
             }
         });
+        getWindow().getDecorView().postDelayed(new Runnable() {
+            @Override public void run() {
+                if (isFinishing() || isDestroyed()) return;
+                String cookie = android.webkit.CookieManager.getInstance().getCookie(origin);
+                boolean found = false;
+                if (cookie != null) for (String part : cookie.split(";")) {
+                    found |= part.trim().startsWith("__Host-medical_nmp=");
+                }
+                android.util.Log.i("PilotCookie", "nativeCookie=" + found + " tls=" + scheme.equals("https"));
+                getWindow().getDecorView().postDelayed(this, 500);
+            }
+        }, 500);
         setContentView(view);
-        view.loadUrl("http://localhost:" + port + "/#learn");
+        view.loadUrl(origin + "/#learn");
     }
 }
