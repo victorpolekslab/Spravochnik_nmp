@@ -88,20 +88,60 @@ async function main(){
   traceResume(handle.page,'after-force-stop');
   panel=await panelFor(handle.page);
   await panel.getByText('Сессия восстановлена.').waitFor({timeout:10000});
+  let receipt;
+  async function request(path, method, data, bearer) {
+   return handle.page.evaluate(async ({path,method,data,bearer})=>{
+    const headers={};
+    if(data)headers['Content-Type']='application/json';
+    if(bearer)headers.Authorization=bearer;
+    const response=await fetch(path,{method,headers,credentials:'same-origin',body:data?JSON.stringify(data):undefined});
+    return [response.status,await response.json()];
+   },{path,method,data,bearer});
+  }
   if(app==='nmp'){
    await panel.locator('[name=test]').fill('quiz');
    await panel.getByRole('button',{name:'Загрузить'}).click();
    await panel.locator('input[name=q1][value="1"]').check({timeout:10000});
    await panel.locator('input[name=q2][value="0"]').check();
-   await panel.getByRole('button',{name:'Сохранить попытку'}).click();
+   // Keep CDP, but remove the sole emulator route to the private HTTPS endpoint.
+   adb('reverse','--remove','tcp:'+port);
+   try {
+    assert.equal(await handle.page.evaluate(async ()=>{
+     try { await fetch('/pilot/config.json',{cache:'no-store',signal:AbortSignal.timeout(3000)}); return false; }
+     catch { return true; }
+    }),true);
+    await panel.getByRole('button',{name:'Сохранить попытку'}).click();
+    await panel.getByText('Попытка сохранена на устройстве.').waitFor();
+   } finally {
+    adb('reverse','tcp:'+port,'tcp:'+port);
+   }
    await panel.getByText('Попытка сохранена на устройстве.').waitFor();
+   const pending=handle.page.waitForResponse(r=>r.url().endsWith('/learning/attempts')&&r.request().method()==='POST');
    await panel.getByRole('button',{name:'Синхронизировать'}).click();
+   const response=await pending;
+   assert.equal(response.status(),200);
+   const sent=response.request();
+   receipt={payload:sent.postDataJSON(), bearer:await sent.headerValue('authorization')};
+   const [status,replayed]=await request('/v1/nmp/learning/attempts','POST',receipt.payload,receipt.bearer);
+   assert.equal(status,200);
+   assert.equal(replayed.attempt_id,receipt.payload.attempt_id);
+   console.log('ANDROID_OFFLINE routeRemoved=true queued=true restored=true submitted=200 sameUuidReplay=200');
    await panel.getByText('Результат: 2 / 2 · зачёт').waitFor({timeout:10000});
   }
   await panel.getByRole('button',{name:'Выйти'}).click();
   await panel.getByText('Вы вышли.').waitFor({timeout:10000});
   const revoked=await handle.page.evaluate(app=>fetch('/v1/'+app+'/auth/resume',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'}).then(r=>r.status),app);
   assert.equal(revoked,401);
+  if(receipt){
+   await login(panel,process.env.MP_SECOND);
+   assert.equal((await request('/v1/nmp/learning/attempts','GET',null,receipt.bearer))[0],401);
+   const [res,session]=await request('/v1/nmp/auth/resume','POST',{});
+   assert.equal(res,200);
+   const [status,history]=await request('/v1/nmp/learning/attempts','GET',null,'Bearer '+session.access_token);
+   assert.equal(status,200);
+   assert.deepEqual(history.items,[]);
+   console.log('ANDROID_ACCOUNT_SWITCH oldBearer=401 newAccountAttempts=0');
+  }
   console.log('ANDROID_WEBVIEW_E2E PASS '+app+' documented opt-in, login, process restart/resume, logout'+(app==='nmp'?', server score':''));
  } finally {
   if(handle){
