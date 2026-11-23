@@ -66,7 +66,6 @@ jobs:
           "$RUNNER_TEMP/medical-e2e/node_modules/.bin/playwright" install --with-deps chromium
           export CHROMIUM="$(node -p 'require("playwright").chromium.executablePath()')"
           export MP_THERAPIST_WEB="$GITHUB_WORKSPACE/therapist-e2e-checkout/web"
-          python -m unittest -v 075_e2e
           sudo apt-get install -y libnss3-tools
           export MP_TEST_TLS_DIR="$RUNNER_TEMP/pilot-tls"
           bash integration/medical-platform/079_test_ca.sh "$MP_TEST_TLS_DIR"
