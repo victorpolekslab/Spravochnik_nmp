@@ -65,14 +65,9 @@ class OriginTest(unittest.TestCase):
                     (f"https://allowed.test:{https.server_port}/", "allowed"),
                 ]):
                     with self.subTest(index=i, expected=expected):
-                        result = subprocess.run([
-                            os.getenv("CHROMIUM", "chromium"), "--headless", "--no-sandbox", "--disable-dev-shm-usage",
-                            "--no-proxy-server", "--host-resolver-rules=MAP *.test 127.0.0.1",
-                            "--user-data-dir="+str(Path(tmp)/"profile"),
-                            "--ignore-certificate-errors-spki-list="+pin,
-                            "--virtual-time-budget=5000", "--dump-dom", url
-                        ], check=True, capture_output=True, text=True, timeout=30)
-                        self.assertIn(f'data-result="{expected}"', result.stdout)
+                        subprocess.run(["node",str(Path(__file__).with_name("078_https_probe.cjs")),
+                                        url, expected, str(Path(tmp)/"profile"), pin],
+                                       check=True, timeout=30)
                         print(f"Chromium case {i+1}: {expected}")
                 for server in (https,http):
                     server.shutdown()

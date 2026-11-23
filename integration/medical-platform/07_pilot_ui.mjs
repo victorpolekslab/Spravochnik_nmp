@@ -3,8 +3,9 @@ const get=id=>document.getElementById(id);
 const status=text=>{get('status').textContent=text;};
 const app=location.pathname.endsWith('/terapevt')?'terapevt':'nmp';
 try {
-  const pilot=await attachMedicalPilot({enabled:true,app});
+  const pilot=await attachMedicalPilot({enabled:sessionStorage.getItem('medical-platform-pilot')==='1',app});
   if (!pilot) throw Error('Unsupported pilot context');
+  get('pilot-controls').disabled=false;
   pilot.resume().then(ok=>{if(ok) status('Сессия восстановлена.');}).catch(()=>{});
   const handle=fn=>async event=>{
     event.preventDefault();

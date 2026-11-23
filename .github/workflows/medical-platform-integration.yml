@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: victorpolekslab/Spravochnik_terapevt
-          ref: a9f021f1f0d4e946c31ce1e2fe452b151be50e85
+          ref: 0551051673baa21cde15bf8323750612c1604577
           path: therapist-e2e-checkout
           persist-credentials: false
       - uses: actions/setup-node@v4

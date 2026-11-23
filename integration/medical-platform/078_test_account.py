@@ -40,4 +40,5 @@ class Lifecycle(process.MultiProcess):
         data = completion(captured("reset"),password)
         self.assertEqual(post("reset",data)[0],200)
         self.assertEqual(post("resume",{},cookie)[0],401)
-        self.assertEqual(post("login",{"email":email,"password":password})[0],200)
+        _, second_port = self.worker()
+        self.assertEqual(self.post(second_port,"login",{"email":email,"password":password})[0],200)
