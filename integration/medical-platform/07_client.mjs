@@ -165,13 +165,15 @@ export function client({app, fetcher, locks, store, now=Date.now, random=Math.ra
         if (row.state!=='pending' || row.next>now()) continue;
         // Confirm the shared cookie still refers to this tab's authenticated identity.
         await refresh();
-        const send=()=>call('learning/attempts',row.body,current.access_token);
-        let result;
-        try { result=await send(); }
-        catch { result={status:0,data:{}}; }
+        const send=async () => {
+          try { return await call('learning/attempts',row.body,current.access_token); }
+          catch { return {status:0,data:{}}; }
+        };
+        let result=await send();
         if (result.status===401) {
-          try { await refresh(); result=await send(); }
+          try { await refresh(); }
           catch { break; }
+          result=await send();
         }
         const {status,data}=result;
         if (status===200 && ['test_id','test_version','attempt_id'].every(k=>data[k]===row.body[k])) {

@@ -143,3 +143,21 @@ test('a second 401 does not loop and leaves the queued attempt',async()=>{
   assert.equal(f.written.length,2);
   await assert.rejects(a.drain(),/AUTH_REQUIRED/);
 });
+
+test('network loss after a 401 retry backs off and replays the original attempt',async()=>{
+  const f=fixture(), a=f.make(), body=attempt();
+  await a.login('one','synthetic');
+  await a.enqueue(body,f.users.one);
+  f.setSend(()=>{
+    if (f.written.length===1) return [401,{}];
+    throw Error('response lost after refresh');
+  });
+  assert.equal((await a.drain())[0].state,'pending');
+  assert.equal(f.saved.get('queue:nmp:'+f.users.one)[0].retries,1);
+  await a.drain();
+  assert.equal(f.written.length,2);
+  f.tick();
+  f.setSend(payload=>[200,payload]);
+  assert.deepEqual(await a.drain(),[]);
+  assert.deepEqual(f.written,[body,body,body]);
+});
