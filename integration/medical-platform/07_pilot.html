@@ -1,0 +1,13 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>Medical Platform · локальный стенд</title>
+<h1>Локальный стенд НМП</h1>
+<fieldset id="pilot-controls" disabled>
+<form id="login" method="post"><label>Email <input name="email" type="email" required></label>
+<label>Пароль <input name="password" type="password" required></label><button>Войти</button></form>
+<button id="logout" type="button">Выйти</button>
+<form id="load"><label>Тест <input name="test" value="course:gbn" required></label><button>Загрузить</button></form>
+<form id="quiz"></form><button id="sync" type="button">Синхронизировать</button>
+</fieldset>
+<p id="status" role="status"></p>
+<script type="module" src="/pilot/07_pilot_ui.mjs"></script>
+</html>

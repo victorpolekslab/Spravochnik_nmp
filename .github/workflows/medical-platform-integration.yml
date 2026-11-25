@@ -1,0 +1,132 @@
+name: Medical Platform isolated integration
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'integration/medical-platform/**'
+      - 'android/app/src/main/assets/www/**'
+      - 'web/sw.js'
+      - '.github/workflows/medical-platform-integration.yml'
+permissions:
+  contents: read
+jobs:
+  ydb:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      MEDICAL_YDB_LOCAL_PORT: '2136'
+      MEDICAL_YDB_DISPOSABLE_CONTAINER: medical-ydb
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONPATH: integration/medical-platform:integration/medical-platform/testdeps
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install ydb==3.35.0 argon2-cffi==25.1.0
+      - run: |
+          docker run -d --name medical-ydb --hostname localhost -p 127.0.0.1:2136:2136 \
+            -e GRPC_PORT=2136 -e YDB_GRPC_ENABLE_TLS=false -e YDB_USE_IN_MEMORY_PDISKS=true ydbplatform/local-ydb:26.2.1.16
+          docker inspect --format '{{.Image}}' medical-ydb
+          for attempt in $(seq 1 60); do
+            test "$(docker inspect --format '{{.State.Health.Status}}' medical-ydb)" = healthy && break
+            sleep 2
+          done
+          test "$(docker inspect --format '{{.State.Health.Status}}' medical-ydb)" = healthy
+          python - <<'PY'
+          import socket, time, ydb
+          for _ in range(30):
+              try:
+                  with socket.create_connection(("127.0.0.1", 2136), timeout=1):
+                      print("Loopback TCP connection established", flush=True)
+                      break
+              except OSError:
+                  time.sleep(1)
+          else:
+              raise RuntimeError("YDB loopback TCP port not reachable")
+          with ydb.Driver(endpoint="grpc://localhost:2136", database="/local",
+                          credentials=ydb.AnonymousCredentials()) as driver:
+              driver.wait(timeout=75, fail_fast=False)
+          PY
+      - run: python -m unittest -v 05_test_ydb 05_test_registration 06_test_ydb 07_test_gateway 072_test_ydb 074_test_processes 075_test_deadline 076_test_ydb 078_test_cloud_preflight 078_test_account
+      - uses: actions/checkout@v4
+        with:
+          repository: victorpolekslab/Spravochnik_terapevt
+          ref: 0551051673baa21cde15bf8323750612c1604577
+          path: therapist-e2e-checkout
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: |
+          npm install --prefix "$RUNNER_TEMP/medical-e2e" --no-audit --no-fund playwright@1.57.0
+          export NODE_PATH="$RUNNER_TEMP/medical-e2e/node_modules"
+          "$RUNNER_TEMP/medical-e2e/node_modules/.bin/playwright" install --with-deps chromium
+          export CHROMIUM="$(node -p 'require("playwright").chromium.executablePath()')"
+          export MP_THERAPIST_WEB="$GITHUB_WORKSPACE/therapist-e2e-checkout/web"
+          sudo apt-get install -y libnss3-tools
+          export MP_TEST_TLS_DIR="$RUNNER_TEMP/pilot-tls"
+          bash integration/medical-platform/079_test_ca.sh "$MP_TEST_TLS_DIR"
+          export HOME="$RUNNER_TEMP/chromium-ca-home"
+          mkdir -p "$HOME/.pki/nssdb"
+          certutil -N --empty-password -d "sql:$HOME/.pki/nssdb"
+          certutil -A -d "sql:$HOME/.pki/nssdb" -n 'Medical Pilot Test CA' -t 'C,,' -i "$MP_TEST_TLS_DIR/ca.pem"
+          python -m unittest -v 075_e2e
+      - if: always()
+        run: |
+          docker ps -a --filter name=medical-ydb
+          docker logs --tail 200 medical-ydb || true
+          docker rm -f medical-ydb || true
+  chromium:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONPATH: integration/medical-platform:integration/medical-platform/testdeps
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          npm install --prefix "$RUNNER_TEMP/medical-test" --no-audit --no-fund playwright@1.57.0
+          export NODE_PATH="$RUNNER_TEMP/medical-test/node_modules"
+          "$RUNNER_TEMP/medical-test/node_modules/.bin/playwright" install --with-deps chromium
+          export CHROMIUM="$(node -p 'require("playwright").chromium.executablePath()')"
+          "$CHROMIUM" --version
+          node --test integration/medical-platform/071_test_browser.cjs integration/medical-platform/074_test_ui.cjs integration/medical-platform/075_sw.cjs
+          python integration/medical-platform/078_https_origin_test.py
+
+  ingress:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y nginx
+          mkdir -p "$RUNNER_TEMP/pilot-tls"
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=pilot.example.invalid \
+            -addext subjectAltName=DNS:pilot.example.invalid \
+            -keyout "$RUNNER_TEMP/pilot-tls/key.pem" -out "$RUNNER_TEMP/pilot-tls/fullchain.pem"
+          sudo mkdir -p /run/medical-tls
+          sudo install -m 0600 "$RUNNER_TEMP/pilot-tls/key.pem" /run/medical-tls/key.pem
+          sudo install -m 0644 "$RUNNER_TEMP/pilot-tls/fullchain.pem" /run/medical-tls/fullchain.pem
+          sed -e 's/10.70.0.10:443/127.0.0.1:8443/' -e 's/10.70.10.0\/24/127.0.0.1/' \
+            integration/medical-platform/076_nginx.conf | sudo tee /etc/nginx/conf.d/medical-pilot.conf >/dev/null
+          sudo nginx -t
+          sudo service nginx restart
+          opts=(--noproxy '*' --cacert "$RUNNER_TEMP/pilot-tls/fullchain.pem" --resolve pilot.example.invalid:8443:127.0.0.1 -sS -o /dev/null -w '%{http_code}')
+          test "$(curl "${opts[@]}" -H 'Host: rejected.invalid' https://pilot.example.invalid:8443/)" = 421
+          test "$(curl "${opts[@]}" https://pilot.example.invalid:8443/)" = 502
+          head -c 33000 /dev/zero > "$RUNNER_TEMP/body"
+          test "$(curl "${opts[@]}" --data-binary "@$RUNNER_TEMP/body" https://pilot.example.invalid:8443/v1/nmp/auth/login)" = 413
+          echo 'INGRESS PASS TLS, exact Host, body cap, upstream unavailable'

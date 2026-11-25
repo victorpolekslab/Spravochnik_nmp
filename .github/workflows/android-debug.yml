@@ -38,6 +38,8 @@ jobs:
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --licenses > /dev/null
           set -o pipefail
           "$SDK/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK" --install "platforms;android-35" "build-tools;35.0.0"
+      - name: Create ephemeral debug-only CA
+        run: bash integration/medical-platform/079_test_ca.sh "$RUNNER_TEMP/pilot-tls" "$GITHUB_WORKSPACE"
       - name: Compile Android debug APK
         working-directory: android
         run: gradle --no-daemon :app:assembleDebug
@@ -46,3 +48,24 @@ jobs:
           name: debug-apk-unverified
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Android emulator runtime smoke
+        env:
+          MEDICAL_ANDROID_START_EMULATOR: '1'
+          MP_ANDROID_APP: nmp
+          MP_TEST_TLS_DIR: ${{ runner.temp }}/pilot-tls
+          MP_E2E_HARNESS: integration/medical-platform/077_android_backend.sh
+        shell: bash
+        run: |
+          APK=$(find android/app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' -print -quit)
+          bash integration/medical-platform/076_android.sh "$APK" android-runtime-evidence
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-runtime-evidence
+          path: android-runtime-evidence/
